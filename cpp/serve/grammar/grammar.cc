@@ -21,6 +21,9 @@ BNFGrammar BNFGrammar::FromEBNFString(String ebnf_string) {
   auto node = make_object<BNFGrammarImpl>();
   auto parser = EBNFParser(node.get());
   parser.Parse(ebnf_string);
+  // node->Simplify();
+  // enable only when debugging?
+  // ICHECK(node->WellFormed()) << "The parsed BNF AST is not well-formed.";
   return BNFGrammar(std::move(node));
 }
 
@@ -65,6 +68,78 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarAsJSON")
     .set_body_typed([](const BNFGrammar& grammar, bool prettify = true) {
       return grammar->AsJSON(prettify);
     });
+
+TVM_REGISTER_OBJECT_TYPE(GrammarStateNode);
+
+class GrammarStateImpl : public GrammarStateNode {
+ public:
+  GrammarStateImpl(const BNFGrammar& grammar, int max_rollback_steps)
+      : GrammarStateNode(grammar, max_rollback_steps) {
+    auto start_element_id = buffer_.Allocate();
+    auto& start_element = buffer_[start_element_id];
+  }
+
+ private:
+  using TStackElementId = int32_t;
+
+  struct RuleWithPosition {
+    /*! \brief The rule's id.*/
+    BNFGrammarImpl::TRuleId rule_id;
+    /*! \brief Which choice in this rule is selected */
+    int choice_id;
+    /*! \brief Which element of the choice sequence is being visited */
+    int element_id;
+    /*! \brief Refers to the parent element */
+    TStackElementId parent_id;
+    /*!
+     * \brief How many elements this element is referenced by as a parent node or the stack top.
+     * If reference count is zero, we can recycle this element.
+     */
+    int reference_count;
+  };
+
+  class StackElementBuffer {
+   public:
+    TStackElementId Allocate() {
+      if (free_nodes_.empty()) {
+        buffer_.emplace_back();
+        return buffer_.size() - 1;
+      } else {
+        TStackElementId id = free_nodes_.back();
+        free_nodes_.pop_back();
+        return id;
+      }
+    }
+
+    void Free(TStackElementId id) { free_nodes_.push_back(id); }
+
+    RuleWithPosition& operator[](TStackElementId id) { return buffer_[id]; }
+
+   private:
+    std::vector<RuleWithPosition> buffer_;
+    std::vector<TStackElementId> free_nodes_;
+  };
+
+  /*!
+   * \brief Store the state in the past `max_rollback_steps` steps. The state is a list of stacks,
+   * representing all possible paths on the pushdown automata.
+   * Every stack is a list of RuleWithPosition. They organize in a tree structure.
+   * \details This history is managed as a circular buffer.
+   */
+  class StackTopsHistory {
+   public:
+    void Push(const std::vector<TStackElementId>& stack_tops);
+    void Pop();
+    std::vector<TStackElementId>& GetTop() const;
+    int GetSize() const;
+
+   private:
+    std::vector<std::vector<TStackElementId>> stack_tops_;
+  };
+
+  StackElementBuffer buffer_;
+  StackTopsHistory stack_tops_history_;
+};
 
 }  // namespace serve
 }  // namespace llm

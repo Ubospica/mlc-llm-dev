@@ -95,6 +95,20 @@ BNFGrammarImpl::TSubruleId BNFGrammarImpl::InsertOrRule(const std::vector<TSubru
   return subrule_storage_.InsertSubrule(data);
 }
 
+bool BNFGrammarImpl::InCharacterRange(std::pair<const TData*, const TData*> character_range,
+                                      int32_t codepoint) {
+  ICHECK(static_cast<DataKind>(character_range.first[0]) == DataKind::kCharacterRange ||
+         static_cast<DataKind>(character_range.first[0]) == DataKind::kNotCharacterRange);
+  bool is_not_range =
+      static_cast<DataKind>(character_range.first[0]) == DataKind::kNotCharacterRange;
+  for (auto it = character_range.first + 1; it != character_range.second; it += 2) {
+    if (codepoint >= it[0] && codepoint <= it[1]) {
+      return !is_not_range;
+    }
+  }
+  return is_not_range;
+}
+
 }  // namespace serve
 }  // namespace llm
 }  // namespace mlc

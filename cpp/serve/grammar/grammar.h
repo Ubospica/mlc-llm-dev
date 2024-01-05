@@ -11,11 +11,15 @@
 #include <tvm/runtime/object.h>
 #include <tvm/runtime/packed_func.h>
 
+#include "../tokenizers.h"
+
 namespace mlc {
 namespace llm {
 namespace serve {
 
 using namespace tvm::runtime;
+
+class GrammarState;
 
 /*!
  * \brief This class stores the abstract syntax tree (AST) of the Backus-Naur Form (BNF) grammar and
@@ -37,6 +41,8 @@ class BNFGrammarNode : public Object {
    * \sa For the format of the JSON file, see ./grammar_impl.h.
    */
   virtual String AsJSON(bool prettify = true) const = 0;
+
+  // virtual GrammarState GetStartState(int max_rollback_steps = 0) const = 0;
 
   static constexpr const char* _type_key = "mlc.serve.BNFGrammar";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -67,6 +73,30 @@ class BNFGrammar : public ObjectRef {
    */
   TVM_DLL static BNFGrammar FromJSON(String json_string);
   TVM_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(BNFGrammar, ObjectRef, BNFGrammarNode);
+};
+
+class GrammarStateNode : public Object {
+ public:
+  virtual void GetRefusedTokens(Tokenizer tokenizer, std::vector<int>* refused_tokens_buffer) = 0;
+  virtual void AcceptToken(int token_id) = 0;
+  virtual void Rollback(int rollback_cnt) = 0;
+
+  const BNFGrammar& grammar;
+  const int max_rollback_steps;
+
+  static constexpr const char* _type_key = "mlc.serve.GrammarState";
+  static constexpr const bool _type_has_method_sequal_reduce = false;
+  static constexpr const bool _type_has_method_shash_reduce = false;
+  TVM_DECLARE_BASE_OBJECT_INFO(GrammarStateNode, Object);
+
+ protected:
+  GrammarStateNode(const BNFGrammar& grammar, int max_rollback_steps)
+      : grammar(grammar), max_rollback_steps(max_rollback_steps) {}
+};
+
+class GrammarState : public ObjectRef {
+ public:
+  TVM_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(GrammarState, ObjectRef, GrammarStateNode);
 };
 
 }  // namespace serve

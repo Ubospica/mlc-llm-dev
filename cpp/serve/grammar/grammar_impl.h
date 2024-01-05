@@ -141,11 +141,15 @@ class BNFGrammarImpl : public BNFGrammarNode {
   }
 
   /****************** Utility functions ******************/
+  static bool InCharacterRange(std::pair<const TData*, const TData*> character_range,
+                               int32_t codepoint);
 
   /*!
    * \brief Print the BNF grammar to a string, in standard BNF format.
    */
   String AsString() const final;
+
+  // GrammarState GetStartState(int max_rollback_steps = 0) const final;
 
   /*!
    * \brief Serialize the AST. Dump the raw representation of the AST to a JSON file.
@@ -164,6 +168,15 @@ class BNFGrammarImpl : public BNFGrammarNode {
   String AsJSON(bool prettify = true) const final;
 
  private:
+  /*!
+   * \brief Simplify rule to satisfy restriction rule #1, #2, #3.
+   */
+  void Simplify();
+  /*!
+   * \brief Check if the grammar is well-formed.
+   */
+  bool WellFormed();
+
   // Stores all subrules
   SubruleStorage subrule_storage_;
   // Stores all rules

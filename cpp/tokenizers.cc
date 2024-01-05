@@ -34,6 +34,12 @@ std::string TokenizerObj::Decode(const std::vector<int32_t>& token_ids) const {
   return tokenizer->Decode(token_ids);
 }
 
+int32_t TokenizerObj::TokenToId(const std::string& token) const {
+  return tokenizer->TokenToId(token);
+}
+
+std::string TokenizerObj::IdToToken(int32_t id) const { return tokenizer->IdToToken(id); }
+
 Tokenizer Tokenizer::FromPath(const String& _path) {
   std::filesystem::path path(_path);
   std::filesystem::path sentencepiece;

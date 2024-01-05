@@ -28,6 +28,10 @@ class TokenizerObj : public Object {
   std::vector<int32_t> Encode(const std::string& text) const;
   /*! \brief Decode token ids into text. */
   std::string Decode(const std::vector<int32_t>& token_ids) const;
+  /*! \brief Get the vocabulary. */
+  int32_t TokenToId(const std::string& token) const;
+  /*! \brief Get the id-to-token map. */
+  std::string IdToToken(int32_t id) const;
 
   static constexpr const char* _type_key = "mlc.Tokenizer";
   static constexpr const bool _type_has_method_sequal_reduce = false;
