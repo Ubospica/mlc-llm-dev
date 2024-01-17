@@ -17,30 +17,32 @@ namespace serve {
 
 using namespace tvm::runtime;
 
-std::string BNFGrammarPrinter::PrintRuleExpr(int32_t rule_expr_id) {
+std::string BNFGrammarPrinter::PrintRule(const Rule& rule) {
+  return rule.name + " ::= " + PrintRuleExpr(rule.rule_expr_id);
+}
+
+std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
   std::string result;
-  auto rule_expr = grammar_->GetRuleExpr(rule_expr_id);
   switch (rule_expr.kind) {
     case DataKind::kCharacterRange:
-      result += PrintCharacterRange(rule_expr);
-      break;
+      return PrintCharacterRange(rule_expr);
     case DataKind::kNegCharacterRange:
-      result += PrintCharacterRange(rule_expr);
-      break;
+      return PrintCharacterRange(rule_expr);
     case DataKind::kEmptyStr:
-      result += PrintEmptyStr(rule_expr);
-      break;
+      return PrintEmptyStr(rule_expr);
     case DataKind::kRuleRef:
-      result += PrintRuleRef(rule_expr);
-      break;
+      return PrintRuleRef(rule_expr);
     case DataKind::kSequence:
-      result += PrintSequence(rule_expr);
-      break;
+      return PrintSequence(rule_expr);
     case DataKind::kChoices:
-      result += PrintChoices(rule_expr);
-      break;
+      return PrintChoices(rule_expr);
+    default:
+      LOG(FATAL) << "Unexpected sequence kind: " << static_cast<int>(rule_expr.kind);
   }
-  return result;
+}
+
+std::string BNFGrammarPrinter::PrintRuleExpr(int32_t rule_expr_id) {
+  return PrintRuleExpr(grammar_->GetRuleExpr(rule_expr_id));
 }
 
 std::string BNFGrammarPrinter::PrintCharacterRange(const RuleExpr& rule_expr) {
@@ -70,46 +72,28 @@ std::string BNFGrammarPrinter::PrintRuleRef(const RuleExpr& rule_expr) {
 
 std::string BNFGrammarPrinter::PrintSequence(const RuleExpr& rule_expr) {
   std::string result;
-  auto prev_require_parentheses = require_parentheses_;
-  // If the sequence contains > 1 elements, and is nested in another rule_expr with > 1 elements,
-  // we need to print parentheses.
-  auto now_require_parentheses = require_parentheses_ && rule_expr.data_len > 1;
-  require_parentheses_ = require_parentheses_ || rule_expr.data_len > 1;
-  if (now_require_parentheses) {
-    result += "(";
-  }
+  result += "(";
   for (int i = 0; i < rule_expr.data_len; ++i) {
     result += PrintRuleExpr(rule_expr[i]);
     if (i + 1 != rule_expr.data_len) {
       result += " ";
     }
   }
-  if (now_require_parentheses) {
-    result += ")";
-  }
-  require_parentheses_ = prev_require_parentheses;
+  result += ")";
   return result;
 }
 
 std::string BNFGrammarPrinter::PrintChoices(const RuleExpr& rule_expr) {
   std::string result;
 
-  auto prev_require_parentheses = require_parentheses_;
-  auto now_require_parentheses = require_parentheses_ && rule_expr.data_len > 1;
-  require_parentheses_ = require_parentheses_ || rule_expr.data_len > 1;
-  if (now_require_parentheses) {
-    result += "(";
-  }
+  result += "(";
   for (int i = 0; i < rule_expr.data_len; ++i) {
     result += PrintRuleExpr(rule_expr[i]);
     if (i + 1 != rule_expr.data_len) {
       result += " | ";
     }
   }
-  if (now_require_parentheses) {
-    result += ")";
-  }
-  require_parentheses_ = prev_require_parentheses;
+  result += ")";
   return result;
 }
 
@@ -117,8 +101,7 @@ String BNFGrammarPrinter::ToString() {
   std::string result;
   auto num_rules = grammar_->NumRules();
   for (auto i = 0; i < num_rules; ++i) {
-    auto rule = grammar_->GetRule(i);
-    result += rule.name + " ::= " + PrintRuleExpr(rule.rule_expr_id) + "\n";
+    result += PrintRule(grammar_->GetRule(i)) + "\n";
   }
   return result;
 }
