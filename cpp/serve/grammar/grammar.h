@@ -93,6 +93,8 @@ class BNFGrammarNode : public Object {
 
     /*! \brief Get the i-th element of the data array. */
     const int32_t& operator[](int i) const { return data[i]; }
+    const int32_t* begin() const { return data; }
+    const int32_t* end() const { return data + data_len; }
   };
 
   /*! \brief Get the number of rule_exprs. */
@@ -134,8 +136,10 @@ class BNFGrammarNode : public Object {
 
 class BNFGrammar : public ObjectRef {
  public:
-  TVM_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(BNFGrammar, ObjectRef, BNFGrammarNode);
+  TVM_DEFINE_OBJECT_REF_METHODS(BNFGrammar, ObjectRef, BNFGrammarNode);
 };
+
+std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);
 
 }  // namespace serve
 }  // namespace llm

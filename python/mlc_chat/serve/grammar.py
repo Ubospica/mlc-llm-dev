@@ -50,6 +50,9 @@ class BNFGrammar(Object):
         """
         return str(_ffi_api.BNFGrammarToString(self))  # type: ignore  # pylint: disable=no-member
 
+    def __str__(self) -> str:
+        return self.to_string()
+
     @staticmethod
     def from_json(json_string: str) -> "BNFGrammar":
         """Load a BNF grammar from the raw representation of the AST in JSON format.
@@ -82,3 +85,13 @@ class BNFGrammar(Object):
         return str(
             _ffi_api.BNFGrammarToJSON(self, prettify)  # type: ignore  # pylint: disable=no-member
         )
+
+    def to_normalized(self) -> "BNFGrammar":
+        """Normalize the grammar.
+
+        Returns
+        -------
+        grammar : BNFGrammar
+            The normalized grammar.
+        """
+        return _ffi_api.BNFGrammarToNormalized(self)  # type: ignore  # pylint: disable=no-member
