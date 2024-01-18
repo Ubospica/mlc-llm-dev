@@ -115,6 +115,9 @@ class BNFGrammarNode : public Object {
             static_cast<size_t>(end_index - start_index)};
   }
 
+  /*! \brief Whether the grammar can generate empty string. */
+  bool CanBeEmpty() const { return can_be_empty_; }
+
   static constexpr const char* _type_key = "mlc.serve.BNFGrammar";
   static constexpr const bool _type_has_method_sequal_reduce = false;
   static constexpr const bool _type_has_method_shash_reduce = false;
@@ -128,6 +131,7 @@ class BNFGrammarNode : public Object {
   /*! \brief The start index of every rule_expr in rule_expr_data_. rule_expr_id corresponds the
    * index of this vector. */
   std::vector<int32_t> rule_expr_indptr_;
+  bool can_be_empty_;
 
   friend class BNFGrammarBuilder;
   friend class BNFGrammarJSONSerializer;

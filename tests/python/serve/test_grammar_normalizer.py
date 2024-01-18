@@ -48,14 +48,17 @@ a ::= ((b))
     assert after == expected
 
 
-def test_main_first():
-    before = """b ::= "a"
-a ::= b
-main ::= a
+def test_main_normalizer():
+    before = """b ::= "b"
+a ::= "a" b
+main ::= "d" a c
+c ::= "c" main | ""
 """
-    expected = """main ::= ((a))
-b ::= (([a]))
-a ::= ((b))
+    expected = """main ::= (([d] a) | ([d] a c))
+main_1 ::= (([d] a) | ([d] a c))
+b ::= (([b]))
+a ::= (([a] b))
+c ::= (([c] main_1))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
@@ -103,31 +106,52 @@ u2 ::= (([b]) | ([c]))
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
-    print(after)
     assert after == expected
 
 
 def test_left_recursion():
-    before = """main ::= l1 | l2_0 | l3_0
+    before = """main ::= "a" l1 | "b" l2_0 | "c" l3_0 | "d" l4_3
 l1 ::= l1 "a" | "b"
 l2_0 ::= l2_1 "a" | "b"
-l2_1 ::= l2_1 "c" | l2_0 "d" | ""
+l2_1 ::= l2_1 "c" | l2_0 "d" | "e"
 l3_0 ::= l3_1 l3_2 "e"
 l3_1 ::= ""
 l3_2 ::= l3_1 l3_2
+l4_0 ::= l4_1 "a"
+l4_1 ::= l4_2 "b"
+l4_2 ::= l4_3 "c"
+l4_3 ::= l4_0 "d"
 """
-    expected = """main ::= (([c]) | ([a]) | ([b]) | (u2 [a]) | (u2 [a]) | ([c]))
-u2 ::= (([b]) | ([c]))
+    expected = """main ::= (([a] l1) | ([b] l2_0) | ([c] l3_0) | ([d] l4_3))
+l1 ::= (([b] l1_left_recursion))
+l2_0 ::= ((l2_1 [a]) | ([b]))
+l2_1 ::= (([b] [d] l2_1_left_recursion) | ([e] l2_1_left_recursion))
+l3_0 ::= (([e]))
+l4_1 ::= ((l4_2 [b]))
+l4_2 ::= ((l4_3 [c]))
+l4_3 ::= ((l4_1 [a] [d]))
+l1_left_recursion ::= ("" | ([a] l1_left_recursion))
+l2_1_left_recursion ::= ("" | ([c] l2_1_left_recursion) | ([a] [d] l2_1_left_recursion))
+
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
     print(after)
     assert after == expected
-
-
 test_left_recursion()
 exit()
+
+def test_empty():
+    before = """main ::= ""
+"""
+    expected = """main ::= ("")
+"""
+    bnf_grammar = BNFGrammar.from_ebnf_string(before)
+    normalized = bnf_grammar.to_normalized()
+    after = normalized.to_string()
+    print(after)
+    assert after == expected
 
 
 def test_error():
