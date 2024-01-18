@@ -36,7 +36,11 @@ class BNFGrammarBuilder {
    * \param grammar The existing grammar.
    */
   explicit BNFGrammarBuilder(const BNFGrammar& grammar)
-      : grammar_(make_object<BNFGrammarNode>(*grammar.get())) {}
+      : grammar_(make_object<BNFGrammarNode>(*grammar.get())) {
+    // for (size_t i = 0; i < grammar_->rules_.size(); ++i) {
+    //   rule_name_to_id_[grammar_->rules_[i].name] = i;
+    // }
+  }
 
   /*! \brief Get the result grammar. */
   BNFGrammar Get() { return BNFGrammar(grammar_); }
@@ -49,6 +53,7 @@ class BNFGrammarBuilder {
     grammar_->rule_expr_data_.push_back(static_cast<int32_t>(rule_expr.kind));
     grammar_->rule_expr_data_.insert(grammar_->rule_expr_data_.end(), rule_expr.data,
                                      rule_expr.data + rule_expr.data_len);
+    std::cout << "after size: " << grammar_->rule_expr_data_.size() << std::endl;
     return static_cast<int32_t>(grammar_->rule_expr_indptr_.size()) - 1;
   }
 
@@ -61,24 +66,20 @@ class BNFGrammarBuilder {
     int32_t upper;
   };
 
-  /*! \brief Add a RuleExpr for character range.*/
-  int32_t AddCharacterRange(const std::vector<CharacterRangeElement>& elements) {
+  /*!
+   * \brief Add a RuleExpr for character range.
+   * \param elements A vector of CharacterRangeElement, each containing a lower and a upper bound.
+   * \param is_neg_range Whether the character range is negated.
+   */
+  int32_t AddCharacterRange(const std::vector<CharacterRangeElement>& elements,
+                            bool is_neg_range = false) {
     std::vector<int32_t> data;
     for (const auto& range : elements) {
       data.push_back(range.lower);
       data.push_back(range.upper);
     }
-    return AddRuleExpr({DataKind::kCharacterRange, data.data(), data.size()});
-  }
-
-  /*! \brief Add a RuleExpr for character range negation.*/
-  int32_t AddNegCharacterRange(const std::vector<CharacterRangeElement>& elements) {
-    std::vector<int32_t> data;
-    for (const auto& range : elements) {
-      data.push_back(range.lower);
-      data.push_back(range.upper);
-    }
-    return AddRuleExpr({DataKind::kNegCharacterRange, data.data(), data.size()});
+    auto kind = is_neg_range ? DataKind::kNegCharacterRange : DataKind::kCharacterRange;
+    return AddRuleExpr({kind, data.data(), data.size()});
   }
 
   /*! \brief Add a RuleExpr for empty string.*/

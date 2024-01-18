@@ -183,7 +183,7 @@ int32_t EBNFParserImpl::ParseCharacterRange() {
     }
   }
 
-  return builder_.AddCharacterRange(elements);
+  return builder_.AddCharacterRange(elements, is_not_range);
 }
 
 // parse a c style string with utf8 support

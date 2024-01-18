@@ -44,13 +44,13 @@ d_1 ::= [d] | ""
 
 
 def test_char():
-    before = r"""main ::= [a-z] [A-z] "\u0234" "\U00000345\xff" [-A-Z] [--] rest
+    before = r"""main ::= [a-z] [A-z] "\u0234" "\U00000345\xff" [-A-Z] [--] [^a] rest
 rest ::= [a-zA-Z0-9-] [\u0234-\U00000345] [测-试] [\--\]]  rest1
 rest1 ::= "\?\"\'测试あc" "👀" ""
 """
-    expected = r"""main ::= [a-z] [A-z] [\u0234] ([\u0345] [\u00ff]) [\-A-Z] [\-\-] rest
-rest ::= [a-zA-Z0-9\-] [\u0234-\u0345] [\u6d4b-\u8bd5] [\--\]] rest1
-rest1 ::= ([\?] [\"] [\'] [\u6d4b] [\u8bd5] [\u3042] [c]) [\U0001f440] ""
+    expected = r"""main ::= (([a-z] [A-z] ([\u0234]) ([\u0345] [\u00ff]) [\-A-Z] [\-\-] [^a] rest))
+rest ::= (([a-zA-Z0-9\-] [\u0234-\u0345] [\u6d4b-\u8bd5] [\--\]] rest1))
+rest1 ::= ((([\?] [\"] [\'] [\u6d4b] [\u8bd5] [\u3042] [c]) ([\U0001f440]) ""))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()

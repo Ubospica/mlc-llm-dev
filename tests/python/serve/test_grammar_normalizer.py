@@ -151,6 +151,22 @@ def test_empty():
     assert after == expected
 
 
+def test_sequence_rule_inliner():
+    before = """main ::= "a" b | "d" c
+b ::= "b" c
+c ::= "c" d
+d ::= "d"
+"""
+    expected = """main ::= ("")
+"""
+    bnf_grammar = BNFGrammar.from_ebnf_string(before)
+    normalized = bnf_grammar.to_normalized()
+    after = normalized.to_string()
+    print(after)
+    assert after == expected
+
+test_sequence_rule_inliner()
+exit()
 def test_error():
     with pytest.raises(TVMError, match="Rule a is not defined at line 1, column 11"):
         BNFGrammar.from_ebnf_string("main ::= a b")
