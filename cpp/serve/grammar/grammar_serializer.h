@@ -54,6 +54,8 @@ class BNFGrammarPrinter : public BNFGrammarSerializer {
 
   /*! \brief Print a rule. */
   std::string PrintRule(const Rule& rule);
+  /*! \brief Print a rule corresponding to the given id. */
+  std::string PrintRule(int32_t rule_id);
   /*! \brief Print a RuleExpr. */
   std::string PrintRuleExpr(const RuleExpr& rule_expr);
   /*! \brief Print a RuleExpr corresponding to the given id. */

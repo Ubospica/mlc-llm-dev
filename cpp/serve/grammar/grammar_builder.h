@@ -190,6 +190,9 @@ class BNFGrammarBuilder {
     }
   }
 
+  void SetCanBeEmpty() const { grammar_->can_be_empty_ = true; }
+  bool CanBeEmpty() const { return grammar_->can_be_empty_; }
+
  private:
   // Mutable pointer to the grammar object.
   ObjectPtr<BNFGrammarNode> grammar_;

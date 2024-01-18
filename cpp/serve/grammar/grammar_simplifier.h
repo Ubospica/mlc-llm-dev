@@ -166,6 +166,135 @@ class SingleElementSequenceOrChoiceEliminator : public BNFGrammarMutator<int32_t
   }
 };
 
+class RuleVisitGraph {
+ public:
+  RuleVisitGraph() = default;
+  explicit RuleVisitGraph(int num_rules) : in_edges_(num_rules), out_edges_(num_rules) {}
+  void AddEdge(int32_t from, int32_t to) {
+    out_edges_[from].push_back(to);
+    in_edges_[to].push_back(from);
+  }
+  const std::vector<int32_t>& GetOutEdges(int32_t from) const { return out_edges_[from]; }
+  const std::vector<int32_t>& GetInEdges(int32_t to) const { return in_edges_[to]; }
+  std::string ToString() const {
+    std::string result;
+    for (int i = 0; i < static_cast<int>(out_edges_.size()); ++i) {
+      result += std::to_string(i) + ": [";
+      for (auto j = out_edges_[i].begin(); j != out_edges_[i].end(); ++j) {
+        result += std::to_string(*j);
+        if (j + 1 != out_edges_[i].end()) {
+          result += ", ";
+        }
+      }
+      result += "]\n";
+    }
+    return result;
+  }
+
+ private:
+  std::vector<std::vector<int32_t>> in_edges_;
+  std::vector<std::vector<int32_t>> out_edges_;
+};
+
+class RuleReachGraphFinder : public BNFGrammarMutator<void, RuleVisitGraph> {
+ public:
+  using BNFGrammarMutator::BNFGrammarMutator;
+
+  RuleVisitGraph Apply() {
+    rule_visit_graph_ = RuleVisitGraph(grammar_->NumRules());
+    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+      auto rule = grammar_->GetRule(i);
+      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      cur_rule_id_ = i;
+      VisitExpr(rule_expr);
+    }
+    return rule_visit_graph_;
+  }
+
+ private:
+  void VisitRuleRef(const RuleExpr& rule_expr) {
+    rule_visit_graph_.AddEdge(cur_rule_id_, rule_expr[0]);
+  }
+
+  RuleVisitGraph rule_visit_graph_;
+  int32_t cur_rule_id_;
+};
+
+int32_t GetMainRuleId(const BNFGrammar& grammar) {
+  for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
+    if (grammar->GetRule(i).name == "main") {
+      return i;
+    }
+  }
+  LOG(FATAL) << "The grammar should have a rule named \"main\"";
+}
+
+class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
+ public:
+  using BNFGrammarMutator::BNFGrammarMutator;
+  BNFGrammar Apply() final {
+    rule_visit_graph_ = RuleReachGraphFinder(grammar_).Apply();
+    main_rule_id_ = GetMainRuleId(grammar_);
+    FindRuleReachable();
+    RenumberRules();
+    BuildRuleBody();
+    return builder_.Get();
+  }
+
+ private:
+  void FindRuleReachable() {
+    rule_reachable_ = std::vector<bool>(grammar_->NumRules(), false);
+    std::unordered_set<int32_t> visited;
+    std::queue<int32_t> queue;
+    queue.push(main_rule_id_);
+    while (!queue.empty()) {
+      auto rule_id = queue.front();
+      queue.pop();
+      if (visited.count(rule_id)) {
+        continue;
+      }
+      visited.insert(rule_id);
+      rule_reachable_[rule_id] = true;
+      for (auto next_rule_id : rule_visit_graph_.GetOutEdges(rule_id)) {
+        queue.push(next_rule_id);
+      }
+    }
+  }
+
+  void RenumberRules() {
+    rule_id_map_.clear();
+    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+      if (rule_reachable_[i]) {
+        rule_id_map_[i] = builder_.AddEmptyRule(grammar_->GetRule(i).name);
+      }
+    }
+  }
+
+  void BuildRuleBody() {
+    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+      if (!rule_reachable_[i]) {
+        continue;
+      }
+      auto rule = grammar_->GetRule(i);
+      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto new_rule_expr_id = VisitExpr(rule_expr);
+      builder_.UpdateRuleBody(rule_id_map_[i], new_rule_expr_id);
+    }
+  }
+
+  int32_t VisitRuleRef(const RuleExpr& rule_expr) final {
+    auto rule_id = rule_expr[0];
+    ICHECK(rule_reachable_[rule_id]);
+    ICHECK(rule_id_map_.count(rule_id));
+    return builder_.AddRuleRef(rule_id_map_[rule_id]);
+  }
+
+  RuleVisitGraph rule_visit_graph_;
+  int32_t main_rule_id_;
+  std::vector<bool> rule_reachable_;
+  std::unordered_map<int32_t, int32_t> rule_id_map_;
+};
+
 class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
@@ -182,7 +311,7 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
       auto new_rule_expr_id = VisitRuleBody(rule_expr);
       builder_.UpdateRuleBody(i, new_rule_expr_id);
     }
-    return builder_.Get();
+    return UnreachableEliminator(builder_.Get()).Apply();
   }
 
  private:
@@ -315,153 +444,89 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
   std::string cur_rule_name_;
 };
 
-class RuleVisitGraph {
+class MainRuleNormalizer : public BNFGrammarMutator<int32_t, BNFGrammar> {
  public:
-  RuleVisitGraph() = default;
-  explicit RuleVisitGraph(int num_rules) : in_edges_(num_rules), out_edges_(num_rules) {}
-  void AddEdge(int32_t from, int32_t to) {
-    out_edges_[from].push_back(to);
-    in_edges_[to].push_back(from);
-  }
-  const std::vector<int32_t>& GetOutEdges(int32_t from) const { return out_edges_[from]; }
-  const std::vector<int32_t>& GetInEdges(int32_t to) const { return in_edges_[to]; }
-  std::string ToString() const {
-    std::string result;
-    for (int i = 0; i < static_cast<int>(out_edges_.size()); ++i) {
-      result += std::to_string(i) + ": [";
-      for (auto j = out_edges_[i].begin(); j != out_edges_[i].end(); ++j) {
-        result += std::to_string(*j);
-        if (j + 1 != out_edges_[i].end()) {
-          result += ", ";
-        }
-      }
-      result += "]\n";
-    }
-    return result;
-  }
+  MainRuleNormalizer(const BNFGrammar& grammar, bool grammar_can_be_empty)
+      : BNFGrammarMutator(grammar), grammar_can_be_empty_(grammar_can_be_empty) {}
 
- private:
-  std::vector<std::vector<int32_t>> in_edges_;
-  std::vector<std::vector<int32_t>> out_edges_;
-};
-
-class RuleReachGraphFinder : public BNFGrammarMutator<void, RuleVisitGraph> {
- public:
-  using BNFGrammarMutator::BNFGrammarMutator;
-
-  RuleVisitGraph Apply() {
-    rule_visit_graph_ = RuleVisitGraph(grammar_->NumRules());
-    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      cur_rule_id_ = i;
-      VisitExpr(rule_expr);
-    }
-    return rule_visit_graph_;
-  }
-
- private:
-  void VisitRuleRef(const RuleExpr& rule_expr) {
-    rule_visit_graph_.AddEdge(cur_rule_id_, rule_expr[0]);
-  }
-
-  RuleVisitGraph rule_visit_graph_;
-  int32_t cur_rule_id_;
-};
-
-class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
- public:
-  using BNFGrammarMutator::BNFGrammarMutator;
   BNFGrammar Apply() final {
     rule_visit_graph_ = RuleReachGraphFinder(grammar_).Apply();
-    FindMainRule();
-    FindRuleReachable();
+    main_rule_id_ = GetMainRuleId(grammar_);
     RenumberRules();
-    BuildRuleBody();
     return builder_.Get();
   }
 
  private:
-  void FindMainRule() {
-    root_rule_id_ = -1;
-    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      if (grammar_->GetRule(i).name == "main") {
-        ICHECK_EQ(root_rule_id_, -1);
-        root_rule_id_ = i;
-        break;
-      }
-    }
-    ICHECK_GE(root_rule_id_, 0);
-    CHECK(rule_visit_graph_.GetInEdges(root_rule_id_).empty()) << "Main rule should not be used.";
-  }
-
-  void FindRuleReachable() {
-    rule_reachable_ = std::vector<bool>(grammar_->NumRules(), false);
-    std::unordered_set<int32_t> visited;
-    std::queue<int32_t> queue;
-    queue.push(root_rule_id_);
-    while (!queue.empty()) {
-      auto rule_id = queue.front();
-      queue.pop();
-      if (visited.count(rule_id)) {
-        continue;
-      }
-      visited.insert(rule_id);
-      rule_reachable_[rule_id] = true;
-      for (auto next_rule_id : rule_visit_graph_.GetOutEdges(rule_id)) {
-        queue.push(next_rule_id);
-      }
-    }
-  }
-
   void RenumberRules() {
     rule_id_map_.clear();
-    rule_id_map_[root_rule_id_] = builder_.AddEmptyRule("main");
-    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      if (i == root_rule_id_) {
-        continue;
-      }
-      if (rule_reachable_[i]) {
-        rule_id_map_[i] = builder_.AddEmptyRule(grammar_->GetRule(i).name);
-      }
+    bool create_new_main = rule_visit_graph_.GetInEdges(main_rule_id_).size() > 0;
+    if (create_new_main) {
+      builder_.AddEmptyRule("main");
+      rule_id_map_[main_rule_id_] = builder_.AddEmptyRule(builder_.GetNewRuleName("main"));
+    } else {
+      rule_id_map_[main_rule_id_] = builder_.AddEmptyRule("main");
     }
-  }
 
-  void BuildRuleBody() {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      if (!rule_reachable_[i]) {
+      auto rule = grammar_->GetRule(i);
+      if (rule.name == "main") {
         continue;
       }
+      rule_id_map_[i] = builder_.AddEmptyRule(rule.name);
+    }
+
+    if (create_new_main) {
+      auto rule = grammar_->GetRule(main_rule_id_);
+      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      cur_rule_id_ = 0;
+      auto new_rule_expr_id = VisitExpr(rule_expr);
+      builder_.UpdateRuleBody(0, new_rule_expr_id);
+    }
+
+    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      cur_rule_id_ = rule_id_map_[i];
       auto new_rule_expr_id = VisitExpr(rule_expr);
       builder_.UpdateRuleBody(rule_id_map_[i], new_rule_expr_id);
     }
   }
 
-  int32_t VisitRuleRef(const RuleExpr& rule_expr) {
+  int32_t VisitChoices(const RuleExpr& rule_expr) final {
+    std::vector<int32_t> choice_ids;
+    for (int32_t i : rule_expr) {
+      choice_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
+    }
+    if (grammar_can_be_empty_ && cur_rule_id_ == 0) {
+      choice_ids.insert(choice_ids.begin(), builder_.AddEmptyStr());
+    }
+    return builder_.AddChoices(choice_ids);
+  }
+
+  int32_t VisitRuleRef(const RuleExpr& rule_expr) final {
     auto rule_id = rule_expr[0];
-    ICHECK(rule_reachable_[rule_id]);
     ICHECK(rule_id_map_.count(rule_id));
     return builder_.AddRuleRef(rule_id_map_[rule_id]);
   }
 
   RuleVisitGraph rule_visit_graph_;
-  int32_t root_rule_id_;
-  std::vector<bool> rule_reachable_;
+  int32_t main_rule_id_;
   std::unordered_map<int32_t, int32_t> rule_id_map_;
+  int32_t cur_rule_id_;
+  bool grammar_can_be_empty_;
 };
 
-class EpsilonEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
+class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGrammar, bool, bool>> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
-  BNFGrammar Apply() final {
+  std::tuple<BNFGrammar, bool, bool> Apply() final {
     rule_visit_graph_ = RuleReachGraphFinder(grammar_).Apply();
     CollectExplicitEpsilonRules();
     FindEpsilonRules();
     FindEpsilonOnlyRules();
     EliminateEpsilonRules();
-    return builder_.Get();
+    grammar_ = UnreachableEliminator(builder_.Get()).Apply();
+    return std::make_tuple(grammar_, grammar_can_be_empty_, grammar_must_be_empty_);
   }
 
  private:
@@ -557,6 +622,10 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       cur_rule_id_ = i;
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.AddRule(rule.name, new_rule_expr_id);
+      if (rule.name == "main") {
+        grammar_can_be_empty_ = epsilon_rule_id_set_.count(i);
+        grammar_must_be_empty_ = epsilon_only_rule_id_set_.count(i);
+      }
     }
   }
 
@@ -573,8 +642,8 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       ICHECK(choice_expr.kind == DataKind::kSequence);
       VisitSequenceInChoices(choice_expr, &new_choice_ids);
     }
-    if (new_choice_ids.empty() || (cur_rule_id_ == 0 && epsilon_rule_id_set_.count(0))) {
-      new_choice_ids.insert(new_choice_ids.begin(), builder_.AddEmptyStr());
+    if (new_choice_ids.empty()) {
+      new_choice_ids.push_back(builder_.AddEmptyStr());
     }
     return builder_.AddChoices(new_choice_ids);
   }
@@ -608,6 +677,8 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   RuleVisitGraph rule_visit_graph_;
   int32_t cur_rule_id_;
   std::vector<int32_t> cur_sequence_;
+  bool grammar_can_be_empty_ = false;
+  bool grammar_must_be_empty_ = false;
 };
 
 class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
@@ -636,7 +707,10 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.AddRule(rule.name, new_rule_expr_id);
     }
-    grammar_ = EpsilonEliminator(builder_.Get()).Apply();
+    bool grammar_can_be_empty, grammar_must_be_empty;
+    std::tie(grammar_, grammar_can_be_empty, grammar_must_be_empty) =
+        EpsilonEliminator(builder_.Get()).Apply();
+    ICHECK(!grammar_must_be_empty && !grammar_can_be_empty);
   }
 
   void Reset() {
@@ -654,14 +728,14 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       ICHECK(rule_expr.kind == DataKind::kChoices);
       for (auto j : rule_expr) {
         auto sequence_expr = grammar_->GetRuleExpr(j);
-        if (sequence_expr.kind != DataKind::kSequence || sequence_expr.data_len != 1) {
+        ICHECK(sequence_expr.kind == DataKind::kSequence);
+        if (sequence_expr.data_len != 1) {
           continue;
         }
         auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
         if (atom_expr.kind == DataKind::kRuleRef) {
           updated_ = true;
           unit_visit_graph_.AddEdge(i, atom_expr[0]);
-          std::cout << i << " " << atom_expr[0] << "\n";
         }
       }
     }
@@ -746,38 +820,64 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.UpdateRuleBody(i, new_rule_expr_id);
     }
-    std::cout << builder_.Get() << "\n";
     return UnreachableEliminator(builder_.Get()).Apply();
   }
 
  private:
   int32_t VisitChoices(const RuleExpr& rule_expr) final {
+    std::cout << "before rule: " << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_expr) << "\n";
     std::vector<int32_t> new_choice_ids;
     new_choice_ids = InlinePriorRules(rule_expr);
-    auto new_expr_id = builder_.AddChoices(new_choice_ids);
-    std::cout << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_expr_id) << "\n";
+    auto new_choice_id = builder_.AddChoices(new_choice_ids);
+    std::cout << "mid rule: " << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_choice_id)
+              << "\n";
     new_choice_ids = EliminateInstantLeftRecursion(new_choice_ids);
-    new_expr_id = builder_.AddChoices(new_choice_ids);
-    std::cout << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_expr_id) << "\n";
-    return new_expr_id;
+    new_choice_id = builder_.AddChoices(new_choice_ids);
+    std::cout << "after rule: " << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_choice_id)
+              << "\n";
+    return new_choice_id;
+    // return builder_.AddChoices(new_choice_ids);
   }
 
   std::vector<int32_t> InlinePriorRules(const RuleExpr& rule_expr) {
     std::vector<int32_t> new_choice_ids;
     for (auto i : rule_expr) {
-      auto choice_expr = grammar_->GetRuleExpr(i);
-      if (choice_expr.kind != DataKind::kSequence) {
-        new_choice_ids.push_back(VisitExpr(choice_expr));
+      new_choice_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
+    }
+    while (RequireInlinePriorRules(new_choice_ids)) {
+      new_choice_ids = InlinePriorRulesOnce(new_choice_ids);
+    }
+    return new_choice_ids;
+  }
+
+  bool RequireInlinePriorRules(const std::vector<int32_t>& choice_ids) {
+    auto check_sequence_start_with_prior_rule = [&](int32_t i) {
+      auto sequence_expr = grammar_->GetRuleExpr(i);
+      if (sequence_expr.kind != DataKind::kSequence) {
+        return false;
+      }
+      auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
+      return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] < cur_rule_id_;
+    };
+    return std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_start_with_prior_rule);
+  }
+
+  std::vector<int32_t> InlinePriorRulesOnce(const std::vector<int32_t>& choice_ids) {
+    std::vector<int32_t> new_choice_ids;
+    for (auto i : choice_ids) {
+      auto sequence_expr = grammar_->GetRuleExpr(i);
+      if (sequence_expr.kind != DataKind::kSequence) {
+        new_choice_ids.push_back(i);
         continue;
       }
-      auto atom_expr = grammar_->GetRuleExpr(choice_expr[0]);
+      auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
       if (atom_expr.kind != DataKind::kRuleRef || atom_expr[0] >= cur_rule_id_) {
-        new_choice_ids.push_back(VisitExpr(choice_expr));
+        new_choice_ids.push_back(i);
         continue;
       }
       std::vector<int32_t> rest_sequence;
-      for (auto j = 1; j < choice_expr.data_len; ++j) {
-        rest_sequence.push_back(VisitExpr(grammar_->GetRuleExpr(choice_expr[j])));
+      for (auto j = 1; j < sequence_expr.data_len; ++j) {
+        rest_sequence.push_back(VisitExpr(grammar_->GetRuleExpr(sequence_expr[j])));
       }
 
       auto choices_to_append = GetChoicesWithInlinedRule(atom_expr[0], rest_sequence);
@@ -795,31 +895,30 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
 
     ICHECK(referred_rule_expr.kind == DataKind::kChoices);
     for (auto j : referred_rule_expr) {
-      auto referred_choice_expr = grammar_->GetRuleExpr(j);
-      if (referred_choice_expr.kind == DataKind::kSequence) {
-        std::vector<int32_t> new_sequence_ids;
-        for (auto k : referred_choice_expr) {
-          new_sequence_ids.push_back(VisitExpr(grammar_->GetRuleExpr(k)));
-        }
-        new_sequence_ids.insert(new_sequence_ids.end(), rest_sequence.begin(), rest_sequence.end());
-        new_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
-      } else {
-        new_choice_ids.push_back(builder_.AddSequence(rest_sequence));
+      auto referred_sequence_expr = builder_.GetRuleExpr(j);
+      ICHECK(referred_sequence_expr.kind == DataKind::kSequence);
+      std::vector<int32_t> new_sequence_ids;
+      for (auto k : referred_sequence_expr) {
+        new_sequence_ids.push_back(VisitExpr(builder_.GetRuleExpr(k)));
       }
+      new_sequence_ids.insert(new_sequence_ids.end(), rest_sequence.begin(), rest_sequence.end());
+      new_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
     }
     return new_choice_ids;
   }
 
   std::vector<int32_t> EliminateInstantLeftRecursion(const std::vector<int32_t>& choice_ids) {
-    bool require_elimination = std::any_of(choice_ids.begin(), choice_ids.end(), [&](int32_t i) {
-      auto choice_expr = builder_.GetRuleExpr(i);
-      if (choice_expr.kind != DataKind::kSequence) {
+    auto check_sequence_left_recursion = [&](int32_t i) {
+      auto sequence_expr = builder_.GetRuleExpr(i);
+      if (sequence_expr.kind != DataKind::kSequence) {
         return false;
       }
-      auto atom_expr = builder_.GetRuleExpr(choice_expr[0]);
+      auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
       return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_;
-    });
+    };
 
+    bool require_elimination =
+        std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_left_recursion);
     if (!require_elimination) {
       return choice_ids;
     }
@@ -830,29 +929,151 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     new_rule_choice_ids.push_back(builder_.AddEmptyStr());
 
     for (auto i : choice_ids) {
-      auto choice_expr = builder_.GetRuleExpr(i);
-      if (choice_expr.kind != DataKind::kSequence) {
+      auto sequence_expr = builder_.GetRuleExpr(i);
+      if (sequence_expr.kind != DataKind::kSequence) {
         cur_rule_choice_ids.push_back(i);
         continue;
       }
-      auto atom_expr = builder_.GetRuleExpr(choice_expr[0]);
+      auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
       if (atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_) {
-        auto new_sequence_ids = std::vector<int32_t>(choice_expr.begin() + 1, choice_expr.end());
+        auto new_sequence_ids =
+            std::vector<int32_t>(sequence_expr.begin() + 1, sequence_expr.end());
         new_sequence_ids.push_back(builder_.AddRuleRef(new_rule_id));
         new_rule_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
       } else {
-        auto new_sequence_ids = std::vector<int32_t>(choice_expr.begin(), choice_expr.end());
+        auto new_sequence_ids = std::vector<int32_t>(sequence_expr.begin(), sequence_expr.end());
         new_sequence_ids.push_back(builder_.AddRuleRef(new_rule_id));
         cur_rule_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
       }
     }
-    builder_.UpdateRuleBody(cur_rule_id_, builder_.AddChoices(cur_rule_choice_ids));
-    return new_rule_choice_ids;
+    builder_.UpdateRuleBody(new_rule_id, builder_.AddChoices(new_rule_choice_ids));
+
+    return cur_rule_choice_ids;
   }
 
   int32_t cur_rule_id_;
   std::string cur_rule_name_;
 };
+
+// class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
+//  public:
+//   using BNFGrammarMutator::BNFGrammarMutator;
+//   BNFGrammar Apply() final {
+//     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+//       auto rule = grammar_->GetRule(i);
+//       builder_.AddEmptyRule(rule.name);
+//     }
+//     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+//       auto rule = grammar_->GetRule(i);
+//       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+//       ICHECK(rule_expr.kind == DataKind::kChoices);
+//       cur_rule_id_ = i;
+//       cur_rule_name_ = rule.name;
+//       auto new_rule_expr_id = VisitChoices(rule_expr);
+//       builder_.UpdateRuleBody(i, new_rule_expr_id);
+//     }
+//     return UnreachableEliminator(builder_.Get()).Apply();
+//   }
+
+//  private:
+//   int32_t VisitChoices(const RuleExpr& rule_expr) final {
+//     std::vector<int32_t> new_choice_ids;
+//     new_choice_ids = InlinePriorRules(rule_expr);
+//     auto new_expr_id = builder_.AddChoices(new_choice_ids);
+//     new_choice_ids = EliminateInstantLeftRecursion(new_choice_ids);
+//     new_expr_id = builder_.AddChoices(new_choice_ids);
+//     return new_expr_id;
+//   }
+
+//   std::vector<int32_t> InlinePriorRules(const RuleExpr& rule_expr) {
+//     std::vector<int32_t> new_choice_ids;
+//     for (auto i : rule_expr) {
+//       auto sequence_expr = grammar_->GetRuleExpr(i);
+//       if (sequence_expr.kind != DataKind::kSequence) {
+//         new_choice_ids.push_back(VisitExpr(sequence_expr));
+//         continue;
+//       }
+//       auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
+//       if (atom_expr.kind != DataKind::kRuleRef || atom_expr[0] >= cur_rule_id_) {
+//         new_choice_ids.push_back(VisitExpr(sequence_expr));
+//         continue;
+//       }
+//       std::vector<int32_t> rest_sequence;
+//       for (auto j = 1; j < sequence_expr.data_len; ++j) {
+//         rest_sequence.push_back(VisitExpr(grammar_->GetRuleExpr(sequence_expr[j])));
+//       }
+
+//       auto choices_to_append = GetChoicesWithInlinedRule(atom_expr[0], rest_sequence);
+//       new_choice_ids.insert(new_choice_ids.end(), choices_to_append.begin(),
+//                             choices_to_append.end());
+//     }
+//     return new_choice_ids;
+//   }
+
+//   std::vector<int32_t> GetChoicesWithInlinedRule(int32_t refered_rule_id,
+//                                                  std::vector<int32_t> rest_sequence) {
+//     std::vector<int32_t> new_choice_ids;
+//     auto referred_rule = builder_.GetRule(refered_rule_id);
+//     auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.rule_expr_id);
+
+//     ICHECK(referred_rule_expr.kind == DataKind::kChoices);
+//     for (auto j : referred_rule_expr) {
+//       auto referred_sequence_expr = builder_.GetRuleExpr(j);
+//       ICHECK(referred_sequence_expr.kind == DataKind::kSequence);
+//       std::vector<int32_t> new_sequence_ids;
+//       for (auto k : referred_sequence_expr) {
+//         new_sequence_ids.push_back(VisitExpr(builder_.GetRuleExpr(k)));
+//       }
+//       new_sequence_ids.insert(new_sequence_ids.end(), rest_sequence.begin(),
+//       rest_sequence.end()); new_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
+//     }
+//     return new_choice_ids;
+//   }
+
+//   std::vector<int32_t> EliminateInstantLeftRecursion(const std::vector<int32_t>& choice_ids) {
+//     auto check_sequence_left_recursion = [&](int32_t i) {
+//       auto sequence_expr = builder_.GetRuleExpr(i);
+//       if (sequence_expr.kind != DataKind::kSequence) {
+//         return false;
+//       }
+//       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
+//       return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_;
+//     };
+
+//     bool require_elimination =
+//         std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_left_recursion);
+//     if (!require_elimination) {
+//       return choice_ids;
+//     }
+
+//     auto new_rule_id = builder_.AddEmptyRule(cur_rule_name_ + "_left_recursion");
+//     std::vector<int32_t> cur_rule_choice_ids;
+//     std::vector<int32_t> new_rule_choice_ids;
+//     new_rule_choice_ids.push_back(builder_.AddEmptyStr());
+
+//     for (auto i : choice_ids) {
+//       auto sequence_expr = builder_.GetRuleExpr(i);
+//       ICHECK(sequence_expr.kind == DataKind::kSequence);
+//       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
+//       if (atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_) {
+//         auto new_sequence_ids =
+//             std::vector<int32_t>(sequence_expr.begin() + 1, sequence_expr.end());
+//         new_sequence_ids.push_back(builder_.AddRuleRef(new_rule_id));
+//         new_rule_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
+//       } else {
+//         auto new_sequence_ids = std::vector<int32_t>(sequence_expr.begin(), sequence_expr.end());
+//         new_sequence_ids.push_back(builder_.AddRuleRef(new_rule_id));
+//         cur_rule_choice_ids.push_back(builder_.AddSequence(new_sequence_ids));
+//       }
+//     }
+//     builder_.UpdateRuleBody(new_rule_id, builder_.AddChoices(new_rule_choice_ids));
+
+//     return cur_rule_choice_ids;
+//   }
+
+//   int32_t cur_rule_id_;
+//   std::string cur_rule_name_;
+// };
 
 class BNFGrammarNormalizer : public BNFGrammarMutator<void, BNFGrammar> {
  public:
@@ -860,15 +1081,21 @@ class BNFGrammarNormalizer : public BNFGrammarMutator<void, BNFGrammar> {
 
   BNFGrammar Apply() final {
     grammar_ = BNFGrammarFlattener(grammar_).Apply();
-    // std::cout << "1st finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
-    grammar_ = UnreachableEliminator(grammar_).Apply();
-    // std::cout << "2nd finished\n";
-    grammar_ = EpsilonEliminator(grammar_).Apply();
-    grammar_ = UnreachableEliminator(grammar_).Apply();
+    std::cout << "1st finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
+    bool grammar_can_be_empty, grammar_must_be_empty;
+    std::cout << "2 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
+    std::tie(grammar_, grammar_can_be_empty, grammar_must_be_empty) =
+        EpsilonEliminator(grammar_).Apply();
+    std::cout << "3 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
+    if (grammar_must_be_empty) {
+      return grammar_;
+    }
     grammar_ = UnitProductionEliminator(grammar_).Apply();
-    grammar_ = UnreachableEliminator(grammar_).Apply();
+    std::cout << "4 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
     grammar_ = LeftRecursionEliminator(grammar_).Apply();
-    // grammar_ = UnreachableEliminator(grammar_).Apply();
+    std::cout << "5 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
+    grammar_ = MainRuleNormalizer(grammar_, grammar_can_be_empty).Apply();
+    std::cout << "6 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
     return grammar_;
   }
 };

@@ -21,6 +21,10 @@ std::string BNFGrammarPrinter::PrintRule(const Rule& rule) {
   return rule.name + " ::= " + PrintRuleExpr(rule.rule_expr_id);
 }
 
+std::string BNFGrammarPrinter::PrintRule(int32_t rule_id) {
+  return PrintRule(grammar_->GetRule(rule_id));
+}
+
 std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
   std::string result;
   switch (rule_expr.kind) {
