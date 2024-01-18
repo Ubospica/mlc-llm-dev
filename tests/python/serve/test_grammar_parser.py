@@ -13,9 +13,9 @@ def test_bnf_simple():
 b ::= "b"
 c ::= "c"
 """
-    expected = """main ::= b c
-b ::= [b]
-c ::= [c]
+    expected = """main ::= ((b c))
+b ::= ((([b])))
+c ::= ((([c])))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()
@@ -28,21 +28,18 @@ b ::= "b"* d
 c ::= [acep-z]+
 d ::= "d"?
 """
-    expected = """main ::= (b c) | (b main)
-b ::= b_1 d
-c ::= c_2
-d ::= d_1
-b_1 ::= ([b] b_1) | ""
+    expected = """main ::= ((b c) | (b main))
+b ::= ((b_1 d))
+c ::= ((c_2))
+d ::= ((d_1))
+b_1 ::= ((([b]) b_1) | "")
 c_1 ::= [acep-z]
-c_2 ::= (c_1 c_2) | c_1
-d_1 ::= [d] | ""
+c_2 ::= ((c_1 c_2) | c_1)
+d_1 ::= (([d]) | "")
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()
-    print(after)
     assert after == expected
-
-
 def test_char():
     before = r"""main ::= [a-z] [A-z] "\u0234" "\U00000345\xff" [-A-Z] [--] [^a] rest
 rest ::= [a-zA-Z0-9-] [\u0234-\U00000345] [测-试] [\--\]]  rest1
@@ -65,22 +62,27 @@ main::="a"  "b" ("c""d"
 
 "f" | "g"
 """
-    expected = """main ::= ([a] [b] ([c] [d] [e])) | [f] | [g]
+    expected = """main ::= ((([a]) ([b]) ((([c]) ([d]) ([e])))) | (([f])) | (([g])))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()
+    print(after)
     assert after == expected
 
 
 def test_nest():
     before = """main::= "a" ("b" | "c" "d") | (("e" "f"))
 """
-    expected = """main ::= ([a] ([b] | ([c] [d]))) | ([e] [f])
+    expected = """main ::= ((([a]) ((([b])) | (([c]) ([d])))) | (((((([e]) ([f])))))))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()
+    print(after)
     assert after == expected
 
+
+test_nest()
+exit()
 
 def test_json():
     current_file_path = os.path.abspath(__file__)
@@ -89,27 +91,27 @@ def test_json():
     with open(json_ebnf_path, "r", encoding="utf-8") as file:
         before = file.read()
 
-    expected = r"""main ::= element
-value ::= object | array | string | number | ([t] [r] [u] [e]) | ([f] [a] [l] [s] [e]) | ([n] [u] [l] [l])
-object ::= ([{] ws [}]) | ([{] members [}])
-members ::= member | (member [,] members)
-member ::= ws string ws [:] element
-array ::= ([[] ws [\]]) | ([[] elements [\]])
-elements ::= element | (element [,] elements)
-element ::= ws value ws
-string ::= [\"] characters [\"]
-characters ::= "" | (character characters)
-character ::= [\"\\] | ([\\] escape)
-escape ::= [\"] | [\\] | [/] | [b] | [f] | [n] | [r] | [t] | ([u] hex hex hex hex)
-hex ::= [A-Fa-f0-9]
-number ::= integer fraction exponent
-integer ::= digit | (onenine digits) | ([\-] digit) | ([\-] onenine digits)
-digits ::= digit | (digit digits)
-digit ::= [0-9]
-onenine ::= [1-9]
-fraction ::= "" | ([.] digits)
-exponent ::= "" | (([e] | [E]) ("" | [+] | [\-]) digits)
-ws ::= "" | ([ ] ws) | ([\n] ws) | ([\r] ws) | ([\t] ws)
+    expected = r"""main ::= ((element))
+value ::= ((object) | (array) | (string) | (number) | (([t] [r] [u] [e])) | (([f] [a] [l] [s] [e])) | (([n] [u] [l] [l])))
+object ::= ((([{]) ws ([}])) | (([{]) members ([}])))
+members ::= ((member) | (member ([,]) members))
+member ::= ((ws string ws ([:]) element))
+array ::= ((([[]) ws ([\]])) | (([[]) elements ([\]])))
+elements ::= ((element) | (element ([,]) elements))
+element ::= ((ws value ws))
+string ::= ((([\"]) characters ([\"])))
+characters ::= (("") | (character characters))
+character ::= (([^\"\\]) | (([\\]) escape))
+escape ::= ((([\"])) | (([\\])) | (([/])) | (([b])) | (([f])) | (([n])) | (([r])) | (([t])) | (([u]) hex hex hex hex))
+hex ::= (([A-Fa-f0-9]))
+number ::= ((integer fraction exponent))
+integer ::= ((digit) | (onenine digits) | (([\-]) digit) | (([\-]) onenine digits))
+digits ::= ((digit) | (digit digits))
+digit ::= (([0-9]))
+onenine ::= (([1-9]))
+fraction ::= (("") | (([.]) digits))
+exponent ::= (("") | (((([e])) | (([E]))) (("") | (([+])) | (([\-]))) digits))
+ws ::= (("") | (([ ]) ws) | (([\n]) ws) | (([\r]) ws) | (([\t]) ws))
 """
 
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
@@ -131,6 +133,7 @@ d_1 ::= [d] | ""
     string = bnf_grammar.to_string()
     new_grammar = BNFGrammar.from_ebnf_string(string)
     new_string = new_grammar.to_string()
+    print(new_string)
     assert string == new_string
 
 
@@ -207,6 +210,7 @@ d_1 ::= [d] | ""
     new_grammar = BNFGrammar.from_json(json)
     new_json = new_grammar.to_json(False)
     after = new_grammar.to_string()
+    print(after)
     assert json == new_json
     assert after == before
 

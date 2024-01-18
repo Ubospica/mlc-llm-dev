@@ -111,7 +111,6 @@ class BNFGrammarNode : public Object {
       end_index = rule_expr_indptr_[rule_expr_id + 1];
     }
     ICHECK_GE(end_index, start_index);
-    std::cout << "end index: " << end_index << " " << rule_expr_data_.size() << std::endl;
     return {kind, rule_expr_data_.data() + start_index,
             static_cast<size_t>(end_index - start_index)};
   }

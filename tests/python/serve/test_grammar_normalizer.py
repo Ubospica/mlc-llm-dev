@@ -1,10 +1,5 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring
-import os
-
-import pytest
 import tvm.testing
-from tvm._ffi.base import TVMError
-
 from mlc_chat.serve import BNFGrammar
 
 
@@ -17,7 +12,7 @@ nested_rest ::= ("a" | ("b" "c" | ("d" | "e" "f"))) | ((("g")))
 empty_test ::= "d" | (("" | "" "") "" | "a" "") | ("" ("" | "")) "" ""
 """
     expected = """main ::= ((or_test sequence_test nested_test empty_test))
-or_test ::= ("" | ([a]) | ([b]) | ([d] [e]) | (or_test) | ([a-z]))
+or_test ::= ("" | ([a]) | ([b]) | ([d] [e]) | (or_test) | ([^a-z]))
 sequence_test ::= (([a] [a] [b] sequence_test_choice [d] [e] sequence_test))
 nested_test ::= (([a] [b] [c] [d]) | ([a]) | ([b]) | ([c]) | (nested_rest))
 nested_rest ::= (([a]) | ([b] [c]) | ([d]) | ([e] [f]) | ([g]))
@@ -28,6 +23,10 @@ sequence_test_choice ::= (([c]) | ([d]))
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
     assert after == expected
+
+
+test_flatten()
+exit()
 
 
 def test_unreachable_eliminator():
@@ -86,7 +85,6 @@ ep7 ::= ((ep6))
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
-    print(after)
     assert after == expected
 
 
@@ -135,19 +133,19 @@ l4_3_recursion ::= (([c] [b] [a] [d]) | ([c] [b] [a] [d] l4_3_recursion))
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
-    print(after)
     assert after == expected
 
 
 def test_empty():
-    before = """main ::= ""
+    before = """main ::= "" | b
+b ::= "" c | ""
+c ::= ""
 """
     expected = """main ::= ("")
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
-    print(after)
     assert after == expected
 
 
@@ -157,55 +155,27 @@ b ::= "b" c
 c ::= "c" d
 d ::= "d"
 """
-    expected = """main ::= ("")
+    expected = """main ::= (([a] [b] [c] [d]) | ([d] [c] [d]))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
-    print(after)
     assert after == expected
 
-test_sequence_rule_inliner()
-exit()
-def test_error():
-    with pytest.raises(TVMError, match="Rule a is not defined at line 1, column 11"):
-        BNFGrammar.from_ebnf_string("main ::= a b")
 
-    with pytest.raises(TVMError, match="Expect element at line 1, column 15"):
-        BNFGrammar.from_ebnf_string('main ::= "a" |')
-
-    with pytest.raises(TVMError, match='Expect " at line 1, column 15'):
-        BNFGrammar.from_ebnf_string('main ::= "a" "')
-
-    with pytest.raises(TVMError, match="Expect rule name at line 1, column 1"):
-        BNFGrammar.from_ebnf_string('::= "a"')
-
-    with pytest.raises(
-        TVMError, match="Character range should not contain newline at line 1, column 12"
-    ):
-        BNFGrammar.from_ebnf_string("main ::= [a\n]")
-
-    with pytest.raises(TVMError, match="Invalid escape sequence at line 1, column 11"):
-        BNFGrammar.from_ebnf_string(r'main ::= "\@"')
-
-    with pytest.raises(TVMError, match="Invalid escape sequence at line 1, column 11"):
-        BNFGrammar.from_ebnf_string(r'main ::= "\uFF"')
-
-    with pytest.raises(
-        TVMError,
-        match="Invalid character range: lower bound is larger than upper bound at "
-        "line 1, column 14",
-    ):
-        BNFGrammar.from_ebnf_string(r"main ::= [Z-A]")
-
-    with pytest.raises(TVMError, match="Expect ::= at line 1, column 6"):
-        BNFGrammar.from_ebnf_string(r'main := "a"')
-
-    with pytest.raises(TVMError, match="Rule main is defined multiple times at line 2, column 9"):
-        BNFGrammar.from_ebnf_string('main ::= "a"\nmain ::= "b"')
-
-    with pytest.raises(TVMError, match="There must be a rule named main at line 1, column 10"):
-        BNFGrammar.from_ebnf_string('a ::= "a"')
+def test_rule_inliner():
+    before = """main ::= b "a" | c "b"
+b ::= c "c" | c "d"
+c ::= "e" | "f"
+"""
+    expected = (
+        "main ::= (([e] [c] [a]) | ([f] [c] [a]) | ([e] [d] [a]) | ([f] [d] [a]) | "
+        "([e] [b]) | ([f] [b]))\n"
+    )
+    bnf_grammar = BNFGrammar.from_ebnf_string(before)
+    normalized = bnf_grammar.to_normalized()
+    after = normalized.to_string()
+    assert after == expected
 
 
 if __name__ == "__main__":

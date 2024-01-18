@@ -53,7 +53,6 @@ class BNFGrammarBuilder {
     grammar_->rule_expr_data_.push_back(static_cast<int32_t>(rule_expr.kind));
     grammar_->rule_expr_data_.insert(grammar_->rule_expr_data_.end(), rule_expr.data,
                                      rule_expr.data + rule_expr.data_len);
-    std::cout << "after size: " << grammar_->rule_expr_data_.size() << std::endl;
     return static_cast<int32_t>(grammar_->rule_expr_indptr_.size()) - 1;
   }
 
