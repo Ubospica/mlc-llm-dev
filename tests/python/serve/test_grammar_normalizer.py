@@ -120,27 +120,24 @@ l3_2 ::= l3_1 l3_2
 l4_0 ::= l4_1 "a"
 l4_1 ::= l4_2 "b"
 l4_2 ::= l4_3 "c"
-l4_3 ::= l4_0 "d"
+l4_3 ::= l4_0 "d" | "e"
 """
     expected = """main ::= (([a] l1) | ([b] l2_0) | ([c] l3_0) | ([d] l4_3))
-l1 ::= (([b] l1_left_recursion))
+l1 ::= (([b]) | ([b] l1_recursion))
 l2_0 ::= ((l2_1 [a]) | ([b]))
-l2_1 ::= (([b] [d] l2_1_left_recursion) | ([e] l2_1_left_recursion))
+l2_1 ::= (([b] [d]) | ([b] [d] l2_1_recursion) | ([e]) | ([e] l2_1_recursion))
 l3_0 ::= (([e]))
-l4_1 ::= ((l4_2 [b]))
-l4_2 ::= ((l4_3 [c]))
-l4_3 ::= ((l4_1 [a] [d]))
-l1_left_recursion ::= ("" | ([a] l1_left_recursion))
-l2_1_left_recursion ::= ("" | ([c] l2_1_left_recursion) | ([a] [d] l2_1_left_recursion))
-
+l4_3 ::= (([e]) | ([e] l4_3_recursion))
+l1_recursion ::= (([a]) | ([a] l1_recursion))
+l2_1_recursion ::= (([c]) | ([c] l2_1_recursion) | ([a] [d]) | ([a] [d] l2_1_recursion))
+l4_3_recursion ::= (([c] [b] [a] [d]) | ([c] [b] [a] [d] l4_3_recursion))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     normalized = bnf_grammar.to_normalized()
     after = normalized.to_string()
     print(after)
     assert after == expected
-test_left_recursion()
-exit()
+
 
 def test_empty():
     before = """main ::= ""
