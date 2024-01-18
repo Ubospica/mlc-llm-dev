@@ -820,23 +820,18 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.UpdateRuleBody(i, new_rule_expr_id);
     }
-    return UnreachableEliminator(builder_.Get()).Apply();
+    bool grammar_can_be_empty, grammar_must_be_empty;
+    std::tie(grammar_, grammar_can_be_empty, grammar_must_be_empty) =
+        EpsilonEliminator(builder_.Get()).Apply();
+    ICHECK(!grammar_must_be_empty && !grammar_can_be_empty);
+    return grammar_;
   }
 
  private:
   int32_t VisitChoices(const RuleExpr& rule_expr) final {
-    std::cout << "before rule: " << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_expr) << "\n";
-    std::vector<int32_t> new_choice_ids;
-    new_choice_ids = InlinePriorRules(rule_expr);
-    auto new_choice_id = builder_.AddChoices(new_choice_ids);
-    std::cout << "mid rule: " << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_choice_id)
-              << "\n";
+    std::vector<int32_t> new_choice_ids = InlinePriorRules(rule_expr);
     new_choice_ids = EliminateInstantLeftRecursion(new_choice_ids);
-    new_choice_id = builder_.AddChoices(new_choice_ids);
-    std::cout << "after rule: " << BNFGrammarPrinter(builder_.Get()).PrintRuleExpr(new_choice_id)
-              << "\n";
-    return new_choice_id;
-    // return builder_.AddChoices(new_choice_ids);
+    return builder_.AddChoices(new_choice_ids);
   }
 
   std::vector<int32_t> InlinePriorRules(const RuleExpr& rule_expr) {
@@ -852,11 +847,11 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
 
   bool RequireInlinePriorRules(const std::vector<int32_t>& choice_ids) {
     auto check_sequence_start_with_prior_rule = [&](int32_t i) {
-      auto sequence_expr = grammar_->GetRuleExpr(i);
+      auto sequence_expr = builder_.GetRuleExpr(i);
       if (sequence_expr.kind != DataKind::kSequence) {
         return false;
       }
-      auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
+      auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
       return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] < cur_rule_id_;
     };
     return std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_start_with_prior_rule);
@@ -865,19 +860,19 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::vector<int32_t> InlinePriorRulesOnce(const std::vector<int32_t>& choice_ids) {
     std::vector<int32_t> new_choice_ids;
     for (auto i : choice_ids) {
-      auto sequence_expr = grammar_->GetRuleExpr(i);
+      auto sequence_expr = builder_.GetRuleExpr(i);
       if (sequence_expr.kind != DataKind::kSequence) {
         new_choice_ids.push_back(i);
         continue;
       }
-      auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
+      auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
       if (atom_expr.kind != DataKind::kRuleRef || atom_expr[0] >= cur_rule_id_) {
         new_choice_ids.push_back(i);
         continue;
       }
       std::vector<int32_t> rest_sequence;
       for (auto j = 1; j < sequence_expr.data_len; ++j) {
-        rest_sequence.push_back(VisitExpr(grammar_->GetRuleExpr(sequence_expr[j])));
+        rest_sequence.push_back(VisitExpr(builder_.GetRuleExpr(sequence_expr[j])));
       }
 
       auto choices_to_append = GetChoicesWithInlinedRule(atom_expr[0], rest_sequence);
@@ -908,7 +903,7 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   }
 
   std::vector<int32_t> EliminateInstantLeftRecursion(const std::vector<int32_t>& choice_ids) {
-    auto check_sequence_left_recursion = [&](int32_t i) {
+    auto check_sequence_is_left_recursion = [&](int32_t i) {
       auto sequence_expr = builder_.GetRuleExpr(i);
       if (sequence_expr.kind != DataKind::kSequence) {
         return false;
@@ -918,12 +913,12 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     };
 
     bool require_elimination =
-        std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_left_recursion);
+        std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_is_left_recursion);
     if (!require_elimination) {
       return choice_ids;
     }
 
-    auto new_rule_id = builder_.AddEmptyRule(cur_rule_name_ + "_left_recursion");
+    auto new_rule_id = builder_.AddEmptyRule(cur_rule_name_ + "_recursion");
     std::vector<int32_t> cur_rule_choice_ids;
     std::vector<int32_t> new_rule_choice_ids;
     new_rule_choice_ids.push_back(builder_.AddEmptyStr());
