@@ -40,6 +40,8 @@ d_1 ::= (([d]) | "")
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     after = bnf_grammar.to_string()
     assert after == expected
+
+
 def test_char():
     before = r"""main ::= [a-z] [A-z] "\u0234" "\U00000345\xff" [-A-Z] [--] [^a] rest
 rest ::= [a-zA-Z0-9-] [\u0234-\U00000345] [测-试] [\--\]]  rest1
@@ -80,9 +82,6 @@ def test_nest():
     print(after)
     assert after == expected
 
-
-test_nest()
-exit()
 
 def test_json():
     current_file_path = os.path.abspath(__file__)
@@ -131,10 +130,15 @@ d_1 ::= [d] | ""
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
     string = bnf_grammar.to_string()
+    print(string)
     new_grammar = BNFGrammar.from_ebnf_string(string)
     new_string = new_grammar.to_string()
     print(new_string)
     assert string == new_string
+
+
+test_to_string_roundtrip()
+exit()
 
 
 def test_error():

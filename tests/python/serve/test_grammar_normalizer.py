@@ -25,10 +25,6 @@ sequence_test_choice ::= (([c]) | ([d]))
     assert after == expected
 
 
-test_flatten()
-exit()
-
-
 def test_unreachable_eliminator():
     before = """main ::= a
 b ::= "a"
