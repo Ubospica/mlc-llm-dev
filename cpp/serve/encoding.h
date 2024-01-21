@@ -16,6 +16,8 @@ namespace serve {
 /*! \brief Represents a unicode codepoint. */
 using TCodepoint = int32_t;
 
+inline constexpr TCodepoint kMLCEOF = -1;
+
 /*!
  * \brief Convert a codepoint to a UTF-8 string.
  * \param codepoint The codepoint.
@@ -42,9 +44,9 @@ std::string CodepointToPrintable(
  */
 enum class CharHandlingError : TCodepoint {
   /*! \brief The UTF-8 string is invalid. */
-  kInvalidUtf8 = -1,
+  kInvalidUtf8 = -2,
   /*! \brief The escape sequence is invalid. */
-  kInvalidEscape = -2,
+  kInvalidEscape = -3,
 };
 
 /*!

@@ -2,7 +2,9 @@
  *  Copyright (c) 2023 by Contributors
  * \file serve/engine_state.cc
  */
+#ifndef PICOJSON_USE_INT64
 #define PICOJSON_USE_INT64
+#endif
 
 #include "engine_state.h"
 

@@ -39,7 +39,7 @@ class BNFGrammarSerializer {
 class BNFGrammarPrinter : public BNFGrammarSerializer {
  private:
   using Rule = BNFGrammarNode::Rule;
-  using DataKind = BNFGrammarNode::DataKind;
+  using RuleExprType = BNFGrammarNode::RuleExprType;
   using RuleExpr = BNFGrammarNode::RuleExpr;
 
  public:
