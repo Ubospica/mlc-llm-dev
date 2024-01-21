@@ -132,6 +132,7 @@ std::string EBNFParserImpl::ParseName(bool accept_empty) {
 // [\]] means ]
 // Character range should not contain newlines.
 int32_t EBNFParserImpl::ParseCharacterRange() {
+  static constexpr TCodepoint kUnknownUpperBound = -4;
   static const std::unordered_map<std::string, TCodepoint> kCustomEscapeMap = {{"\\-", '-'},
                                                                                {"\\]", ']'}};
 
@@ -172,13 +173,13 @@ int32_t EBNFParserImpl::ParseCharacterRange() {
       past_is_hyphen = false;
       ICHECK(past_is_single_char == false);
     } else {
-      elements.push_back({codepoint, -1});
+      elements.push_back({codepoint, kUnknownUpperBound});
       past_is_single_char = true;
     }
   }
 
   for (auto& element : elements) {
-    if (element.upper == -1) {
+    if (element.upper == kUnknownUpperBound) {
       element.upper = element.lower;
     }
   }
@@ -259,7 +260,6 @@ int32_t EBNFParserImpl::ParseElement() {
       ThrowParseError("Expect element");
     }
   }
-  return -1;
 }
 
 int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {

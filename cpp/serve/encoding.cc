@@ -37,6 +37,33 @@ std::string CodepointToUtf8(TCodepoint codepoint) {
   return utf8;
 }
 
+std::string CodepointToPrintable(
+    TCodepoint codepoint, const std::unordered_map<TCodepoint, std::string>& custom_escape_map) {
+  static const std::unordered_map<TCodepoint, std::string> kCodepointToEscape = {
+      {'\'', "\\\'"}, {'\"', "\\\""}, {'\?', "\\\?"}, {'\\', "\\\\"}, {'\a', "\\a"},
+      {'\b', "\\b"},  {'\f', "\\f"},  {'\n', "\\n"},  {'\r', "\\r"},  {'\t', "\\t"},
+      {'\v', "\\v"},  {'\0', "\\0"},  {'\x1B', "\\e"}};
+
+  if (auto it = custom_escape_map.find(codepoint); it != custom_escape_map.end()) {
+    return it->second;
+  }
+
+  if (auto it = kCodepointToEscape.find(codepoint); it != kCodepointToEscape.end()) {
+    return it->second;
+  }
+
+  if (codepoint >= 0x20 && codepoint <= 0x7E) {
+    return std::string({static_cast<char>(codepoint)});
+  }
+
+  // convert codepoint to hex
+  int width = codepoint <= 0xFFFF ? 4 : 8;
+  std::stringstream ss;
+  ss << std::setfill('0') << std::setw(width) << std::hex << codepoint;
+  auto hex = ss.str();
+  return codepoint <= 0xFFFF ? "\\u" + hex : "\\U" + hex;
+}
+
 std::pair<TCodepoint, int> Utf8ToCodepoint(const char* utf8) {
   const std::array<int8_t, 5> kFirstByteMask = {0x00, 0x7F, 0x1F, 0x0F, 0x07};
   // clang-format off
@@ -75,33 +102,6 @@ std::pair<TCodepoint, int> Utf8ToCodepoint(const char* utf8) {
     res = (res << 6) | (static_cast<unsigned char>(utf8[i]) & 0x3F);
   }
   return {res, bytes};
-}
-
-std::string CodepointToPrintable(
-    TCodepoint codepoint, const std::unordered_map<TCodepoint, std::string>& custom_escape_map) {
-  static const std::unordered_map<TCodepoint, std::string> kCodepointToEscape = {
-      {'\'', "\\\'"}, {'\"', "\\\""}, {'\?', "\\\?"}, {'\\', "\\\\"}, {'\a', "\\a"},
-      {'\b', "\\b"},  {'\f', "\\f"},  {'\n', "\\n"},  {'\r', "\\r"},  {'\t', "\\t"},
-      {'\v', "\\v"},  {'\0', "\\0"},  {'\x1B', "\\e"}};
-
-  if (auto it = custom_escape_map.find(codepoint); it != custom_escape_map.end()) {
-    return it->second;
-  }
-
-  if (auto it = kCodepointToEscape.find(codepoint); it != kCodepointToEscape.end()) {
-    return it->second;
-  }
-
-  if (codepoint >= 0x20 && codepoint <= 0x7E) {
-    return std::string({static_cast<char>(codepoint)});
-  }
-
-  // convert codepoint to hex
-  int width = codepoint <= 0xFFFF ? 4 : 8;
-  std::stringstream ss;
-  ss << std::setfill('0') << std::setw(width) << std::hex << codepoint;
-  auto hex = ss.str();
-  return codepoint <= 0xFFFF ? "\\u" + hex : "\\U" + hex;
 }
 
 int HexCharToInt(char c) {

@@ -42,9 +42,9 @@ std::string CodepointToPrintable(
  */
 enum class CharHandlingError : TCodepoint {
   /*! \brief The UTF-8 string is invalid. */
-  kInvalidUtf8 = -1,
+  kInvalidUtf8 = -10,
   /*! \brief The escape sequence is invalid. */
-  kInvalidEscape = -2,
+  kInvalidEscape = -11,
 };
 
 /*!

@@ -1,19 +1,17 @@
-// /*!
-//  *  Copyright (c) 2023 by Contributors
-//  * \file serve/grammar/grammar.cc
-//  */
+/*!
+ *  Copyright (c) 2023 by Contributors
+ * \file serve/grammar/grammar.cc
+ */
 
-// #include "grammar_state.h"
+#include "grammar_state.h"
 
-// #include "grammar.h"
+namespace mlc {
+namespace llm {
+namespace serve {
 
-// namespace mlc {
-// namespace llm {
-// namespace serve {
-
-// TVM_REGISTER_OBJECT_TYPE(GrammarStateNode);
+TVM_REGISTER_OBJECT_TYPE(GrammarStateNode);
 
 
-// }  // namespace serve
-// }  // namespace llm
-// }  // namespace mlc
+}  // namespace serve
+}  // namespace llm
+}  // namespace mlc

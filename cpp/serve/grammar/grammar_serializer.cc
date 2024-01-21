@@ -27,21 +27,21 @@ std::string BNFGrammarPrinter::PrintRule(int32_t rule_id) {
 
 std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
   std::string result;
-  switch (rule_expr.kind) {
-    case DataKind::kCharacterRange:
+  switch (rule_expr.type) {
+    case RuleExprType::kCharacterRange:
       return PrintCharacterRange(rule_expr);
-    case DataKind::kNegCharacterRange:
+    case RuleExprType::kNegCharacterRange:
       return PrintCharacterRange(rule_expr);
-    case DataKind::kEmptyStr:
+    case RuleExprType::kEmptyStr:
       return PrintEmptyStr(rule_expr);
-    case DataKind::kRuleRef:
+    case RuleExprType::kRuleRef:
       return PrintRuleRef(rule_expr);
-    case DataKind::kSequence:
+    case RuleExprType::kSequence:
       return PrintSequence(rule_expr);
-    case DataKind::kChoices:
+    case RuleExprType::kChoices:
       return PrintChoices(rule_expr);
     default:
-      LOG(FATAL) << "Unexpected sequence kind: " << static_cast<int>(rule_expr.kind);
+      LOG(FATAL) << "Unexpected RuleExpr type: " << static_cast<int>(rule_expr.type);
   }
 }
 
@@ -53,7 +53,7 @@ std::string BNFGrammarPrinter::PrintCharacterRange(const RuleExpr& rule_expr) {
   static const std::unordered_map<TCodepoint, std::string> kCustomEscapeMap = {{'-', "\\-"},
                                                                                {']', "\\]"}};
   std::string result = "[";
-  if (rule_expr.kind == DataKind::kNegCharacterRange) {
+  if (rule_expr.type == RuleExprType::kNegCharacterRange) {
     result += "^";
   }
   for (auto i = 0; i < rule_expr.data_len; i += 2) {

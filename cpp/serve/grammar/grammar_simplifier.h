@@ -63,23 +63,23 @@ class BNFGrammarMutator {
  protected:
   using Rule = BNFGrammarNode::Rule;
   using RuleExpr = BNFGrammarNode::RuleExpr;
-  using DataKind = BNFGrammarNode::DataKind;
+  using RuleExprType = BNFGrammarNode::RuleExprType;
 
   virtual T VisitExpr(const RuleExpr& rule_expr) {
-    switch (rule_expr.kind) {
-      case DataKind::kSequence:
+    switch (rule_expr.type) {
+      case RuleExprType::kSequence:
         return VisitSequence(rule_expr);
-      case DataKind::kChoices:
+      case RuleExprType::kChoices:
         return VisitChoices(rule_expr);
-      case DataKind::kEmptyStr:
+      case RuleExprType::kEmptyStr:
         return VisitEmptyStr(rule_expr);
-      case DataKind::kCharacterRange:
-      case DataKind::kNegCharacterRange:
+      case RuleExprType::kCharacterRange:
+      case RuleExprType::kNegCharacterRange:
         return VisitCharacterRange(rule_expr);
-      case DataKind::kRuleRef:
+      case RuleExprType::kRuleRef:
         return VisitRuleRef(rule_expr);
       default:
-        LOG(FATAL) << "Unexpected sequence kind: " << static_cast<int>(rule_expr.kind);
+        LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
   }
 
@@ -329,19 +329,19 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
 
  private:
   int32_t VisitRuleBody(const RuleExpr& rule_expr) {
-    switch (rule_expr.kind) {
-      case DataKind::kSequence:
+    switch (rule_expr.type) {
+      case RuleExprType::kSequence:
         return builder_.AddChoices({builder_.AddSequence(VisitSequence(rule_expr))});
-      case DataKind::kChoices:
+      case RuleExprType::kChoices:
         return builder_.AddChoices(VisitChoices(rule_expr));
-      case DataKind::kEmptyStr:
+      case RuleExprType::kEmptyStr:
         return builder_.AddChoices({builder_.AddEmptyStr()});
-      case DataKind::kCharacterRange:
-      case DataKind::kNegCharacterRange:
-      case DataKind::kRuleRef:
+      case RuleExprType::kCharacterRange:
+      case RuleExprType::kNegCharacterRange:
+      case RuleExprType::kRuleRef:
         return builder_.AddChoices({builder_.AddSequence({builder_.AddRuleExpr(rule_expr)})});
       default:
-        LOG(FATAL) << "Unexpected sequence kind: " << static_cast<int>(rule_expr.kind);
+        LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
   }
 
@@ -350,23 +350,23 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
     bool found_empty = false;
     for (auto i : rule_expr) {
       auto choice_expr = grammar_->GetRuleExpr(i);
-      switch (choice_expr.kind) {
-        case DataKind::kSequence:
+      switch (choice_expr.type) {
+        case RuleExprType::kSequence:
           VisitSequenceInChoices(choice_expr, &new_choice_ids, &found_empty);
           break;
-        case DataKind::kChoices:
+        case RuleExprType::kChoices:
           VisitChoicesInChoices(choice_expr, &new_choice_ids, &found_empty);
           break;
-        case DataKind::kEmptyStr:
+        case RuleExprType::kEmptyStr:
           found_empty = true;
           break;
-        case DataKind::kCharacterRange:
-        case DataKind::kNegCharacterRange:
-        case DataKind::kRuleRef:
+        case RuleExprType::kCharacterRange:
+        case RuleExprType::kNegCharacterRange:
+        case RuleExprType::kRuleRef:
           VisitAtomInChoices(choice_expr, &new_choice_ids);
           break;
         default:
-          LOG(FATAL) << "Unexpected choice kind: " << static_cast<int>(choice_expr.kind);
+          LOG(FATAL) << "Unexpected choice type: " << static_cast<int>(choice_expr.type);
       }
     }
     if (found_empty) {
@@ -389,7 +389,7 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
   void VisitChoicesInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
                              bool* found_empty) {
     auto sub_choice_ids = VisitChoices(rule_expr);
-    bool contains_empty = builder_.GetRuleExpr(sub_choice_ids[0]).kind == DataKind::kEmptyStr;
+    bool contains_empty = builder_.GetRuleExpr(sub_choice_ids[0]).type == RuleExprType::kEmptyStr;
     if (contains_empty) {
       *found_empty = true;
       new_choice_ids->insert(new_choice_ids->end(), sub_choice_ids.begin() + 1,
@@ -408,22 +408,22 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
     std::vector<int32_t> new_sequence_ids;
     for (auto i : rule_expr) {
       auto seq_expr = grammar_->GetRuleExpr(i);
-      switch (seq_expr.kind) {
-        case DataKind::kSequence:
+      switch (seq_expr.type) {
+        case RuleExprType::kSequence:
           VisitSequenceInSequence(seq_expr, &new_sequence_ids);
           break;
-        case DataKind::kChoices:
+        case RuleExprType::kChoices:
           VisitChoiceInSequence(seq_expr, &new_sequence_ids);
           break;
-        case DataKind::kEmptyStr:
+        case RuleExprType::kEmptyStr:
           break;
-        case DataKind::kCharacterRange:
-        case DataKind::kNegCharacterRange:
-        case DataKind::kRuleRef:
+        case RuleExprType::kCharacterRange:
+        case RuleExprType::kNegCharacterRange:
+        case RuleExprType::kRuleRef:
           VisitAtomInSequence(seq_expr, &new_sequence_ids);
           break;
         default:
-          LOG(FATAL) << "Unexpected sequence kind: " << static_cast<int>(seq_expr.kind);
+          LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(seq_expr.type);
       }
     }
     return new_sequence_ids;
@@ -439,7 +439,7 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
     auto sub_choice_ids = VisitChoices(rule_expr);
     if (sub_choice_ids.size() == 1) {
       auto choice_element_expr = builder_.GetRuleExpr(sub_choice_ids[0]);
-      if (choice_element_expr.kind != DataKind::kEmptyStr) {
+      if (choice_element_expr.type != RuleExprType::kEmptyStr) {
         new_sequence_ids->insert(new_sequence_ids->end(), choice_element_expr.begin(),
                                  choice_element_expr.end());
       }
@@ -547,7 +547,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      if (grammar_->GetRuleExpr(rule_expr[0]).kind == DataKind::kEmptyStr) {
+      if (grammar_->GetRuleExpr(rule_expr[0]).type == RuleExprType::kEmptyStr) {
         epsilon_rule_id_set_.insert(i);
         if (rule_expr.data_len == 1) {
           epsilon_only_rule_id_set_.insert(i);
@@ -614,14 +614,15 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
 
   bool SubRuleExprIsEpsilon(const RuleExpr& sub_expr,
                             const std::unordered_set<int32_t>& epsilon_rule_id_set) {
-    if (sub_expr.kind == DataKind::kEmptyStr) {
+    if (sub_expr.type == RuleExprType::kEmptyStr) {
       return true;
     }
-    ICHECK(sub_expr.kind == DataKind::kSequence);
+    ICHECK(sub_expr.type == RuleExprType::kSequence);
 
     bool all_epsilon = std::all_of(sub_expr.begin(), sub_expr.end(), [&](int32_t i) {
       auto sub_sub_expr = grammar_->GetRuleExpr(i);
-      return sub_sub_expr.kind == DataKind::kRuleRef && epsilon_rule_id_set.count(sub_sub_expr[0]);
+      return sub_sub_expr.type == RuleExprType::kRuleRef &&
+             epsilon_rule_id_set.count(sub_sub_expr[0]);
     });
 
     return all_epsilon;
@@ -631,7 +632,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_expr.kind == DataKind::kChoices);
+      ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.AddRule(rule.name, new_rule_expr_id);
@@ -649,10 +650,10 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
     std::vector<int32_t> new_choice_ids;
     for (auto i : rule_expr) {
       auto choice_expr = grammar_->GetRuleExpr(i);
-      if (choice_expr.kind == DataKind::kEmptyStr) {
+      if (choice_expr.type == RuleExprType::kEmptyStr) {
         continue;
       }
-      ICHECK(choice_expr.kind == DataKind::kSequence);
+      ICHECK(choice_expr.type == RuleExprType::kSequence);
       VisitSequenceInChoices(choice_expr, &new_choice_ids);
     }
     if (new_choice_ids.empty()) {
@@ -670,10 +671,10 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
       return;
     }
     auto sub_expr = grammar_->GetRuleExpr(rule_expr[rule_iter]);
-    ICHECK(sub_expr.kind != DataKind::kEmptyStr);
-    if (sub_expr.kind == DataKind::kRuleRef && epsilon_only_rule_id_set_.count(sub_expr[0])) {
+    ICHECK(sub_expr.type != RuleExprType::kEmptyStr);
+    if (sub_expr.type == RuleExprType::kRuleRef && epsilon_only_rule_id_set_.count(sub_expr[0])) {
       VisitSequenceInChoices(rule_expr, new_choice_ids, rule_iter + 1);
-    } else if (sub_expr.kind == DataKind::kRuleRef && epsilon_rule_id_set_.count(sub_expr[0])) {
+    } else if (sub_expr.type == RuleExprType::kRuleRef && epsilon_rule_id_set_.count(sub_expr[0])) {
       VisitSequenceInChoices(rule_expr, new_choice_ids, rule_iter + 1);
       cur_sequence_.push_back(VisitExpr(sub_expr));
       VisitSequenceInChoices(rule_expr, new_choice_ids, rule_iter + 1);
@@ -715,7 +716,7 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_expr.kind == DataKind::kChoices);
+      ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
       auto new_rule_expr_id = VisitChoices(rule_expr);
       builder_.AddRule(rule.name, new_rule_expr_id);
@@ -738,15 +739,15 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_expr.kind == DataKind::kChoices);
+      ICHECK(rule_expr.type == RuleExprType::kChoices);
       for (auto j : rule_expr) {
         auto sequence_expr = grammar_->GetRuleExpr(j);
-        ICHECK(sequence_expr.kind == DataKind::kSequence);
+        ICHECK(sequence_expr.type == RuleExprType::kSequence);
         if (sequence_expr.data_len != 1) {
           continue;
         }
         auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
-        if (atom_expr.kind == DataKind::kRuleRef) {
+        if (atom_expr.type == RuleExprType::kRuleRef) {
           updated_ = true;
           unit_visit_graph_.AddEdge(i, atom_expr[0]);
         }
@@ -782,7 +783,7 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
       }
       auto rule = grammar_->GetRule(to);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_expr.kind == DataKind::kChoices);
+      ICHECK(rule_expr.type == RuleExprType::kChoices);
       auto choices_to_append = GetNonUnitChoices(rule_expr);
       new_choice_ids.insert(new_choice_ids.end(), choices_to_append.begin(),
                             choices_to_append.end());
@@ -797,9 +798,9 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     std::vector<int32_t> new_choice_ids;
     for (auto i : rule_expr) {
       auto choice_expr = grammar_->GetRuleExpr(i);
-      if (choice_expr.kind == DataKind::kSequence && choice_expr.data_len == 1) {
+      if (choice_expr.type == RuleExprType::kSequence && choice_expr.data_len == 1) {
         auto sub_expr = grammar_->GetRuleExpr(choice_expr[0]);
-        if (sub_expr.kind == DataKind::kRuleRef) {
+        if (sub_expr.type == RuleExprType::kRuleRef) {
           continue;
         }
       }
@@ -827,7 +828,7 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_expr.kind == DataKind::kChoices);
+      ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
       cur_rule_name_ = rule.name;
       auto new_rule_expr_id = VisitChoices(rule_expr);
@@ -856,11 +857,11 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   bool RequireInlinePriorRules(const std::vector<int32_t>& choice_ids) {
     auto check_sequence_start_with_prior_rule = [&](int32_t i) {
       auto sequence_expr = builder_.GetRuleExpr(i);
-      if (sequence_expr.kind != DataKind::kSequence) {
+      if (sequence_expr.type != RuleExprType::kSequence) {
         return false;
       }
       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
-      return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] < cur_rule_id_;
+      return atom_expr.type == RuleExprType::kRuleRef && atom_expr[0] < cur_rule_id_;
     };
     return std::any_of(choice_ids.begin(), choice_ids.end(), check_sequence_start_with_prior_rule);
   }
@@ -869,12 +870,12 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     std::vector<int32_t> new_choice_ids;
     for (auto i : choice_ids) {
       auto sequence_expr = builder_.GetRuleExpr(i);
-      if (sequence_expr.kind != DataKind::kSequence) {
+      if (sequence_expr.type != RuleExprType::kSequence) {
         new_choice_ids.push_back(i);
         continue;
       }
       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
-      if (atom_expr.kind != DataKind::kRuleRef || atom_expr[0] >= cur_rule_id_) {
+      if (atom_expr.type != RuleExprType::kRuleRef || atom_expr[0] >= cur_rule_id_) {
         new_choice_ids.push_back(i);
         continue;
       }
@@ -896,10 +897,10 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     auto referred_rule = builder_.GetRule(refered_rule_id);
     auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.rule_expr_id);
 
-    ICHECK(referred_rule_expr.kind == DataKind::kChoices);
+    ICHECK(referred_rule_expr.type == RuleExprType::kChoices);
     for (auto j : referred_rule_expr) {
       auto referred_sequence_expr = builder_.GetRuleExpr(j);
-      ICHECK(referred_sequence_expr.kind == DataKind::kSequence);
+      ICHECK(referred_sequence_expr.type == RuleExprType::kSequence);
       std::vector<int32_t> new_sequence_ids;
       for (auto k : referred_sequence_expr) {
         new_sequence_ids.push_back(VisitExpr(builder_.GetRuleExpr(k)));
@@ -913,11 +914,11 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::vector<int32_t> EliminateInstantLeftRecursion(const std::vector<int32_t>& choice_ids) {
     auto check_sequence_is_left_recursion = [&](int32_t i) {
       auto sequence_expr = builder_.GetRuleExpr(i);
-      if (sequence_expr.kind != DataKind::kSequence) {
+      if (sequence_expr.type != RuleExprType::kSequence) {
         return false;
       }
       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
-      return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_;
+      return atom_expr.type == RuleExprType::kRuleRef && atom_expr[0] == cur_rule_id_;
     };
 
     bool require_elimination =
@@ -933,12 +934,12 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
 
     for (auto i : choice_ids) {
       auto sequence_expr = builder_.GetRuleExpr(i);
-      if (sequence_expr.kind != DataKind::kSequence) {
+      if (sequence_expr.type != RuleExprType::kSequence) {
         cur_rule_choice_ids.push_back(i);
         continue;
       }
       auto atom_expr = builder_.GetRuleExpr(sequence_expr[0]);
-      if (atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == cur_rule_id_) {
+      if (atom_expr.type == RuleExprType::kRuleRef && atom_expr[0] == cur_rule_id_) {
         auto new_sequence_ids =
             std::vector<int32_t>(sequence_expr.begin() + 1, sequence_expr.end());
         new_sequence_ids.push_back(builder_.AddRuleRef(new_rule_id));
@@ -976,17 +977,17 @@ class SequenceRuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
         continue;
       }
       auto rule_body = grammar_->GetRuleExpr(rule.rule_expr_id);
-      ICHECK(rule_body.kind == DataKind::kChoices);
+      ICHECK(rule_body.type == RuleExprType::kChoices);
       if (rule_body.data_len > 1) {
         continue;
       }
       auto sequence_expr = grammar_->GetRuleExpr(rule_body[0]);
-      ICHECK(sequence_expr.kind == DataKind::kSequence);
+      ICHECK(sequence_expr.type == RuleExprType::kSequence);
 
       bool contain_self_ref =
           std::any_of(sequence_expr.begin(), sequence_expr.end(), [&](int32_t j) {
             auto atom_expr = grammar_->GetRuleExpr(j);
-            return atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == i;
+            return atom_expr.type == RuleExprType::kRuleRef && atom_expr[0] == i;
           });
       if (contain_self_ref) {
         continue;
@@ -1018,7 +1019,7 @@ class SequenceRuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
     std::vector<int32_t> new_sequence_ids;
     for (auto i : sequence_expr) {
       const auto atom_expr = grammar_->GetRuleExpr(i);
-      if (atom_expr.kind == DataKind::kRuleRef && atom_expr[0] == rule_to_inline_) {
+      if (atom_expr.type == RuleExprType::kRuleRef && atom_expr[0] == rule_to_inline_) {
         for (auto j : sequences_to_inline_) {
           new_sequence_ids.push_back(VisitExpr(grammar_->GetRuleExpr(j)));
         }
@@ -1059,12 +1060,12 @@ class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
     std::vector<int32_t> new_choice_ids;
     for (auto i : choices_expr) {
       auto sequence_expr = grammar_->GetRuleExpr(i);
-      if (sequence_expr.kind != DataKind::kSequence) {
+      if (sequence_expr.type != RuleExprType::kSequence) {
         new_choice_ids.push_back(VisitExpr(sequence_expr));
         continue;
       }
       auto atom_expr = grammar_->GetRuleExpr(sequence_expr[0]);
-      if (atom_expr.kind != DataKind::kRuleRef) {
+      if (atom_expr.type != RuleExprType::kRuleRef) {
         new_choice_ids.push_back(VisitExpr(sequence_expr));
         continue;
       }
@@ -1087,10 +1088,10 @@ class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
     auto referred_rule = builder_.GetRule(refered_rule_id);
     auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.rule_expr_id);
 
-    ICHECK(referred_rule_expr.kind == DataKind::kChoices);
+    ICHECK(referred_rule_expr.type == RuleExprType::kChoices);
     for (auto j : referred_rule_expr) {
       auto referred_sequence_expr = builder_.GetRuleExpr(j);
-      ICHECK(referred_sequence_expr.kind == DataKind::kSequence);
+      ICHECK(referred_sequence_expr.type == RuleExprType::kSequence);
       std::vector<int32_t> new_sequence_ids;
       for (auto k : referred_sequence_expr) {
         new_sequence_ids.push_back(VisitExpr(builder_.GetRuleExpr(k)));

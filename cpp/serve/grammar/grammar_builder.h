@@ -24,7 +24,7 @@ using namespace tvm::runtime;
 class BNFGrammarBuilder {
  public:
   using Rule = BNFGrammarNode::Rule;
-  using DataKind = BNFGrammarNode::DataKind;
+  using RuleExprType = BNFGrammarNode::RuleExprType;
   using RuleExpr = BNFGrammarNode::RuleExpr;
 
   /*! \brief Default constructor. Creates a new grammar object. */
@@ -50,7 +50,7 @@ class BNFGrammarBuilder {
   /*! \brief Add a rule_expr and return the rule_expr id. */
   int32_t AddRuleExpr(const RuleExpr& rule_expr) {
     grammar_->rule_expr_indptr_.push_back(grammar_->rule_expr_data_.size());
-    grammar_->rule_expr_data_.push_back(static_cast<int32_t>(rule_expr.kind));
+    grammar_->rule_expr_data_.push_back(static_cast<int32_t>(rule_expr.type));
     grammar_->rule_expr_data_.insert(grammar_->rule_expr_data_.end(), rule_expr.data,
                                      rule_expr.data + rule_expr.data_len);
     return static_cast<int32_t>(grammar_->rule_expr_indptr_.size()) - 1;
@@ -77,32 +77,32 @@ class BNFGrammarBuilder {
       data.push_back(range.lower);
       data.push_back(range.upper);
     }
-    auto kind = is_neg_range ? DataKind::kNegCharacterRange : DataKind::kCharacterRange;
-    return AddRuleExpr({kind, data.data(), data.size()});
+    auto type = is_neg_range ? RuleExprType::kNegCharacterRange : RuleExprType::kCharacterRange;
+    return AddRuleExpr({type, data.data(), data.size()});
   }
 
   /*! \brief Add a RuleExpr for empty string.*/
-  int32_t AddEmptyStr() { return AddRuleExpr({DataKind::kEmptyStr, nullptr, 0}); }
+  int32_t AddEmptyStr() { return AddRuleExpr({RuleExprType::kEmptyStr, nullptr, 0}); }
 
   /*! \brief Add a RuleExpr for rule reference.*/
   int32_t AddRuleRef(int32_t rule_id) {
     std::vector<int32_t> data;
     data.push_back(rule_id);
-    return AddRuleExpr({DataKind::kRuleRef, data.data(), data.size()});
+    return AddRuleExpr({RuleExprType::kRuleRef, data.data(), data.size()});
   }
 
   /*! \brief Add a RuleExpr for RuleExpr sequence.*/
   int32_t AddSequence(const std::vector<int32_t>& elements) {
     std::vector<int32_t> data;
     data.insert(data.end(), elements.begin(), elements.end());
-    return AddRuleExpr({DataKind::kSequence, data.data(), data.size()});
+    return AddRuleExpr({RuleExprType::kSequence, data.data(), data.size()});
   }
 
   /*! \brief Add a RuleExpr for RuleExpr choices.*/
   int32_t AddChoices(const std::vector<int32_t>& choices) {
     std::vector<int32_t> data;
     data.insert(data.end(), choices.begin(), choices.end());
-    return AddRuleExpr({DataKind::kChoices, data.data(), data.size()});
+    return AddRuleExpr({RuleExprType::kChoices, data.data(), data.size()});
   }
 
   size_t NumRuleExprs() const { return grammar_->NumRuleExprs(); }
