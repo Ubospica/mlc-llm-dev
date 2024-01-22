@@ -95,3 +95,13 @@ class BNFGrammar(Object):
             The normalized grammar.
         """
         return _ffi_api.BNFGrammarToNormalized(self)  # type: ignore  # pylint: disable=no-member
+
+    def match_string(self, input: str) -> bool:
+        """Whether the grammar can match a string.
+
+        Returns
+        -------
+        match : bool
+            Whether the grammar can match a string.
+        """
+        return _ffi_api.BNFGrammarMatchString(self, input)
