@@ -13,7 +13,7 @@ TVM_REGISTER_OBJECT_TYPE(GrammarMatcherNode);
 
 TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarMatchString")
     .set_body_typed([](BNFGrammar grammar, String input) {
-      return GrammarMatcher(grammar)->AcceptString(input);
+      return GrammarMatcher(grammar)->MatchCompleteString(input);
     });
 
 }  // namespace serve

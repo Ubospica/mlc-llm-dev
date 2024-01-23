@@ -101,7 +101,7 @@ struct RulePosition {
   /*! \brief The rule's id. */
   int32_t rule_id;
   /*! \brief Which choice in this rule is selected. */
-  int sequence_expr_id;
+  int sequence_id;
   /*! \brief Which element of the choice sequence is being visited. */
   int element_id;
 
@@ -109,30 +109,34 @@ struct RulePosition {
   int reference_count = 0;
 };
 
-template <typename T>
-class TypedElementBuffer {
+class RulePositionBuffer {
  public:
-  template <typename... Args>
-  int32_t Allocate(Args&&... args) {
+  int32_t Allocate(int32_t rule_id, int32_t sequence_id, int32_t element_id, int32_t parent_id,
+                   int32_t reference_count = 0) {
     int32_t id;
     if (free_nodes_.empty()) {
       buffer_.emplace_back();
       id = buffer_.size() - 1;
     } else {
       id = free_nodes_.back();
+      ICHECK(buffer_[id].rule_id == -1);
       free_nodes_.pop_back();
-      return id;
     }
-    buffer_[id] = T(std::forward<Args>(args)...);
+    buffer_[id] = RulePosition{rule_id, sequence_id, element_id, parent_id, reference_count};
     return id;
   }
 
-  void Free(int32_t id) { free_nodes_.push_back(id); }
+  void Free(int32_t id) {
+    ICHECK(buffer_[id].rule_id != -1);
+    buffer_[id] = RulePosition{-1, -1, -1, -1, 0};
+    free_nodes_.push_back(id);
+  }
 
-  T& operator[](int32_t id) { return buffer_[id]; }
+  RulePosition& operator[](int32_t id) { return buffer_[id]; }
+  const RulePosition& operator[](int32_t id) const { return buffer_[id]; }
 
  private:
-  std::vector<T> buffer_;
+  std::vector<RulePosition> buffer_;
   std::vector<int32_t> free_nodes_;
 };
 
@@ -140,9 +144,9 @@ class RulePositionTree {
  public:
   static constexpr int32_t kNoParent = -1;
 
-  int32_t NewNode(int32_t rule_id, int32_t sequence_expr_id, int32_t element_id,
+  int32_t NewNode(int32_t rule_id, int32_t sequence_id, int32_t element_id,
                   int32_t parent_id = kNoParent) {
-    auto id = node_buffer_.Allocate(RulePosition{rule_id, sequence_expr_id, element_id, parent_id});
+    auto id = node_buffer_.Allocate(rule_id, sequence_id, element_id, parent_id);
     if (parent_id != kNoParent) {
       node_buffer_[parent_id].reference_count++;
     }
@@ -159,20 +163,17 @@ class RulePositionTree {
     auto cur_node = id;
     while (cur_node != kNoParent) {
       node_buffer_[cur_node].reference_count--;
-      if (node_buffer_[cur_node].reference_count == 0) {
-        node_buffer_.Free(cur_node);
+      if (node_buffer_[cur_node].reference_count != 0) {
+        break;
       }
+      node_buffer_.Free(cur_node);
       cur_node = node_buffer_[cur_node].parent_id;
     }
   }
 
-  const RulePosition& operator[](int32_t id) {
+  const RulePosition& operator[](int32_t id) const {
     ICHECK(id != kNoParent);
     return node_buffer_[id];
-  }
-  int32_t GetParentId(int32_t id) {
-    ICHECK(id != kNoParent);
-    return node_buffer_[id].parent_id;
   }
 
   std::string PrintStackByTopId(const BNFGrammar& grammar, int32_t top_id) {
@@ -184,17 +185,16 @@ class RulePositionTree {
     ss << "{\n";
     for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
       const auto& rule_position = node_buffer_[*it];
-      ss << "rule: " << grammar->GetRule(rule_position.rule_id).name << ", "
-         << "sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(rule_position.sequence_expr_id)
-         << ", "
-         << "element id: " << rule_position.element_id << "\n";
+      ss << "id: " << *it << ", rule: " << grammar->GetRule(rule_position.rule_id).name
+         << ", sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(rule_position.sequence_id)
+         << ", element id: " << rule_position.element_id << "\n";
     }
     ss << "}";
     return ss.str();
   }
 
  private:
-  TypedElementBuffer<RulePosition> node_buffer_;
+  RulePositionBuffer node_buffer_;
 };
 
 /*!
@@ -210,17 +210,15 @@ class StacksListWithHistory {
 
   void PushStackTops(const std::vector<int32_t>& stack_tops, bool drop_old = true) {
     stack_tops_history_.push_back(stack_tops);
-    if (drop_old) {
-      while (stack_tops_history_.size() > max_rollback_steps_) {
-        PopFront();
-      }
-    }
     for (auto id : stack_tops) {
       tree_->AttachRefTo(id);
     }
+    if (drop_old) {
+      while (stack_tops_history_.size() > max_rollback_steps_ + 1) {
+        PopFront();
+      }
+    }
   }
-
-  const std::vector<int32_t>& Back() const { return stack_tops_history_.back(); }
 
   void Rollback(int rollback_cnt) {
     CHECK(rollback_cnt < stack_tops_history_.size())
@@ -231,8 +229,22 @@ class StacksListWithHistory {
     }
   }
 
+  const std::vector<int32_t>& Back() const { return stack_tops_history_.back(); }
+
+  std::string PrintBack(const BNFGrammar& grammar) const {
+    std::stringstream ss;
+    ss << "Stacks list size: " << stack_tops_history_.back().size() << std::endl;
+    int cnt = 0;
+    for (auto id : stack_tops_history_.back()) {
+      ss << "Stack #" << cnt << ": " << tree_->PrintStackByTopId(grammar, id) << "\n";
+      ++cnt;
+    }
+    return ss.str();
+  }
+
   int Size() const { return stack_tops_history_.size(); }
 
+ private:
   void PopFront() {
     auto old_stack_tops = stack_tops_history_.front();
     stack_tops_history_.pop_front();
@@ -249,18 +261,6 @@ class StacksListWithHistory {
     }
   }
 
-  std::string PrintBack(const BNFGrammar& grammar) const {
-    std::stringstream ss;
-    ss << "Stacks list size: " << stack_tops_history_.size() << std::endl;
-    int cnt = 0;
-    for (auto id : stack_tops_history_.back()) {
-      ss << "Stack #" << cnt << ": " << tree_->PrintStackByTopId(grammar, id) << "\n";
-      ++cnt;
-    }
-    return ss.str();
-  }
-
- private:
   RulePositionTree* tree_;
   int max_rollback_steps_;
   std::deque<std::vector<int32_t>> stack_tops_history_;
@@ -277,12 +277,12 @@ class GrammarMatcherNode : public Object {
     PushInitStackTops();
   }
 
-  bool AcceptChar(TCodepoint codepoint) {
+  bool AcceptChar(TCodepoint codepoint, bool drop_old = true) {
     auto last_stack_tops = stacks_list_with_history_.Back();
     std::vector<int32_t> new_stack_tops;
     for (auto id : last_stack_tops) {
-      auto& rule_position = tree_[id];
-      auto sequence = grammar_->GetRuleExpr(rule_position.sequence_expr_id);
+      const auto& rule_position = tree_[id];
+      auto sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
       if (rule_position.element_id == sequence.size()) {
         // The state of this stack means previous elements has matched the whole rule.
         // But we are still accepting characters, so this stack cannot match the current elements.
@@ -294,12 +294,14 @@ class GrammarMatcherNode : public Object {
         if (!CodepointSet(element).Contains(codepoint)) {
           continue;
         }
-        new_stack_tops.push_back(GetUpdatedRulePositionId(rule_position.rule_id,
-                                                          rule_position.sequence_expr_id,
-                                                          rule_position.element_id + 1, id));
+        new_stack_tops.push_back(
+            GetUpdatedRulePositionId(rule_position.rule_id, rule_position.sequence_id,
+                                     rule_position.element_id + 1, rule_position.parent_id));
+
       } else {
         ICHECK(element.type == RuleExprType::kRuleRef);
-        auto new_rule = grammar_->GetRule(element.data[0]);
+        auto new_rule_id = element[0];
+        auto new_rule = grammar_->GetRule(new_rule_id);
         auto new_rule_expr = grammar_->GetRuleExpr(new_rule.rule_expr_id);
         ICHECK(new_rule_expr.type == RuleExprType::kChoices);
 
@@ -312,26 +314,50 @@ class GrammarMatcherNode : public Object {
           if (!CodepointSet(sequence_first_element).Contains(codepoint)) {
             continue;
           }
-          new_stack_tops.push_back(GetUpdatedRulePositionId(element.data[0], j, 1, id));
+          new_stack_tops.push_back(GetUpdatedRulePositionId(new_rule_id, j, 1, id));
         }
       }
     }
     if (new_stack_tops.empty()) {
       return false;
     }
-    stacks_list_with_history_.PushStackTops(new_stack_tops);
+    stacks_list_with_history_.PushStackTops(new_stack_tops, drop_old);
     std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
-              << "\" Stack : " << std::endl;
-    std::cout << stacks_list_with_history_.PrintBack(grammar_) << std::endl;
+              << "\" Stack size : " << stacks_list_with_history_.Back().size() << std::endl;
     return true;
   }
 
-  bool AcceptString(std::string str) {
+  bool CanAcceptEnd() const {
+    auto last_stack_tops = stacks_list_with_history_.Back();
+    for (auto id : last_stack_tops) {
+      const auto& rule_position = tree_[id];
+      auto sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
+      if (rule_position.element_id == sequence.size()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool MatchCompleteString(const std::string& str) {
     for (auto c : str) {
       if (!AcceptChar(c)) {
         return false;
       }
     }
+    return CanAcceptEnd();
+  }
+
+  bool CanAcceptString(const std::string& str) {
+    int rollback_cnt = 0;
+    for (auto c : str) {
+      if (!AcceptChar(c, false)) {
+        Rollback(rollback_cnt);
+        return false;
+      }
+      ++rollback_cnt;
+    }
+    Rollback(rollback_cnt);
     return true;
   }
 
@@ -355,17 +381,17 @@ class GrammarMatcherNode : public Object {
     stacks_list_with_history_.PushStackTops(new_stack_tops);
   }
 
-  int32_t GetUpdatedRulePositionId(int32_t rule_id, int32_t sequence_expr_id, int32_t element_id,
+  int32_t GetUpdatedRulePositionId(int32_t rule_id, int32_t sequence_id, int32_t element_id,
                                    int32_t parent_id) {
     while (parent_id != RulePositionTree::kNoParent &&
-           grammar_->GetRuleExpr(sequence_expr_id).size() == element_id) {
+           grammar_->GetRuleExpr(sequence_id).size() == element_id) {
       auto parent_rule_position = tree_[parent_id];
       rule_id = parent_rule_position.rule_id;
-      sequence_expr_id = parent_rule_position.sequence_expr_id;
+      sequence_id = parent_rule_position.sequence_id;
       element_id = parent_rule_position.element_id + 1;
       parent_id = parent_rule_position.parent_id;
     }
-    return tree_.NewNode(rule_id, sequence_expr_id, element_id, parent_id);
+    return tree_.NewNode(rule_id, sequence_id, element_id, parent_id);
   }
 
   const BNFGrammar& grammar_;
@@ -375,7 +401,7 @@ class GrammarMatcherNode : public Object {
 
 class GrammarMatcher : public ObjectRef {
  public:
-  GrammarMatcher(const BNFGrammar& grammar, int max_rollback_steps = 1) {
+  GrammarMatcher(const BNFGrammar& grammar, int max_rollback_steps = 0) {
     data_ = make_object<GrammarMatcherNode>(grammar, max_rollback_steps);
   }
 
