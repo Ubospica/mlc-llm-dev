@@ -143,10 +143,14 @@ class BNFGrammarNode : public Object {
 
 class BNFGrammar : public ObjectRef {
  public:
+  static BNFGrammar FromEBNFString(const String& ebnf_string);
+  static BNFGrammar FromJSON(const String& json_string);
+  static BNFGrammar GetJSONGrammar();
+
+  friend std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);
+
   TVM_DEFINE_OBJECT_REF_METHODS(BNFGrammar, ObjectRef, BNFGrammarNode);
 };
-
-std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);
 
 }  // namespace serve
 }  // namespace llm

@@ -9,6 +9,9 @@
 #include <tvm/runtime/container/string.h>
 #include <tvm/runtime/object.h>
 
+#include "../tokenizers.h"
+#include "encoding.h"
+
 namespace mlc {
 namespace llm {
 namespace serve {
@@ -31,6 +34,8 @@ class GenerationConfigNode : public Object {
   int max_tokens = 128;
   Array<String> stop_strs;
   std::vector<int> stop_token_ids;
+  bool json_mode;
+  Optional<String> output_grammar;
 
   String AsJSONString() const;
 
@@ -98,6 +103,28 @@ class EngineMode : public ObjectRef {
   explicit EngineMode(const std::string& config_str);
 
   TVM_DEFINE_OBJECT_REF_METHODS(EngineMode, ObjectRef, EngineModeNode);
+};
+
+struct TokenAndId {
+  std::vector<TCodepoint> token;
+  int32_t id;
+  bool operator<(const TokenAndId& other) const;
+};
+
+class TokenizerConfigNode : public Object {
+ public:
+  size_t vocab_size;
+  std::vector<TokenAndId> sorted_token_and_ids;
+  std::vector<int32_t> stop_token_ids;
+  std::vector<int32_t> special_token_ids;
+  const std::string special_underscore = "▁";
+};
+
+class TokenizerConfig : public ObjectRef {
+ public:
+  explicit TokenizerConfig(const Tokenizer& tokenizer);
+
+  TVM_DEFINE_OBJECT_REF_METHODS(TokenizerConfig, ObjectRef, TokenizerConfigNode);
 };
 
 }  // namespace serve

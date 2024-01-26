@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "../config.h"
 #include "../encoding.h"
 #include "grammar.h"
 #include "grammar_serializer.h"
@@ -327,6 +328,18 @@ class GrammarMatcherNode : public Object {
     return true;
   }
 
+  bool AcceptChars(const std::vector<TCodepoint>& codepoints, bool drop_old = true) {
+    int accepted_cnt = 0;
+    for (auto codepoint : codepoints) {
+      if (!AcceptChar(codepoint, drop_old)) {
+        Rollback(accepted_cnt);
+        return false;
+      }
+      ++accepted_cnt;
+    }
+    return true;
+  }
+
   bool CanAcceptEnd() const {
     auto last_stack_tops = stacks_list_with_history_.Back();
     for (auto id : last_stack_tops) {
@@ -339,26 +352,46 @@ class GrammarMatcherNode : public Object {
     return false;
   }
 
-  bool MatchCompleteString(const std::string& str) {
-    for (auto c : str) {
-      if (!AcceptChar(c)) {
-        return false;
+  std::vector<int32_t> FindRejectedTokenIds(const std::vector<TokenAndId>& sorted_token_and_ids) {
+    std::vector<int32_t> rejected_ids;
+    int prev_matched_size = 0;
+    for (int i = 0; i < sorted_token_and_ids.size(); ++i) {
+      // Step 1. Find the length of the previous token that is useful for matching the current
+      // token. (denoted by prev_useful_size)
+      // prev_useful_size = min(prev_matched_size, len(longest_common_prefix(prev_token,
+      // current_token))
+      auto prev_useful_size =
+          std::min(prev_matched_size, static_cast<int>(sorted_token_and_ids[i].token.size()));
+      if (i > 0) {
+        for (int j = 0; j < prev_useful_size; ++j) {
+          if (sorted_token_and_ids[i].token[j] != sorted_token_and_ids[i - 1].token[j]) {
+            prev_useful_size = j;
+            break;
+          }
+        }
       }
-    }
-    return CanAcceptEnd();
-  }
 
-  bool CanAcceptString(const std::string& str) {
-    int rollback_cnt = 0;
-    for (auto c : str) {
-      if (!AcceptChar(c, false)) {
-        Rollback(rollback_cnt);
-        return false;
+      // Step 2. Rollback the stack before matching the current token.
+      Rollback(prev_matched_size - prev_useful_size);
+
+      // Step 3. Match the current token, and update the prev_matched_size.
+      bool accepted = true;
+      for (int j = prev_useful_size; j < sorted_token_and_ids[i].token.size(); ++j) {
+        if (!AcceptChar(sorted_token_and_ids[i].token[j], false)) {
+          Rollback(1);
+          accepted = false;
+          break;
+        }
+        prev_matched_size = j + 1;
       }
-      ++rollback_cnt;
+
+      // Step 4. If the current token is accepted, push its id to the result.
+      if (!accepted) {
+        rejected_ids.push_back(sorted_token_and_ids[i].id);
+      }
     }
-    Rollback(rollback_cnt);
-    return true;
+    Rollback(prev_matched_size);
+    return rejected_ids;
   }
 
   void Rollback(int rollback_cnt) { stacks_list_with_history_.Rollback(rollback_cnt); }

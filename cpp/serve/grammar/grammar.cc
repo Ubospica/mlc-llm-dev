@@ -5,6 +5,7 @@
 
 #include "grammar.h"
 
+#include "grammar_parser.h"
 #include "grammar_serializer.h"
 
 namespace mlc {
@@ -17,6 +18,24 @@ std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar) {
   os << BNFGrammarPrinter(grammar).ToString();
   return os;
 }
+
+BNFGrammar BNFGrammar::FromEBNFString(const String& ebnf_string) {
+  return EBNFParser::Parse(ebnf_string);
+}
+
+BNFGrammar BNFGrammar::FromJSON(const String& json_string) {
+  return BNFJSONParser::Parse(json_string);
+}
+
+
+
+BNFGrammar BNFGrammar::GetJSONGrammar() {
+  return BNFJSONParser::GetJSONGrammar();
+}
+
+}  // namespace serve
+}  // namespace llm
+}  // namespace mlc
 
 }  // namespace serve
 }  // namespace llm

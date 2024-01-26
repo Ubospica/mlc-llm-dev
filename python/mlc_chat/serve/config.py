@@ -63,6 +63,9 @@ class GenerationConfig:  # pylint: disable=too-many-instance-attributes
     stop_token_ids: List[int] = field(default_factory=list)
     ignore_eos: bool = False
 
+    json_mode: bool = False
+    output_grammar: Optional[str] = None
+
     def asjson(self) -> str:
         """Return the config in string of JSON format."""
         return json.dumps(asdict(self))

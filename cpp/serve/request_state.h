@@ -12,6 +12,7 @@
 
 #include "../random.h"
 #include "config.h"
+#include "grammar/grammar_matcher.h"
 #include "request.h"
 
 namespace mlc {
@@ -77,6 +78,11 @@ class RequestModelStateNode : public Object {
   std::vector<float> draft_output_token_prob;
   /*! \brief The appeared committed and draft tokens and their occurrence times. */
   std::unordered_map<int32_t, int32_t> appeared_token_ids;
+  /*!
+   * \brief The current state of the generated token matching
+   * the grammar. Used in grammar-guided generation, otherwise it's NullOpt.
+   */
+  Optional<GrammarMatcher> grammar_matcher;
 
   /*! \brief Return the total length of the input data. */
   int GetInputLength() const;

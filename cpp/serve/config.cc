@@ -6,6 +6,7 @@
 
 #include <picojson.h>
 
+#include <iostream>
 #include <random>
 
 #include "data.h"
@@ -102,6 +103,24 @@ GenerationConfig::GenerationConfig(String config_json_str) {
     CHECK(config["ignore_eos"].is<bool>());
     n->ignore_eos = config["ignore_eos"].get<bool>();
   }
+
+  if (config.count("json_mode")) {
+    CHECK(config["json_mode"].is<bool>());
+    n->json_mode = config["json_mode"].get<bool>();
+  }
+
+  if (config.count("output_grammar")) {
+    if (config["output_grammar"].is<picojson::null>()) {
+      n->output_grammar = tvm::NullOpt;
+    } else {
+      CHECK(config["output_grammar"].is<std::string>());
+      n->output_grammar = config["output_grammar"].get<std::string>();
+    }
+  }
+
+  CHECK(!n->json_mode || !n->output_grammar.defined())
+      << "json_mode and output_grammar cannot be specified at the same time";
+
   data_ = std::move(n);
 }
 
@@ -129,6 +148,13 @@ String GenerationConfigNode::AsJSONString() const {
 
   // Params for benchmarking. Not the part of openai spec.
   config["ignore_eos"] = picojson::value(this->ignore_eos);
+
+  config["json_mode"] = picojson::value(this->json_mode);
+  if (this->output_grammar.defined()) {
+    config["output_grammar"] = picojson::value(this->output_grammar.value());
+  } else {
+    config["output_grammar"] = picojson::value();
+  }
 
   return picojson::value(config).serialize(true);
 }
@@ -239,6 +265,59 @@ String EngineModeNode::AsJSONString() const {
   config["enable_speculative"] = picojson::value(static_cast<bool>(this->enable_speculative));
   config["spec_draft_length"] = picojson::value(static_cast<int64_t>(this->spec_draft_length));
   return picojson::value(config).serialize(true);
+}
+
+bool TokenAndId::operator<(const TokenAndId& other) const {
+  for (size_t i = 0; i < token.size(); ++i) {
+    if (i >= other.token.size()) {
+      return false;
+    }
+    if (token[i] < other.token[i]) {
+      return true;
+    } else if (token[i] > other.token[i]) {
+      return false;
+    }
+  }
+  return token.size() < other.token.size();
+}
+
+std::string ReplaceUnderscoreWithSpace(const std::string& str,
+                                       const std::string& special_underscore) {
+  std::string res;
+  size_t pos = 0;
+  while (pos < str.size()) {
+    size_t found = str.find(special_underscore, pos);
+    if (found == std::string::npos) {
+      res += str.substr(pos);
+      break;
+    }
+    res += str.substr(pos, found - pos) + special_underscore;
+    pos = found + special_underscore.size();
+  }
+  return res;
+}
+
+TokenizerConfig::TokenizerConfig(const Tokenizer& tokenizer) {
+  ObjectPtr<TokenizerConfigNode> n = make_object<TokenizerConfigNode>();
+  n->vocab_size = tokenizer->GetVocabSize();
+  for (int i = 0; i < tokenizer->GetVocabSize(); ++i) {
+    auto token = tokenizer->IdToToken(i);
+    if (token == "<unk>" || token == "<pad>" || token == "<s>") {
+      n->special_token_ids.push_back(i);
+    } else if (token == "</s>") {
+      n->stop_token_ids.push_back(i);
+    } else if (token[0] == '<' && token[token.size() - 1] == '>') {
+      n->special_token_ids.push_back(i);
+    } else {
+      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, n->special_underscore);
+      auto codepoints = Utf8StringToCodepoints(token);
+      ICHECK(!codepoints.empty() &&
+             codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
+          << "Invalid token: " << token;
+      n->sorted_token_and_ids.push_back({codepoints, i});
+    }
+  }
+  std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
 }
 
 }  // namespace serve

@@ -48,7 +48,7 @@ class SamplerObj : public Object {
   virtual std::vector<int32_t> BatchSampleTokens(
       NDArray logits_on_device, Model model, Array<RequestModelState> request_mstates,
       Array<GenerationConfig> generation_cfg, const std::vector<RandomGenerator*>& rngs,
-      std::vector<NDArray>* output_prob_dist = nullptr,
+      TokenizerConfig tokenizer_config, std::vector<NDArray>* output_prob_dist = nullptr,
       std::vector<float>* output_token_probs = nullptr) = 0;
 
   /*!

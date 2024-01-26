@@ -104,6 +104,19 @@ std::pair<TCodepoint, int> Utf8ToCodepoint(const char* utf8) {
   return {res, bytes};
 }
 
+std::vector<TCodepoint> Utf8StringToCodepoints(const char* utf8) {
+  std::vector<TCodepoint> codepoints;
+  while (*utf8 != 0) {
+    auto [codepoint, bytes] = Utf8ToCodepoint(utf8);
+    if (codepoint == static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8)) {
+      return {codepoint};
+    }
+    codepoints.push_back(codepoint);
+    utf8 += bytes;
+  }
+  return codepoints;
+}
+
 int HexCharToInt(char c) {
   if (c >= '0' && c <= '9') {
     return c - '0';

@@ -8,6 +8,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace mlc {
 namespace llm {
@@ -54,6 +55,8 @@ enum class CharHandlingError : TCodepoint {
  * function returns (CharHandlingError::kInvalidUtf8, 0).
  */
 std::pair<TCodepoint, int> Utf8ToCodepoint(const char* utf8);
+
+std::vector<TCodepoint> Utf8StringToCodepoints(const std::string& utf8);
 
 /*!
  * \brief Convert a UTF-8 string or an escape sequence to a codepoint. By default the function

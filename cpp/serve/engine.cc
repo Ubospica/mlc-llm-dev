@@ -14,6 +14,7 @@
 #include <tuple>
 
 #include "../tokenizers.h"
+#include "config.h"
 #include "engine_actions/action.h"
 #include "engine_actions/action_commons.h"
 #include "engine_state.h"
@@ -54,6 +55,7 @@ class EngineImpl : public Engine {
     this->trace_recorder_ = trace_recorder;
     this->sampler_ = Sampler::Create(/*sampler_kind=*/"cpu", trace_recorder_);
     this->tokenizer_ = Tokenizer::FromPath(tokenizer_path);
+    this->tokenizer_config_ = TokenizerConfig(this->tokenizer_);
     // Step 2. Initialize each model independently.
     this->models_.clear();
     for (const auto& model_info : model_infos) {
@@ -74,21 +76,24 @@ class EngineImpl : public Engine {
       // Speculative decoding is only possible for more than one model.
       ICHECK_GT(this->models_.size(), 1U);
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,           //
-                                          this->sampler_,          //
-                                          this->kv_cache_config_,  //
+          EngineAction::NewRequestPrefill(this->models_,            //
+                                          this->sampler_,           //
+                                          this->tokenizer_config_,  //
+                                          this->kv_cache_config_,   //
                                           this->max_single_sequence_length_, this->trace_recorder_),
-          EngineAction::BatchDraft(this->models_, this->sampler_, this->trace_recorder_,
-                                   this->engine_mode_->spec_draft_length),
+          EngineAction::BatchDraft(this->models_, this->sampler_, this->tokenizer_config_,
+                                   this->trace_recorder_, this->engine_mode_->spec_draft_length),
           EngineAction::BatchVerify(this->models_, this->sampler_, this->kv_cache_config_,
                                     this->max_single_sequence_length_, this->trace_recorder_)};
     } else {
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,           //
-                                          this->sampler_,          //
-                                          this->kv_cache_config_,  //
+          EngineAction::NewRequestPrefill(this->models_,            //
+                                          this->sampler_,           //
+                                          this->tokenizer_config_,  //
+                                          this->kv_cache_config_,   //
                                           this->max_single_sequence_length_, this->trace_recorder_),
-          EngineAction::BatchDecode(this->models_, this->sampler_, this->trace_recorder_)};
+          EngineAction::BatchDecode(this->models_, this->sampler_, this->tokenizer_config_,
+                                    this->trace_recorder_)};
     }
   }
 
@@ -182,6 +187,7 @@ class EngineImpl : public Engine {
   int max_single_sequence_length_;
   Sampler sampler_;
   Tokenizer tokenizer_;
+  TokenizerConfig tokenizer_config_;
   // Models
   Array<Model> models_;
   // Request stream callback function

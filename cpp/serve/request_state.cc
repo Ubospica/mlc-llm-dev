@@ -9,6 +9,8 @@ namespace mlc {
 namespace llm {
 namespace serve {
 
+using namespace tvm;
+
 /****************** RequestModelState ******************/
 
 TVM_REGISTER_OBJECT_TYPE(RequestModelStateNode);
@@ -20,6 +22,16 @@ RequestModelState::RequestModelState(Request request, int model_id, int64_t inte
   n->model_id = model_id;
   n->internal_id = internal_id;
   n->inputs = std::move(inputs);
+
+  if (request->generation_cfg->output_grammar.defined()) {
+    auto grammar = BNFGrammar::FromJSON(request->generation_cfg->output_grammar.value());
+    n->grammar_matcher = GrammarMatcher(grammar);
+  } else if (request->generation_cfg->json_mode) {
+    auto grammar = BNFGrammar::FromJSON(request->generation_cfg->json_grammar.value());
+    n->grammar_matcher = GrammarMatcher(grammar);
+  } else {
+    n->grammar_matcher = NullOpt;
+  }
   data_ = std::move(n);
 }
 

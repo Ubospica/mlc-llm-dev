@@ -61,6 +61,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction NewRequestPrefill(Array<Model> models, Sampler sampler,
+                                        TokenizerConfig tokenizer_config,
                                         KVCacheConfig kv_cache_config,
                                         int max_single_sequence_length,
                                         Optional<EventTraceRecorder> trace_recorder);
@@ -78,6 +79,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction BatchDecode(Array<Model> models, Sampler sampler,
+                                  TokenizerConfig tokenizer_config,
                                   Optional<EventTraceRecorder> trace_recorder);
 
   /*!
@@ -92,6 +94,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction BatchDraft(Array<Model> models, Sampler sampler,
+                                 TokenizerConfig tokenizer_config,
                                  Optional<EventTraceRecorder> trace_recorder, int draft_length = 4);
 
   /*!

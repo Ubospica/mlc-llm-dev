@@ -21,9 +21,11 @@ namespace serve {
 class BatchDraftActionObj : public EngineActionObj {
  public:
   explicit BatchDraftActionObj(Array<Model> models, Sampler sampler,
+                               TokenizerConfig tokenizer_config,
                                Optional<EventTraceRecorder> trace_recorder, int draft_length)
       : models_(std::move(models)),
         sampler_(std::move(sampler)),
+        tokenizer_config_(std::move(tokenizer_config)),
         trace_recorder_(std::move(trace_recorder)),
         draft_length_(draft_length) {
     ICHECK_GT(draft_length_, 0);
@@ -106,8 +108,9 @@ class BatchDraftActionObj : public EngineActionObj {
         RECORD_EVENT(trace_recorder_, request_ids, "start proposal sampling");
         std::vector<NDArray> prob_dist;
         std::vector<float> token_probs;
-        std::vector<int32_t> next_tokens = sampler_->BatchSampleTokens(
-            logits, models_[model_id], mstates, generation_cfg, rngs, &prob_dist, &token_probs);
+        std::vector<int32_t> next_tokens =
+            sampler_->BatchSampleTokens(logits, models_[model_id], mstates, generation_cfg, rngs,
+                                        tokenizer_config_, &prob_dist, &token_probs);
         RECORD_EVENT(trace_recorder_, request_ids, "finish proposal sampling");
         ICHECK_EQ(next_tokens.size(), num_requests);
 
@@ -145,6 +148,8 @@ class BatchDraftActionObj : public EngineActionObj {
   Array<Model> models_;
   /*! \brief The sampler to sample new tokens. */
   Sampler sampler_;
+  /*! \brief The tokenizer config. */
+  TokenizerConfig tokenizer_config_;
   /*! \brief Event trace recorder. */
   Optional<EventTraceRecorder> trace_recorder_;
   /*! \brief Draft proposal length */
@@ -152,9 +157,11 @@ class BatchDraftActionObj : public EngineActionObj {
 };
 
 EngineAction EngineAction::BatchDraft(Array<Model> models, Sampler sampler,
+                                      TokenizerConfig tokenizer_config,
                                       Optional<EventTraceRecorder> trace_recorder,
                                       int draft_length) {
   return EngineAction(make_object<BatchDraftActionObj>(std::move(models), std::move(sampler),
+                                                       std::move(tokenizer_config),
                                                        std::move(trace_recorder), draft_length));
 }
 
