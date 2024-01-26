@@ -27,15 +27,7 @@ BNFGrammar BNFGrammar::FromJSON(const String& json_string) {
   return BNFJSONParser::Parse(json_string);
 }
 
-
-
-BNFGrammar BNFGrammar::GetJSONGrammar() {
-  return BNFJSONParser::GetJSONGrammar();
-}
-
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+BNFGrammar BNFGrammar::GetJSONGrammar() { return BNFGrammar(); }
 
 }  // namespace serve
 }  // namespace llm

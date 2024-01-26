@@ -310,7 +310,7 @@ TokenizerConfig::TokenizerConfig(const Tokenizer& tokenizer) {
       n->special_token_ids.push_back(i);
     } else {
       auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, n->special_underscore);
-      auto codepoints = Utf8StringToCodepoints(token);
+      auto codepoints = Utf8StringToCodepoints(token.c_str());
       ICHECK(!codepoints.empty() &&
              codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
           << "Invalid token: " << token;

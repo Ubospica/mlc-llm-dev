@@ -154,6 +154,7 @@ def _estimate_max_total_sequence_length(  # pylint: disable=too-many-locals
             config_file_path,
         ]
         usage_str = subprocess.check_output(cmd, universal_newlines=True)
+        print("loading model metadata: ", usage_str)
         usage_json = json.loads(usage_str)
         params_bytes += usage_json["params_bytes"]
         temp_func_bytes = max(temp_func_bytes, usage_json["temp_func_bytes"])

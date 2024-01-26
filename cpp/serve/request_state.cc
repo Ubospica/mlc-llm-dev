@@ -5,6 +5,9 @@
 
 #include "request_state.h"
 
+#include <fstream>
+#include <sstream>
+
 namespace mlc {
 namespace llm {
 namespace serve {
@@ -18,20 +21,27 @@ TVM_REGISTER_OBJECT_TYPE(RequestModelStateNode);
 RequestModelState::RequestModelState(Request request, int model_id, int64_t internal_id,
                                      Array<Data> inputs) {
   ObjectPtr<RequestModelStateNode> n = make_object<RequestModelStateNode>();
-  n->request = std::move(request);
   n->model_id = model_id;
   n->internal_id = internal_id;
   n->inputs = std::move(inputs);
 
   if (request->generation_cfg->output_grammar.defined()) {
-    auto grammar = BNFGrammar::FromJSON(request->generation_cfg->output_grammar.value());
+    auto grammar_path = request->generation_cfg->output_grammar.value();
+    std::ifstream file(grammar_path);
+    ICHECK(file) << "Grammar file " << grammar_path << " is not found";
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string grammar_str = buffer.str();
+
+    auto grammar = BNFGrammar::FromJSON(grammar_str);
     n->grammar_matcher = GrammarMatcher(grammar);
   } else if (request->generation_cfg->json_mode) {
-    auto grammar = BNFGrammar::FromJSON(request->generation_cfg->json_grammar.value());
+    auto grammar = BNFGrammar::GetJSONGrammar();
     n->grammar_matcher = GrammarMatcher(grammar);
   } else {
     n->grammar_matcher = NullOpt;
   }
+  n->request = std::move(request);
   data_ = std::move(n);
 }
 
