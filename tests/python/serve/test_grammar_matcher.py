@@ -20,66 +20,66 @@ def json_grammar():
     return BNFGrammar.from_ebnf_string(before)
 
 
-# (json_inputs_accepted,) = tvm.testing.parameters(
-#     ('{"name": "John"}',),
-#     ('{"name": "Alice", "age": 30, "city": "New York"}',),
-#     ('{"name": "Mike", "hobbies": ["reading", "cycling", "hiking"]}',),
-#     ('{"name": "Emma", "address": {"street": "Maple Street", "city": "Boston"}}',),
-#     ('[{"name": "David"}, {"name": "Sophia"}]',),
-#     (
-#         '{"name": "William", "age": null, "married": true, "children": ["Liam", "Olivia"],'
-#         ' "hasPets": false}',
-#     ),
-#     (
-#         '{"name": "Olivia", "contact": {"email": "olivia@example.com", "address": '
-#         '{"city": "Chicago", "zipcode": "60601"}}}',
-#     ),
-#     (
-#         '{"name": "Liam", "skills": ["Java", "Python"], "experience": '
-#         '[{"company": "CompanyA", "years": 5}, {"company": "CompanyB", "years": 3}]}',
-#     ),
-#     (
-#         '{"person": {"name": "Ethan", "age": 40}, "education": {"degree": "Masters", '
-#         '"university": "XYZ University"}, "work": [{"company": "ABC Corp", "position": '
-#         '"Manager"}, {"company": "DEF Corp", "position": "Senior Manager"}]}',
-#     ),
-#     (
-#         '{"name": "Charlotte", "details": {"personal": {"age": 35, "hobbies": ["gardening", '
-#         '"painting"]}, "professional": {"occupation": "Engineer", "skills": '
-#         '["CAD", "Project Management"], "projects": [{"name": "Project A", '
-#         '"status": "Completed"}, {"name": "Project B", "status": "In Progress"}]}}}',
-#     ),
-# )
+(json_inputs_accepted,) = tvm.testing.parameters(
+    ('{"name": "John"}',),
+    ('{"name": "Alice", "age": 30, "city": "New York"}',),
+    ('{"name": "Mike", "hobbies": ["reading", "cycling", "hiking"]}',),
+    ('{"name": "Emma", "address": {"street": "Maple Street", "city": "Boston"}}',),
+    ('[{"name": "David"}, {"name": "Sophia"}]',),
+    (
+        '{"name": "William", "age": null, "married": true, "children": ["Liam", "Olivia"],'
+        ' "hasPets": false}',
+    ),
+    (
+        '{"name": "Olivia", "contact": {"email": "olivia@example.com", "address": '
+        '{"city": "Chicago", "zipcode": "60601"}}}',
+    ),
+    (
+        '{"name": "Liam", "skills": ["Java", "Python"], "experience": '
+        '[{"company": "CompanyA", "years": 5}, {"company": "CompanyB", "years": 3}]}',
+    ),
+    (
+        '{"person": {"name": "Ethan", "age": 40}, "education": {"degree": "Masters", '
+        '"university": "XYZ University"}, "work": [{"company": "ABC Corp", "position": '
+        '"Manager"}, {"company": "DEF Corp", "position": "Senior Manager"}]}',
+    ),
+    (
+        '{"name": "Charlotte", "details": {"personal": {"age": 35, "hobbies": ["gardening", '
+        '"painting"]}, "professional": {"occupation": "Engineer", "skills": '
+        '["CAD", "Project Management"], "projects": [{"name": "Project A", '
+        '"status": "Completed"}, {"name": "Project B", "status": "In Progress"}]}}}',
+    ),
+)
 
 
-# def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
-#     print("grammar:", json_grammar)
-#     matcher = GrammarMatcher(json_grammar)
-#     assert matcher.can_match_complete_string(json_inputs_accepted)
+def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
+    print("grammar:", json_grammar)
+    matcher = GrammarMatcher(json_grammar)
+    assert matcher.match_complete_string(json_inputs_accepted)
 
 
-# (json_inputs_refused,) = tvm.testing.parameters(
-#     (r'{ name: "John" }',),
-#     (r'{ "name": "John", "age": 30, }',),
-#     (r'{ "name": "John", "address": { "street": "123 Main St", "city": "New York" }',),
-#     (r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling",], }',),
-#     (r'{ "name": "John", "age": 30.5.7 }',),
-#     (r'{ "name": "John, "age": 30, "hobbies": ["reading", "traveling"] }',),
-#     (
-#         r'{ "name": "John", "age": 30, "hobbies": ["reading", { "type": "outdoor", "list": '
-#         r'["hiking", "swimming",]}] }',
-#     ),
-#     (r'{ "name": "John", "age": 30, "status": "\P\J" }',),
-#     (
-#         r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling"], "address": '
-#         r'{ "street": "123 Main St", "city": "New York", "coordinates": { "latitude": 40.7128, '
-#         r'"longitude": -74.0060 }}}, "work": { "company": "Acme", "position": "developer" }}',
-#     ),
-# )
+(json_inputs_refused,) = tvm.testing.parameters(
+    (r'{ name: "John" }',),
+    (r'{ "name": "John", "age": 30, }',),
+    (r'{ "name": "John", "address": { "street": "123 Main St", "city": "New York" }',),
+    (r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling",], }',),
+    (r'{ "name": "John", "age": 30.5.7 }',),
+    (r'{ "name": "John, "age": 30, "hobbies": ["reading", "traveling"] }',),
+    (
+        r'{ "name": "John", "age": 30, "hobbies": ["reading", { "type": "outdoor", "list": '
+        r'["hiking", "swimming",]}] }',
+    ),
+    (r'{ "name": "John", "age": 30, "status": "\P\J" }',),
+    (
+        r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling"], "address": '
+        r'{ "street": "123 Main St", "city": "New York", "coordinates": { "latitude": 40.7128, '
+        r'"longitude": -74.0060 }}}, "work": { "company": "Acme", "position": "developer" }}',
+    ),
+)
 
 
-# def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
-#     assert not GrammarMatcher(json_grammar).can_match_complete_string(json_inputs_refused)
+def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
+    assert not GrammarMatcher(json_grammar).match_complete_string(json_inputs_refused)
 
 
 (json_inputs_pressure,) = tvm.testing.parameters(
@@ -200,8 +200,7 @@ def json_grammar():
 
 
 def test_json_pressure(json_grammar: BNFGrammar, json_inputs_pressure):
-    # 60s on AMD Threadripper 1950X. Need to be optimized later
-    assert GrammarMatcher(json_grammar).can_match_complete_string(json_inputs_pressure)
+    assert GrammarMatcher(json_grammar).match_complete_string(json_inputs_pressure)
 
 
 if __name__ == "__main__":

@@ -329,7 +329,7 @@ class GrammarMatcherNode : public Object {
     return true;
   }
 
-  bool CanMatchCompleteString(String str) {
+  bool MatchCompleteString(String str) {
     auto codepoints = Utf8StringToCodepoints(str.c_str());
     int accepted_cnt = 0;
     for (auto codepoint : codepoints) {

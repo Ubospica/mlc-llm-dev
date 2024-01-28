@@ -24,10 +24,10 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherAcceptChar")
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanAcceptEnd")
     .set_body_typed([](GrammarMatcher matcher) { return matcher->CanAcceptEnd(); });
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanMatchCompleteString")
+TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
     .set_body_typed([](GrammarMatcher matcher, String str) {
       std::cout << "29 Grammar: " << matcher->grammar_ << "\n";
-      return matcher->CanMatchCompleteString(str);
+      return matcher->MatchCompleteString(str);
     });
 
 }  // namespace serve

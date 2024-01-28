@@ -106,6 +106,6 @@ class GrammarMatcher(Object):
         """ """
         return _ffi_api.GrammarMatcherCanAcceptEnd(self)
 
-    def can_match_complete_string(self, string: str) -> bool:
+    def match_complete_string(self, string: str) -> bool:
         """ """
-        return _ffi_api.GrammarMatcherCanMatchCompleteString(self, string)
+        return _ffi_api.GrammarMatcherMatchCompleteString(self, string)
