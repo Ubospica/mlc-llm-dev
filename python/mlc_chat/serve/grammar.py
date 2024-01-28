@@ -88,12 +88,24 @@ class BNFGrammar(Object):
             _ffi_api.BNFGrammarToJSON(self, prettify)  # type: ignore  # pylint: disable=no-member
         )
 
-    def to_simplified(self) -> "BNFGrammar":
-        """Simplifie the grammar.
 
-        Returns
-        -------
-        grammar : BNFGrammar
-            The simplified grammar.
-        """
-        return _ffi_api.BNFGrammarToSimplified(self)  # type: ignore  # pylint: disable=no-member
+@tvm._ffi.register_object("mlc.serve.GrammarMatcher")  # pylint: disable=protected-access
+class GrammarMatcher(Object):
+    """ """
+
+    def __init__(self, grammar: BNFGrammar, max_rollback_steps: int = 0):
+        self.__init_handle_by_constructor__(_ffi_api.GrammarMatcher, grammar, max_rollback_steps)  # type: ignore  # pylint: disable=no-member
+
+    def accept_char(self, codepoint: int, drop_old: bool = False) -> bool:
+        """ """
+        return _ffi_api.GrammarMatcherAcceptChar(  # type: ignore  # pylint: disable=no-member
+            self, codepoint, drop_old
+        )
+
+    def can_accept_end(self) -> bool:
+        """ """
+        return _ffi_api.GrammarMatcherCanAcceptEnd(self)
+
+    def can_match_complete_string(self, string: str) -> bool:
+        """ """
+        return _ffi_api.GrammarMatcherCanMatchCompleteString(self, string)

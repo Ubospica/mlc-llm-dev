@@ -273,9 +273,10 @@ class GrammarMatcherNode : public Object {
   using RuleExprType = BNFGrammarNode::RuleExprType;
 
  public:
-  GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 1)
+  GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 0)
       : grammar_(grammar), stacks_list_with_history_(&tree_, max_rollback_steps) {
     PushInitStackTops();
+    std::cout << "279 Grammar: " << grammar_ << "\n";
   }
 
   bool AcceptChar(TCodepoint codepoint, bool drop_old = true) {
@@ -328,16 +329,19 @@ class GrammarMatcherNode : public Object {
     return true;
   }
 
-  bool AcceptChars(const std::vector<TCodepoint>& codepoints, bool drop_old = true) {
+  bool CanMatchCompleteString(String str) {
+    auto codepoints = Utf8StringToCodepoints(str.c_str());
     int accepted_cnt = 0;
     for (auto codepoint : codepoints) {
-      if (!AcceptChar(codepoint, drop_old)) {
+      if (!AcceptChar(codepoint, false)) {
         Rollback(accepted_cnt);
         return false;
       }
       ++accepted_cnt;
     }
-    return true;
+    auto accepted = CanAcceptEnd();
+    Rollback(accepted_cnt);
+    return accepted;
   }
 
   bool CanAcceptEnd() const {
@@ -401,7 +405,7 @@ class GrammarMatcherNode : public Object {
   static constexpr const bool _type_has_method_shash_reduce = false;
   TVM_DECLARE_BASE_OBJECT_INFO(GrammarMatcherNode, Object);
 
- private:
+ public:
   void PushInitStackTops() {
     auto main_rule = grammar_->GetRule(0);
     auto main_rule_expr = grammar_->GetRuleExpr(main_rule.rule_expr_id);
@@ -427,7 +431,7 @@ class GrammarMatcherNode : public Object {
     return tree_.NewNode(rule_id, sequence_id, element_id, parent_id);
   }
 
-  const BNFGrammar& grammar_;
+  BNFGrammar grammar_;
   RulePositionTree tree_;
   StacksListWithHistory stacks_list_with_history_;
 };

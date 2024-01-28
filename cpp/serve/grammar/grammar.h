@@ -65,7 +65,11 @@ class BNFGrammarNode : public Object {
   /*! \brief Get the number of rules. */
   size_t NumRules() const { return rules_.size(); }
   /*! \brief Get the rule with the given id. */
-  const Rule& GetRule(int32_t rule_id) const { return rules_[rule_id]; }
+  const Rule& GetRule(int32_t rule_id) const {
+    CHECK(rule_id >= 0 && rule_id < static_cast<int32_t>(rules_.size()))
+        << "rule_id " << rule_id << " is out of bound";
+    return rules_[rule_id];
+  }
 
   /*! \brief The type of the rule expr. */
   enum class RuleExprType : int32_t {
@@ -104,6 +108,8 @@ class BNFGrammarNode : public Object {
   size_t NumRuleExprs() const { return rule_expr_indptr_.size(); }
   /*! \brief Get the rule_expr with the given id. */
   RuleExpr GetRuleExpr(int32_t rule_expr_id) const {
+    CHECK(rule_expr_id >= 0 && rule_expr_id < static_cast<int32_t>(rule_expr_indptr_.size()))
+        << "rule_expr_id " << rule_expr_id << " is out of bound";
     int start_index = rule_expr_indptr_[rule_expr_id];
     RuleExprType type = static_cast<RuleExprType>(rule_expr_data_[start_index]);
     ++start_index;
