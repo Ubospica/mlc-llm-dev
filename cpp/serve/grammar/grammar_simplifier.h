@@ -45,8 +45,7 @@ namespace serve {
 template <typename T = int32_t, typename ReturnType = BNFGrammar>
 class BNFGrammarMutator {
  public:
-  explicit BNFGrammarMutator(const BNFGrammar& grammar) : grammar_(grammar) {}
-  virtual ReturnType Apply() {
+  static ReturnType Apply(const BNFGrammar& grammar) {
     if constexpr (std::is_same<T, int32_t>::value && std::is_same<ReturnType, BNFGrammar>::value) {
       for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
         auto rule = grammar_->GetRule(i);
@@ -61,6 +60,8 @@ class BNFGrammarMutator {
   }
 
  protected:
+  explicit BNFGrammarMutator(const BNFGrammar& grammar) : grammar_(grammar) {}
+
   using Rule = BNFGrammarNode::Rule;
   using RuleExpr = BNFGrammarNode::RuleExpr;
   using RuleExprType = BNFGrammarNode::RuleExprType;
@@ -308,7 +309,7 @@ class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::unordered_map<int32_t, int32_t> rule_id_map_;
 };
 
-class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
+class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
 
@@ -1110,7 +1111,7 @@ class BNFGrammarNormalizer : public BNFGrammarMutator<void, BNFGrammar> {
   using BNFGrammarMutator::BNFGrammarMutator;
 
   BNFGrammar Apply() final {
-    grammar_ = BNFGrammarFlattener(grammar_).Apply();
+    grammar_ = NestingEliminator(grammar_).Apply();
     std::cout << "1st finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
     bool grammar_can_be_empty, grammar_must_be_empty;
     std::cout << "2 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";

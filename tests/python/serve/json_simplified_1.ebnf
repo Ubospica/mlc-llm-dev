@@ -1,0 +1,196 @@
+main ::= element
+
+value ::= (
+    ([t] [r] [u] [e]) |
+    ([f] [a] [l] [s] [e]) |
+    ([n] [u] [l] [l]) |
+    ([0-9] value_2) |
+    ([1-9] value_1) |
+    ([\-] value_3) |
+    ([\"] value_4) |
+    ([[] value_5) |
+    ([{] value_6) |
+    ([\-] value_7)
+)
+
+value_6 ::= (
+    (ws [}]) |
+    (members [}])
+)
+
+value_7 ::= (
+    ([0-9]) |
+    ([1-9] digits)
+)
+
+value_4 ::= (
+    ([\"]) |
+    (characters [\"])
+)
+
+value_5 ::= (
+    (ws [\]]) |
+    (elements [\]])
+)
+
+value_2 ::= (
+    "" |
+    (exponent) |
+    ([.] digits) |
+    ([.] digits exponent)
+)
+
+value_1 ::= (
+    (digits) |
+    (digits exponent) |
+    (digits [.] digits) |
+    (digits [.] digits exponent) |
+)
+
+value_3 ::= (
+    ([0-9] exponent) |
+    ([0-9] [.] digits) |
+    ([0-9] [.] digits exponent) |
+    ([1-9] digits exponent) |
+    ([1-9] digits [.] digits) |
+    ([1-9] digits [.] digits exponent
+)
+
+members ::= (
+    (ws string ws ":" element) |
+    (ws string ws ":" element "," members)
+)
+
+elements ::= element | element "," elements
+
+element ::= (
+    ([t] [r] [u] [e] ws) |
+    ([f] [a] [l] [s] [e] ws) |
+    ([n] [u] [l] [l] ws) |
+    ([0-9] value_7) |
+    ([0-9]) |
+    ([1-9] value_6) |
+    ([\-] value_5) |
+    ([\"] value_4)
+    ([[] value_3) |
+    ([{] value_2) |
+    ([ ] value_1) |
+    ([\n] value_1) |
+    ([\r] value_1) |
+    ([\t] value_1)
+)
+
+value_7 ::= (
+    (ws) |
+    ([.] digits ws) |
+    ([.] digits exponent ws) |
+    (exponent ws) |
+)
+
+value_6 ::= (
+    (digits exponent ws) |
+    (digits [.] digits ws) |
+    (digits [.] digits exponent ws) |
+    (digits ws) |
+)
+
+value_5 ::= (
+    ([0-9]) |
+    ([0-9] value_5_1) |
+    ([1-9] value_5_2)
+)
+
+value_5_1 ::= (
+    (ws) |
+    ([.] digits ws) |
+    ([.] digits exponent ws) |
+    (exponent ws)
+)
+
+value_5_2 ::= (
+    (digits exponent ws) |
+    (digits [.] digits ws) |
+    (digits [.] digits exponent ws) |
+    (digits ws)
+)
+
+value_4 ::= (
+    ([\"] ws) |
+    (characters [\"] ws)
+)
+
+value_3 ::= (
+    (ws [\]] ws) |
+    (elements [\]] ws)
+)
+
+value_2 ::= (
+    (ws [}] ws) |
+    (members [}] ws) |
+)
+
+value_1 ::= (
+    (value ws) |
+    ([ ] ws value_1_1) |
+    ([\n] ws value_1_1) |
+    ([\r] ws value_1_1) |
+    ([\t] ws value_1_1)
+)
+
+value_1_1 ::= (
+    (ws value ws)
+)
+
+string ::= (
+    ([\"] [\"]) |
+    ([\"] characters [\"])
+)
+
+characters ::= (
+    ([^\"\\]) |
+    ([^\"\\] characters) |
+    ([\\] escape)
+    ([\\] escape characters) |
+)
+
+escape ::= (
+    ([\"]) |
+    ([\\]) |
+    ([/]) |
+    ([b]) |
+    ([f]) |
+    ([n]) |
+    ([r]) |
+    ([t]) |
+    ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9])
+)
+
+digits ::= (
+    ([0-9] digits) |
+    ([0-9])
+)
+
+exponent ::= (
+    ([e] exponent_1) |
+    ([E] exponent_1)
+)
+
+exponent_1 ::= (
+    ([0-9]) |
+    ([0-9] digits) |
+    ([+] digits) |
+    ([\-] digits)
+)
+
+ws ::= (
+    "" |
+    ([ ] ws) |
+    ([\n] ws) |
+    ([\r] ws) |
+    ([\t] ws)
+)
+
+exponent_choice_1 ::= (
+    ([+]) |
+    ([\-])
+)

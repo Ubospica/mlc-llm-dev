@@ -1,0 +1,88 @@
+# v1： flatten, inline sequence
+# main ::= ws value ws
+# value ::= object | array | "\"" characters "\"" | integer fraction exponent | "true" | "false" | "null"
+# object ::= "{" ws "}" | "{" members "}"
+# members ::= ws "\"" characters "\"" ws ":" ws value ws | ws "\"" characters "\"" ws ":" ws value ws "," members
+# array ::= "[" ws "]" | "[" elements "]"
+# elements ::= ws value ws | ws value ws "," elements
+# characters ::= "" | character characters
+# character ::= [^"\\] | "\\" escape
+# escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
+# integer ::= [0-9] | [1-9] digits | "-" [0-9] | "-" [1-9] digits
+# digits ::= [0-9] | [0-9] digits
+# fraction ::= "" | "." digits
+# exponent ::= "" | E sign digits
+# E ::= "e" | "E"
+# sign ::= "" | "+" | "-"
+# ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
+
+# v2: inline for left char
+main ::= (
+    "{" ws "}" ws |
+    "{" members "}" ws |
+    "[" ws "]" ws |
+    "[" elements "]" ws |
+    "\"" characters "\"" ws |
+    [0-9] fraction exponent ws |
+    [1-9] digits fraction exponent ws |
+    "-" [0-9] fraction exponent ws |
+    "-" [1-9] digits fraction exponent ws |
+    "true" ws | "false" ws | "null" ws
+    "\u0020" ws value ws |
+    "\u000A" ws value ws |
+    "\u000D" ws value ws |
+    "\u0009" ws value ws
+)
+value ::= (
+    "{" ws "}" |
+    "{" members "}" |
+    "[" ws "]" |
+    "[" elements "]" |
+    "\"" characters "\"" |
+    [0-9] fraction exponent |
+    [1-9] digits fraction exponent |
+    "-" [0-9] fraction exponent |
+    "-" [1-9] digits fraction exponent |
+    "true" | "false" | "null"
+)
+object ::= "{" ws "}" | "{" members "}"
+members ::= (
+    "\"" characters "\"" ws ":" ws value ws |
+    "\u0020" ws "\"" characters "\"" ws ":" ws value ws |
+    "\u000A" ws "\"" characters "\"" ws ":" ws value ws |
+    "\u000D" ws "\"" characters "\"" ws ":" ws value ws |
+    "\u0009" ws "\"" characters "\"" ws ":" ws value ws |
+    "\"" characters "\"" ws ":" ws value ws "," members |
+    "\u0020" ws "\"" characters "\"" ws ":" ws value ws "," members |
+    "\u000A" ws "\"" characters "\"" ws ":" ws value ws "," members |
+    "\u000D" ws "\"" characters "\"" ws ":" ws value ws "," members |
+    "\u0009" ws "\"" characters "\"" ws ":" ws value ws "," members |
+)
+array ::= "[" ws "]" | "[" elements "]"
+elements ::= (
+    "{" ws "}" ws elements_rest |
+    "{" members "}" ws elements_rest |
+    "[" ws "]" ws elements_rest |
+    "[" elements "]" ws elements_rest |
+    "\"" characters "\"" ws elements_rest |
+    [0-9] fraction exponent ws elements_rest |
+    [1-9] digits fraction exponent ws elements_rest |
+    "-" [0-9] fraction exponent ws elements_rest |
+    "-" [1-9] digits fraction exponent ws elements_rest |
+    "true" ws elements_rest |
+    "false" ws elements_rest |
+    "null" ws elements_rest |
+    "\u0020" ws value ws elements_rest |
+    "\u000A" ws value ws elements_rest |
+    "\u000D" ws value ws elements_rest |
+    "\u0009" ws value ws elements_rest
+)
+elements_rest ::= "" | "," elements
+characters ::= "" | [^"\\] characters | "\\" escape characters
+escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
+integer ::= [0-9] | [1-9] digits | "-" [0-9] | "-" [1-9] digits
+digits ::= [0-9] | [0-9] digits
+fraction ::= "" | "." digits
+exponent ::= "" |  "e" sign digits | "E" sign digits
+sign ::= "" | "+" | "-"
+ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
