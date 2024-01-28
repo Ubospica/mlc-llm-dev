@@ -23,8 +23,8 @@ prompts = [
 async def test_engine_generate():
     # Initialize model loading info and KV cache config
     model = ModelInfo(
-        "dist/Llama-2-7b-chat-hf-q0f16-MLC",
-        model_lib_path="dist/Llama-2-7b-chat-hf-q0f16-MLC/Llama-2-7b-chat-hf-q0f16-MLC-cuda.so",
+        "dist/Llama-2-7b-chat-hf-q4f16_1-MLC",
+        model_lib_path="dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so",
     )
     kv_cache_config = KVCacheConfig(page_size=16)
     # Create engine
