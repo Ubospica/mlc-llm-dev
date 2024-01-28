@@ -233,7 +233,7 @@ class RuleReachGraphFinder : public BNFGrammarMutator<void, RuleVisitGraph> {
   int32_t cur_rule_id_;
 };
 
-int32_t GetMainRuleId(const BNFGrammar& grammar) {
+inline int32_t GetMainRuleId(const BNFGrammar& grammar) {
   for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
     if (grammar->GetRule(i).name == "main") {
       return i;
@@ -308,7 +308,7 @@ class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::unordered_map<int32_t, int32_t> rule_id_map_;
 };
 
-class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
+class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
 
@@ -324,7 +324,7 @@ class BNFGrammarFlattener : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
       auto new_rule_expr_id = VisitRuleBody(rule_expr);
       builder_.UpdateRuleBody(i, new_rule_expr_id);
     }
-    return UnreachableEliminator(builder_.Get()).Apply();
+    return builder_.Get();
   }
 
  private:
@@ -1105,12 +1105,12 @@ class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
   int32_t cur_rule_id_;
 };
 
-class BNFGrammarNormalizer : public BNFGrammarMutator<void, BNFGrammar> {
+class BNFGrammarSimplifier : public BNFGrammarMutator<void, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
 
   BNFGrammar Apply() final {
-    grammar_ = BNFGrammarFlattener(grammar_).Apply();
+    grammar_ = UnreachableEliminator(grammar_).Apply();
     std::cout << "1st finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";
     bool grammar_can_be_empty, grammar_must_be_empty;
     std::cout << "2 finished\nresult:" << BNFGrammarPrinter(grammar_).ToString() << "\n";

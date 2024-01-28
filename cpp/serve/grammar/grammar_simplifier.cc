@@ -9,9 +9,9 @@ namespace mlc {
 namespace llm {
 namespace serve {
 
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarToNormalized")
+TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarToSimplified")
     .set_body_typed([](const BNFGrammar& grammar) {
-      return BNFGrammarNormalizer(grammar).Apply();
+      return BNFGrammarSimplifier(grammar).Apply();
     });
 
 }  // namespace serve

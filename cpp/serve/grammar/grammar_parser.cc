@@ -412,10 +412,6 @@ BNFGrammar EBNFParser::Parse(String ebnf_string) {
   return parser.DoParse(ebnf_string);
 }
 
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromEBNFString").set_body_typed([](String ebnf_string) {
-  return EBNFParser::Parse(ebnf_string);
-});
-
 BNFGrammar BNFJSONParser::Parse(String json_string) {
   auto node = make_object<BNFGrammarNode>();
   auto grammar_json = json::ParseToJsonObject(json_string);
@@ -437,10 +433,6 @@ BNFGrammar BNFJSONParser::Parse(String json_string) {
   }
   return BNFGrammar(std::move(node));
 }
-
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String json_string) {
-  return BNFJSONParser::Parse(json_string);
-});
 
 }  // namespace serve
 }  // namespace llm

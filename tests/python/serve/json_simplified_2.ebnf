@@ -1,51 +1,22 @@
-/*!
- *  Copyright (c) 2023 by Contributors
- * \file serve/grammar/grammar.cc
- */
+# v1： flatten, inline sequence
+# main ::= ws value ws
+# value ::= object | array | "\"" characters "\"" | integer fraction exponent | "true" | "false" | "null"
+# object ::= "{" ws "}" | "{" members "}"
+# members ::= ws "\"" characters "\"" ws ":" ws value ws | ws "\"" characters "\"" ws ":" ws value ws "," members
+# array ::= "[" ws "]" | "[" elements "]"
+# elements ::= ws value ws | ws value ws "," elements
+# characters ::= "" | character characters
+# character ::= [^"\\] | "\\" escape
+# escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
+# integer ::= [0-9] | [1-9] digits | "-" [0-9] | "-" [1-9] digits
+# digits ::= [0-9] | [0-9] digits
+# fraction ::= "" | "." digits
+# exponent ::= "" | E sign digits
+# E ::= "e" | "E"
+# sign ::= "" | "+" | "-"
+# ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
 
-#include "grammar.h"
-
-#include "grammar_parser.h"
-#include "grammar_serializer.h"
-#include "grammar_simplifier.h"
-
-namespace mlc {
-namespace llm {
-namespace serve {
-
-TVM_REGISTER_OBJECT_TYPE(BNFGrammarNode);
-
-std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar) {
-  os << BNFGrammarPrinter(grammar).ToString();
-  return os;
-}
-
-BNFGrammar BNFGrammar::FromEBNFString(const String& ebnf_string, bool unwrap_nesting_rules,
-                                      bool simplify) {
-  auto grammar = EBNFParser::Parse(ebnf_string);
-  if (unwrap_nesting_rules) {
-    grammar = NestedRuleUnwrapper(grammar).Apply();
-  }
-  if (simplify) {
-    grammar = BNFGrammarSimplifier(grammar).Apply();
-  }
-  return grammar;
-}
-
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromEBNFString")
-    .set_body_typed([](String ebnf_string, bool unwrap_nesting_rules, bool simplify) {
-      return BNFGrammar::FromEBNFString(ebnf_string, unwrap_nesting_rules, simplify);
-    });
-
-BNFGrammar BNFGrammar::FromJSON(const String& json_string) {
-  return BNFJSONParser::Parse(json_string);
-}
-
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String json_string) {
-  return BNFGrammar::FromJSON(json_string);
-});
-
-const std::string kJSONGrammarString = R"(
+# v2: inline for left char
 main ::= (
     "{" ws "}" ws |
     "{" members "}" ws |
@@ -115,13 +86,3 @@ fraction ::= "" | "." digits
 exponent ::= "" |  "e" sign digits | "E" sign digits
 sign ::= "" | "+" | "-"
 ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
-)";
-
-BNFGrammar BNFGrammar::GetJSONGrammar() {
-  static BNFGrammar grammar = BNFGrammar::FromEBNFString(kJSONGrammarString);
-  return grammar;
-}
-
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc

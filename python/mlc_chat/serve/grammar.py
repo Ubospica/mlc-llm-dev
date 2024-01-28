@@ -14,7 +14,9 @@ class BNFGrammar(Object):
     """
 
     @staticmethod
-    def from_ebnf_string(ebnf_string: str) -> "BNFGrammar":
+    def from_ebnf_string(
+        ebnf_string: str, unwrap_nesting_rules: bool = True, simplify: bool = True
+    ) -> "BNFGrammar":
         r"""Parse a BNF grammar from a string in BNF/EBNF format.
 
         This method accepts the EBNF notation from the W3C XML Specification
@@ -37,7 +39,7 @@ class BNFGrammar(Object):
             The parsed BNF grammar.
         """
         return _ffi_api.BNFGrammarFromEBNFString(  # type: ignore  # pylint: disable=no-member
-            ebnf_string
+            ebnf_string, unwrap_nesting_rules, simplify
         )
 
     def to_string(self) -> str:
@@ -86,22 +88,12 @@ class BNFGrammar(Object):
             _ffi_api.BNFGrammarToJSON(self, prettify)  # type: ignore  # pylint: disable=no-member
         )
 
-    def to_normalized(self) -> "BNFGrammar":
-        """Normalize the grammar.
+    def to_simplified(self) -> "BNFGrammar":
+        """Simplifie the grammar.
 
         Returns
         -------
         grammar : BNFGrammar
-            The normalized grammar.
+            The simplified grammar.
         """
-        return _ffi_api.BNFGrammarToNormalized(self)  # type: ignore  # pylint: disable=no-member
-
-    def match_string(self, input: str) -> bool:
-        """Whether the grammar can match a string.
-
-        Returns
-        -------
-        match : bool
-            Whether the grammar can match a string.
-        """
-        return _ffi_api.BNFGrammarMatchString(self, input)
+        return _ffi_api.BNFGrammarToSimplified(self)  # type: ignore  # pylint: disable=no-member

@@ -20,8 +20,8 @@ empty_test ::= ("" | ([d]) | ([a]))
 sequence_test_choice ::= (([c]) | ([d]))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -38,8 +38,8 @@ b ::= (([a]))
 a ::= ((b))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -56,8 +56,8 @@ a ::= (([a] b))
 c ::= (([c] main_1))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -79,8 +79,8 @@ ep6 ::= ((ep7))
 ep7 ::= ((ep6))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -98,8 +98,8 @@ u7 ::= u4 u1
 u2 ::= (([b]) | ([c]))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -127,8 +127,8 @@ l2_1_recursion ::= (([c]) | ([c] l2_1_recursion) | ([a] [d]) | ([a] [d] l2_1_rec
 l4_3_recursion ::= (([c] [b] [a] [d]) | ([c] [b] [a] [d] l4_3_recursion))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -140,8 +140,8 @@ c ::= ""
     expected = """main ::= ("")
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -154,8 +154,8 @@ d ::= "d"
     expected = """main ::= (([a] [b] [c] [d]) | ([d] [c] [d]))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 
@@ -169,8 +169,8 @@ c ::= "e" | "f"
         "([e] [b]) | ([f] [b]))\n"
     )
     bnf_grammar = BNFGrammar.from_ebnf_string(before)
-    normalized = bnf_grammar.to_normalized()
-    after = normalized.to_string()
+    simplified = bnf_grammar.to_simplified()
+    after = simplified.to_string()
     assert after == expected
 
 

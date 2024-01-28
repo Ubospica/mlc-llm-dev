@@ -17,7 +17,7 @@ def json_grammar():
     with open(json_ebnf_path, "r", encoding="utf-8") as file:
         before = file.read()
 
-    return BNFGrammar.from_ebnf_string(before).to_normalized()
+    return BNFGrammar.from_ebnf_string(before).to_simplified()
 
 
 (json_inputs_accepted,) = tvm.testing.parameters(

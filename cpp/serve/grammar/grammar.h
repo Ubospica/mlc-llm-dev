@@ -143,7 +143,8 @@ class BNFGrammarNode : public Object {
 
 class BNFGrammar : public ObjectRef {
  public:
-  static BNFGrammar FromEBNFString(const String& ebnf_string);
+  static BNFGrammar FromEBNFString(const String& ebnf_string, bool unwrap_nesting_rules = true,
+                                   bool simplify = true);
   static BNFGrammar FromJSON(const String& json_string);
   static BNFGrammar GetJSONGrammar();
 
