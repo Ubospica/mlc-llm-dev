@@ -45,26 +45,49 @@ namespace serve {
 template <typename T = int32_t, typename ReturnType = BNFGrammar>
 class BNFGrammarMutator {
  public:
-  static ReturnType Apply(const BNFGrammar& grammar) {
-    if constexpr (std::is_same<T, int32_t>::value && std::is_same<ReturnType, BNFGrammar>::value) {
-      for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-        auto rule = grammar_->GetRule(i);
-        auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-        auto new_rule_expr_id = VisitExpr(rule_expr);
-        builder_.AddRule(rule.name, new_rule_expr_id);
-      }
-      return builder_.Get();
+  explicit BNFGrammarMutator(const BNFGrammar& grammar) : grammar_(grammar) {}
+
+  virtual ReturnType Apply() {
+    AddEmptyRules();
+    VisitRuleBodies();
+    if constexpr (std::is_same<ReturnType, BNFGrammar>::value) {
+      grammar_ = builder_.Get();
+      return grammar_;
     } else if constexpr (!std::is_same<ReturnType, void>::value) {
       return ReturnType();
     }
   }
 
  protected:
-  explicit BNFGrammarMutator(const BNFGrammar& grammar) : grammar_(grammar) {}
-
   using Rule = BNFGrammarNode::Rule;
   using RuleExpr = BNFGrammarNode::RuleExpr;
   using RuleExprType = BNFGrammarNode::RuleExprType;
+
+  void AddEmptyRules() {
+    if constexpr (std::is_same<T, int32_t>::value) {
+      for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+        auto rule = grammar_->GetRule(i);
+        builder_.AddEmptyRule(rule.name);
+      }
+    }
+  }
+
+  void VisitRuleBodies() {
+    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
+      auto rule = grammar_->GetRule(i);
+      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      cur_rule_name_ = rule.name;
+      cur_rule_id_ = i;
+      if constexpr (std::is_same<T, int32_t>::value) {
+        auto new_rule_expr_id = VisitExpr(rule_expr);
+        builder_.UpdateRuleBody(i, new_rule_expr_id);
+      } else if constexpr (std::is_same<T, void>::value) {
+        VisitExpr(rule_expr);
+      } else {
+        continue;
+      }
+    }
+  }
 
   virtual T VisitExpr(const RuleExpr& rule_expr) {
     switch (rule_expr.type) {
@@ -85,32 +108,57 @@ class BNFGrammarMutator {
   }
 
   virtual T VisitSequence(const RuleExpr& rule_expr) {
-    if constexpr (std::is_same<T, void>::value) {
-      for (auto i : rule_expr) {
-        VisitExpr(grammar_->GetRuleExpr(i));
-      }
-    } else if constexpr (std::is_same<T, int32_t>::value) {
-      std::vector<T> sequence_ids;
-      for (int32_t i : rule_expr) {
-        sequence_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
-      }
-      return builder_.AddSequence(sequence_ids);
+    if constexpr (std::is_same<T, int32_t>::value) {
+      return buider_.AddSequence(VisitSequence_(rule_expr));
+    } else if constexpr (std::is_same<T, void>::value) {
+      return VisitSequence_(rule_expr);
     } else {
       return T();
     }
   }
 
   virtual T VisitChoices(const RuleExpr& rule_expr) {
-    if constexpr (std::is_same<T, void>::value) {
+    if constexpr (std::is_same<T, int32_t>::value) {
+      return builder_.AddChoices(VisitChoices_(rule_expr));
+    } else if constexpr (std::is_same<T, void>::value) {
+      return VisitChoices_(rule_expr);
+    } else {
+      return T();
+    }
+  }
+
+  using DispatcherReturnType =
+      std::conditional_t<std::is_same<T, int32_t>::value, std::vector<T>, T>;
+
+  virtual DispatcherReturnType VisitSequence_(const RuleExpr& rule_expr) {
+    if constexpr (std::is_same<T, int32_t>::value) {
+      std::vector<T> sequence_ids;
+      for (int32_t i : rule_expr) {
+        sequence_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
+      }
+      return sequence_ids;
+    } else if constexpr (std::is_same<T, void>::value) {
       for (auto i : rule_expr) {
         VisitExpr(grammar_->GetRuleExpr(i));
       }
-    } else if constexpr (std::is_same<T, int32_t>::value) {
-      std::vector<int32_t> choice_ids;
+      return;
+    } else {
+      return T();
+    }
+  }
+
+  virtual DispatcherReturnType VisitChoices_(const RuleExpr& rule_expr) {
+    if constexpr (std::is_same<T, int32_t>::value) {
+      std::vector<T> choice_ids;
       for (int32_t i : rule_expr) {
         choice_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
       }
-      return builder_.AddChoices(choice_ids);
+      return choice_ids;
+    } else if constexpr (std::is_same<T, void>::value) {
+      for (auto i : rule_expr) {
+        VisitExpr(grammar_->GetRuleExpr(i));
+      }
+      return;
     } else {
       return T();
     }
@@ -134,6 +182,8 @@ class BNFGrammarMutator {
 
   BNFGrammar grammar_;
   BNFGrammarBuilder builder_;
+  std::string cur_rule_name_;
+  int32_t cur_rule_id_;
 };
 
 class SingleElementSequenceOrChoiceEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
@@ -143,10 +193,7 @@ class SingleElementSequenceOrChoiceEliminator : public BNFGrammarMutator<int32_t
 
  private:
   int32_t VisitSequence(const RuleExpr& rule_expr) {
-    std::vector<int32_t> sequence_ids;
-    for (int32_t i : rule_expr) {
-      sequence_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
-    }
+    auto sequence_ids = VisitSequence_(rule_expr);
     if (sequence_ids.size() == 1) {
       return sequence_ids[0];
     } else {
@@ -155,10 +202,7 @@ class SingleElementSequenceOrChoiceEliminator : public BNFGrammarMutator<int32_t
   }
 
   int32_t VisitChoices(const RuleExpr& rule_expr) {
-    std::vector<int32_t> choice_ids;
-    for (int32_t i : rule_expr) {
-      choice_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
-    }
+    auto choice_ids = VisitChoices_(rule_expr);
     if (choice_ids.size() == 1) {
       return choice_ids[0];
     } else {
@@ -216,12 +260,8 @@ class RuleReachGraphFinder : public BNFGrammarMutator<void, RuleVisitGraph> {
 
   RuleVisitGraph Apply() {
     rule_visit_graph_ = RuleVisitGraph(grammar_->NumRules());
-    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      cur_rule_id_ = i;
-      VisitExpr(rule_expr);
-    }
+    AddEmptyRules();
+    VisitRuleBodies();
     return rule_visit_graph_;
   }
 
@@ -309,15 +349,13 @@ class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::unordered_map<int32_t, int32_t> rule_id_map_;
 };
 
-class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
+class NestingEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
 
   BNFGrammar Apply() final {
     grammar_ = SingleElementSequenceOrChoiceEliminator(grammar_).Apply();
-    for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
-      builder_.AddEmptyRule(grammar_->GetRule(i).name);
-    }
+    AddEmptyRules();
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
       auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
@@ -332,9 +370,9 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
   int32_t VisitRuleBody(const RuleExpr& rule_expr) {
     switch (rule_expr.type) {
       case RuleExprType::kSequence:
-        return builder_.AddChoices({builder_.AddSequence(VisitSequence(rule_expr))});
+        return builder_.AddChoices({builder_.AddSequence(VisitSequence_(rule_expr))});
       case RuleExprType::kChoices:
-        return builder_.AddChoices(VisitChoices(rule_expr));
+        return builder_.AddChoices(VisitChoices_(rule_expr));
       case RuleExprType::kEmptyStr:
         return builder_.AddChoices({builder_.AddEmptyStr()});
       case RuleExprType::kCharacterRange:
@@ -346,7 +384,7 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
     }
   }
 
-  std::vector<int32_t> VisitChoices(const RuleExpr& rule_expr) {
+  std::vector<int32_t> VisitChoices_(const RuleExpr& rule_expr) final {
     std::vector<int32_t> new_choice_ids;
     bool found_empty = false;
     for (auto i : rule_expr) {
@@ -379,7 +417,7 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
 
   void VisitSequenceInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
                               bool* found_empty) {
-    auto sub_sequence_ids = VisitSequence(rule_expr);
+    auto sub_sequence_ids = VisitSequence_(rule_expr);
     if (sub_sequence_ids.size() == 0) {
       *found_empty = true;
     } else {
@@ -389,7 +427,7 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
 
   void VisitChoicesInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
                              bool* found_empty) {
-    auto sub_choice_ids = VisitChoices(rule_expr);
+    auto sub_choice_ids = VisitChoices_(rule_expr);
     bool contains_empty = builder_.GetRuleExpr(sub_choice_ids[0]).type == RuleExprType::kEmptyStr;
     if (contains_empty) {
       *found_empty = true;
@@ -405,7 +443,7 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
     new_choice_ids->push_back(builder_.AddSequence({sub_expr_id}));
   }
 
-  std::vector<int32_t> VisitSequence(const RuleExpr& rule_expr) {
+  std::vector<int32_t> VisitSequence_(const RuleExpr& rule_expr) final {
     std::vector<int32_t> new_sequence_ids;
     for (auto i : rule_expr) {
       auto seq_expr = grammar_->GetRuleExpr(i);
@@ -431,13 +469,13 @@ class NestingEliminator : public BNFGrammarMutator<std::vector<int32_t>, BNFGram
   }
 
   void VisitSequenceInSequence(const RuleExpr& rule_expr, std::vector<int32_t>* new_sequence_ids) {
-    auto sub_sequence_ids = VisitSequence(rule_expr);
+    auto sub_sequence_ids = VisitSequence_(rule_expr);
     new_sequence_ids->insert(new_sequence_ids->end(), sub_sequence_ids.begin(),
                              sub_sequence_ids.end());
   }
 
   void VisitChoiceInSequence(const RuleExpr& rule_expr, std::vector<int32_t>* new_sequence_ids) {
-    auto sub_choice_ids = VisitChoices(rule_expr);
+    auto sub_choice_ids = VisitChoices_(rule_expr);
     if (sub_choice_ids.size() == 1) {
       auto choice_element_expr = builder_.GetRuleExpr(sub_choice_ids[0]);
       if (choice_element_expr.type != RuleExprType::kEmptyStr) {
@@ -507,10 +545,7 @@ class MainRuleNormalizer : public BNFGrammarMutator<int32_t, BNFGrammar> {
   }
 
   int32_t VisitChoices(const RuleExpr& rule_expr) final {
-    std::vector<int32_t> choice_ids;
-    for (int32_t i : rule_expr) {
-      choice_ids.push_back(VisitExpr(grammar_->GetRuleExpr(i)));
-    }
+    auto choice_ids = VisitChoices_(rule_expr);
     if (grammar_can_be_empty_ && cur_rule_id_ == 0) {
       choice_ids.insert(choice_ids.begin(), builder_.AddEmptyStr());
     }
@@ -644,9 +679,9 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
     }
   }
 
-  int32_t VisitChoices(const RuleExpr& rule_expr) final {
+  std::vector<int32_t> VisitChoices_(const RuleExpr& rule_expr) final {
     if (epsilon_only_rule_id_set_.count(cur_rule_id_)) {
-      return builder_.AddChoices({builder_.AddEmptyStr()});
+      return {builder_.AddEmptyStr()};
     }
     std::vector<int32_t> new_choice_ids;
     for (auto i : rule_expr) {
@@ -660,7 +695,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
     if (new_choice_ids.empty()) {
       new_choice_ids.push_back(builder_.AddEmptyStr());
     }
-    return builder_.AddChoices(new_choice_ids);
+    return new_choice_ids;
   }
 
   void VisitSequenceInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
