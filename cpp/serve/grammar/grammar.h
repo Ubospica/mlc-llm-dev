@@ -99,7 +99,10 @@ class BNFGrammarNode : public Object {
 
     const size_t size() const { return data_len; }
     /*! \brief Get the i-th element of the data array. */
-    const int32_t& operator[](int i) const { return data[i]; }
+    const int32_t& operator[](int i) const {
+      ICHECK(i >= 0 && i < static_cast<int32_t>(data_len)) << "Index " << i << " is out of bound";
+      return data[i];
+    }
     const int32_t* begin() const { return data; }
     const int32_t* end() const { return data + data_len; }
   };

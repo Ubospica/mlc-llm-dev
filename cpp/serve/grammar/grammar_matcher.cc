@@ -26,7 +26,6 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanAcceptEnd")
 
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
     .set_body_typed([](GrammarMatcher matcher, String str) {
-      std::cout << "29 Grammar: " << matcher->grammar_ << "\n";
       return matcher->MatchCompleteString(str);
     });
 
