@@ -47,10 +47,9 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String jso
 
 const std::string kJSONGrammarString = R"(
 main ::= (
-    "{" ws "}" ws |
-    "{" members "}" ws |
-    "[" ws "]" ws |
+    "{" members_or_ws "}" ws |
     "[" elements "]" ws |
+    "[" ws "]" ws |
     "\"" characters "\"" ws |
     [0-9] fraction exponent ws |
     [1-9] digits fraction exponent ws |
@@ -63,8 +62,7 @@ main ::= (
     "\u0009" ws value ws
 )
 value ::= (
-    "{" ws "}" |
-    "{" members "}" |
+    "{" members_or_ws "}" |
     "[" ws "]" |
     "[" elements "]" |
     "\"" characters "\"" |
@@ -74,23 +72,25 @@ value ::= (
     "-" [1-9] digits fraction exponent |
     "true" | "false" | "null"
 )
-object ::= "{" ws "}" | "{" members "}"
-members ::= (
-    "\"" characters "\"" ws ":" ws value ws |
-    "\u0020" ws "\"" characters "\"" ws ":" ws value ws |
-    "\u000A" ws "\"" characters "\"" ws ":" ws value ws |
-    "\u000D" ws "\"" characters "\"" ws ":" ws value ws |
-    "\u0009" ws "\"" characters "\"" ws ":" ws value ws |
-    "\"" characters "\"" ws ":" ws value ws "," members |
-    "\u0020" ws "\"" characters "\"" ws ":" ws value ws "," members |
-    "\u000A" ws "\"" characters "\"" ws ":" ws value ws "," members |
-    "\u000D" ws "\"" characters "\"" ws ":" ws value ws "," members |
-    "\u0009" ws "\"" characters "\"" ws ":" ws value ws "," members |
+members_or_ws ::= (
+    "" |
+    "\"" characters "\"" ws ":" ws value ws members_rest |
+    "\u0020" ws members_or_ws_rest |
+    "\u000A" ws members_or_ws_rest |
+    "\u000D" ws members_or_ws_rest |
+    "\u0009" ws members_or_ws_rest
 )
-array ::= "[" ws "]" | "[" elements "]"
+members_or_ws_rest ::= "" | "\"" characters "\"" ws ":" ws value ws members_rest
+members ::= (
+    "\"" characters "\"" ws ":" ws value ws members_rest |
+    "\u0020" ws "\"" characters "\"" ws ":" ws value ws members_rest |
+    "\u000A" ws "\"" characters "\"" ws ":" ws value ws members_rest |
+    "\u000D" ws "\"" characters "\"" ws ":" ws value ws members_rest |
+    "\u0009" ws "\"" characters "\"" ws ":" ws value ws members_rest
+)
+members_rest ::= "" | "," members
 elements ::= (
-    "{" ws "}" ws elements_rest |
-    "{" members "}" ws elements_rest |
+    "{" members_or_ws "}" ws elements_rest |
     "[" ws "]" ws elements_rest |
     "[" elements "]" ws elements_rest |
     "\"" characters "\"" ws elements_rest |
@@ -109,7 +109,6 @@ elements ::= (
 elements_rest ::= "" | "," elements
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
-integer ::= [0-9] | [1-9] digits | "-" [0-9] | "-" [1-9] digits
 digits ::= [0-9] | [0-9] digits
 fraction ::= "" | "." digits
 exponent ::= "" |  "e" sign digits | "E" sign digits
@@ -118,9 +117,13 @@ ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
 )";
 
 BNFGrammar BNFGrammar::GetJSONGrammar() {
-  static BNFGrammar grammar = BNFGrammar::FromEBNFString(kJSONGrammarString);
+  static BNFGrammar grammar = BNFGrammar::FromEBNFString(kJSONGrammarString, true, false);
   return grammar;
 }
+
+TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarGetJSONGrammar").set_body_typed([]() {
+  return BNFGrammar::GetJSONGrammar();
+});
 
 }  // namespace serve
 }  // namespace llm

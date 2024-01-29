@@ -11,17 +11,13 @@ from mlc_chat.serve import BNFGrammar, GrammarMatcher
 
 @pytest.fixture(scope="function")
 def json_grammar():
-    current_file_path = os.path.abspath(__file__)
-    json_ebnf_path = os.path.join(os.path.dirname(current_file_path), "json_simplified_2.ebnf")
-
-    with open(json_ebnf_path, "r", encoding="utf-8") as file:
-        before = file.read()
-
-    return BNFGrammar.from_ebnf_string(before, True, False)
+    return BNFGrammar.get_json_grammar()
 
 
 (json_inputs_accepted,) = tvm.testing.parameters(
     ('{"name": "John"}',),
+    ("{}",),
+    ("[]",),
     ('{"name": "Alice", "age": 30, "city": "New York"}',),
     ('{"name": "Mike", "hobbies": ["reading", "cycling", "hiking"]}',),
     ('{"name": "Emma", "address": {"street": "Maple Street", "city": "Boston"}}',),
@@ -53,8 +49,7 @@ def json_grammar():
 
 
 def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
-    matcher = GrammarMatcher(json_grammar)
-    assert matcher.match_complete_string(json_inputs_accepted)
+    assert GrammarMatcher(json_grammar).match_complete_string(json_inputs_accepted)
 
 
 (json_inputs_refused,) = tvm.testing.parameters(

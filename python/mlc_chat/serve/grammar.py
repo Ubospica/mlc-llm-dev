@@ -88,6 +88,17 @@ class BNFGrammar(Object):
             _ffi_api.BNFGrammarToJSON(self, prettify)  # type: ignore  # pylint: disable=no-member
         )
 
+    @staticmethod
+    def get_json_grammar() -> "BNFGrammar":
+        """Get the JSON grammar.
+
+        Returns
+        -------
+        grammar : BNFGrammar
+            The JSON grammar.
+        """
+        return _ffi_api.BNFGrammarGetJSONGrammar()
+
 
 @tvm._ffi.register_object("mlc.serve.GrammarMatcher")  # pylint: disable=protected-access
 class GrammarMatcher(Object):

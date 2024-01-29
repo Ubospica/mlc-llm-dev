@@ -93,6 +93,7 @@
 main ::= (
     "{" members_or_ws "}" ws |
     "[" elements "]" ws |
+    "[" ws "]" ws |
     "\"" characters "\"" ws |
     [0-9] fraction exponent ws |
     [1-9] digits fraction exponent ws |
@@ -106,6 +107,7 @@ main ::= (
 )
 value ::= (
     "{" members_or_ws "}" |
+    "[" ws "]" |
     "[" elements "]" |
     "\"" characters "\"" |
     [0-9] fraction exponent |
@@ -114,7 +116,6 @@ value ::= (
     "-" [1-9] digits fraction exponent |
     "true" | "false" | "null"
 )
-
 members_or_ws ::= (
     "" |
     "\"" characters "\"" ws ":" ws value ws members_rest |
@@ -124,7 +125,6 @@ members_or_ws ::= (
     "\u0009" ws members_or_ws_rest
 )
 members_or_ws_rest ::= "" | "\"" characters "\"" ws ":" ws value ws members_rest
-
 members ::= (
     "\"" characters "\"" ws ":" ws value ws members_rest |
     "\u0020" ws "\"" characters "\"" ws ":" ws value ws members_rest |
@@ -133,10 +133,9 @@ members ::= (
     "\u0009" ws "\"" characters "\"" ws ":" ws value ws members_rest
 )
 members_rest ::= "" | "," members
-
-array ::= "[" ws "]" | "[" elements "]"
 elements ::= (
     "{" members_or_ws "}" ws elements_rest |
+    "[" ws "]" ws elements_rest |
     "[" elements "]" ws elements_rest |
     "\"" characters "\"" ws elements_rest |
     [0-9] fraction exponent ws elements_rest |
@@ -154,7 +153,6 @@ elements ::= (
 elements_rest ::= "" | "," elements
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
-integer ::= [0-9] | [1-9] digits | "-" [0-9] | "-" [1-9] digits
 digits ::= [0-9] | [0-9] digits
 fraction ::= "" | "." digits
 exponent ::= "" |  "e" sign digits | "E" sign digits
