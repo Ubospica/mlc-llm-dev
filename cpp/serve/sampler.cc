@@ -345,18 +345,28 @@ class CPUSampler : public SamplerObj {
                                          std::vector<NDArray>* output_prob_dist,
                                          std::vector<float>* output_token_probs) final {
     auto original_device = logits_on_device->device;
-    NDArray logits = ApplyGrammarMatcherForLogits(
-        logits_on_device, /*cum_sequence_length=*/nullptr, request_mstates, tokenizer_config);
+    NDArray logits = ApplyGrammarMatcherForLogits(logits_on_device, /*cum_sequence_length=*/nullptr,
+                                                  request_mstates, tokenizer_config);
+    auto logits_copy = logits.CopyTo(DLDevice{kDLCPU, 0});
 
-    NDArray probs_on_cpu =
-        BatchComputeProb(logits, /*cum_sequence_length=*/nullptr, model, request_mstates,
-                         generation_cfg, original_device);
+    NDArray probs_on_cpu = BatchComputeProb(logits, /*cum_sequence_length=*/nullptr, model,
+                                            request_mstates, generation_cfg, original_device);
     // - Sample tokens from probabilities.
     // NOTE: Though we have the probability field in RequestModelState,
     //       we do not save the probabilities right now.
     //       We will handle this in the future when we work on speculation.
     std::vector<int32_t> output_tokens = SampleTokensFromProbs(
         probs_on_cpu, request_mstates, generation_cfg, rngs, output_prob_dist, output_token_probs);
+    // std::cout << "logits for output: ";
+    // for (auto i : output_tokens) {
+    //   std::cout << *(static_cast<float*>(__builtin_assume_aligned(logits_copy->data, 4)) + (i))
+    //             << "\n";
+    // }
+    // std::cout << "prob for output: ";
+    // for (auto i : output_tokens) {
+    //   std::cout << *(static_cast<float*>(__builtin_assume_aligned(probs_on_cpu->data, 4)) + (i))
+    //             << "\n";
+    // }
     return output_tokens;
   }
 
@@ -516,42 +526,44 @@ class CPUSampler : public SamplerObj {
 
     auto logits_on_cpu = CopyArrayToDevice(logits_on_device, &cpu_copy_buffer_, {kDLCPU, 0});
 
-    tvm::runtime::parallel_for_with_threading_backend(
-        [&](int i) {
-          if (!request_mstates[i]->grammar_matcher.defined()) {
-            return;
-          }
-          auto matcher = request_mstates[i]->grammar_matcher.value();
-          RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
-                       "start finding rejected tokens for grammar");
-          std::vector<int32_t> rejected_token_ids =
-              matcher->FindRejectedTokenIds(tokenizer_config->sorted_token_and_ids);
-          rejected_token_ids.insert(rejected_token_ids.end(),
-                                    tokenizer_config->special_token_ids.begin(),
-                                    tokenizer_config->special_token_ids.end());
-          if (!matcher->CanAcceptEnd()) {
-            rejected_token_ids.insert(rejected_token_ids.end(),
-                                      tokenizer_config->stop_token_ids.begin(),
-                                      tokenizer_config->stop_token_ids.end());
-          }
-          RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
-                       "finish finding rejected tokens for grammar");
+    // tvm::runtime::parallel_for_with_threading_backend(
+    //     [&](int i) {
+    for (auto i = 0; i < n; ++i) {
+      if (!request_mstates[i]->grammar_matcher.defined()) {
+        continue;
+      }
+      auto matcher = request_mstates[i]->grammar_matcher.value();
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start finding rejected tokens for grammar");
+      // std::cout << tokenizer_config->sorted_token_and_ids.size();
+      std::vector<int32_t> rejected_token_ids =
+          matcher->FindRejectedTokenIds(tokenizer_config->sorted_token_and_ids);
+      rejected_token_ids.insert(rejected_token_ids.end(),
+                                tokenizer_config->special_token_ids.begin(),
+                                tokenizer_config->special_token_ids.end());
+      if (!matcher->CanAcceptEnd()) {
+        rejected_token_ids.insert(rejected_token_ids.end(),
+                                  tokenizer_config->stop_token_ids.begin(),
+                                  tokenizer_config->stop_token_ids.end());
+      }
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "finish finding rejected tokens for grammar");
 
-          RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
-                       "start masking tokens for grammar");
-          float* __restrict logits_raw_data =
-              static_cast<float*>(__builtin_assume_aligned(logits_on_cpu->data, 4)) +
-              (i * vocab_size);
-          float neg_inf = std::numeric_limits<float>::min();
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start masking tokens for grammar");
+      float* __restrict logits_raw_data =
+          static_cast<float*>(__builtin_assume_aligned(logits_on_cpu->data, 4)) + (i * vocab_size);
+      float neg_inf = -std::numeric_limits<float>::infinity();
 
-          for (int32_t token_id : rejected_token_ids) {
-            logits_raw_data[token_id] = neg_inf;
-          }
+      for (int32_t token_id : rejected_token_ids) {
+        logits_raw_data[token_id] = neg_inf;
+      }
 
-          RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
-                       "start masking tokens for grammar");
-        },
-        0, n);
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start masking tokens for grammar");
+    }
+    // },
+    // 0, n);
 
     return logits_on_cpu;
   }
@@ -753,6 +765,11 @@ class CPUSampler : public SamplerObj {
           RECORD_EVENT(this->trace_recorder_, request_ids[i], "finish sample token");
         },
         0, n);
+    // std::cout << "<sampled tokens: ";
+    // for (auto i : sampled_tokens) {
+    //   std::cout << i << " ";
+    // }
+    // std::cout << ">\n";
     return sampled_tokens;
   }
 

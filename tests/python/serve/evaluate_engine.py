@@ -14,11 +14,11 @@ def _parse_args():
     args.add_argument("--device", type=str, default="auto")
     args.add_argument("--batch-size", type=int, default=80)
     args.add_argument("--page-size", type=int, default=16)
-    args.add_argument("--max-total-seq-length", type=int)
+    args.add_argument("--max-total-seq-length", type=int, default=2048)
     args.add_argument("--seed", type=int, default=0)
 
     parsed = args.parse_args()
-    parsed.model = os.path.dirname(parsed.model_lib_path)
+    # parsed.model = os.path.dirname(parsed.model_lib_path)
     assert parsed.batch_size % 16 == 0
     assert parsed.page_size == 16
     assert parsed.max_total_seq_length >= 2048
@@ -44,7 +44,12 @@ def benchmark(args: argparse.Namespace):
     random.seed(args.seed)
 
     # Initialize model loading info and KV cache config
-    model = ModelInfo(args.model, args.model_lib_path, args.device)
+    # model = ModelInfo(args.model, args.model_lib_path, args.device)
+    model = ModelInfo(
+        "dist/Llama-2-7b-chat-hf-q4f16_1-MLC",
+        model_lib_path="dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so",
+        device=args.device,
+    )
     kv_cache_config = KVCacheConfig(
         page_size=args.page_size,
         max_num_sequence=args.batch_size,

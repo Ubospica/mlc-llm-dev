@@ -47,7 +47,7 @@ void ProcessFinishedRequest(Array<Request> finished_requests, EngineState estate
 
 void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Model> models,
                            FRequestStreamCallback request_stream_callback,
-                           int max_single_sequence_length) {
+                           TokenizerConfig tokenizer_config, int max_single_sequence_length) {
   Array<Request> finished_requests;
   finished_requests.reserve(requests.size());
 
@@ -65,6 +65,25 @@ void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Mo
     ICHECK_LE(rstate->next_callback_token_pos, num_committed_tokens);
     if (rstate->next_callback_token_pos == num_committed_tokens && !finish_reason.defined()) {
       continue;
+    }
+
+    if (rstate->mstates[0]->grammar_matcher) {
+      auto grammar_matcher = rstate->mstates[0]->grammar_matcher.value();
+      // std::cout << "<debug: " << rstate->next_callback_token_pos << " " << num_committed_tokens
+      //           << ">\n";
+      for (int i = rstate->next_callback_token_pos; i < num_committed_tokens; i++) {
+        int32_t id = rstate->mstates[0]->committed_tokens[i];
+        if (tokenizer_config->token_lookup_map.count(id) == 0) {
+          // std::cout << "<fail>\n";
+          continue;
+        }
+        auto codepoints = tokenizer_config->token_lookup_map.at(id).token;
+        for (auto codepoint : codepoints) {
+          rstate->mstates[0]->grammar_matcher.value()->AcceptChar(codepoint, true, true);
+        }
+      }
+      // std::cout << "<After: " << rstate->mstates[0]->grammar_matcher.value()->PrintStackState()
+      //           << ">\n";
     }
 
     callback_delta_outputs.push_back(RequestStreamOutput(

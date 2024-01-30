@@ -291,9 +291,10 @@ std::string ReplaceUnderscoreWithSpace(const std::string& str,
       res += str.substr(pos);
       break;
     }
-    res += str.substr(pos, found - pos) + special_underscore;
+    res += str.substr(pos, found - pos) + " ";
     pos = found + special_underscore.size();
   }
+  // std::cout << "str before: " << str << " str after: " << res << "\n";
   return res;
 }
 
@@ -310,14 +311,21 @@ TokenizerConfig::TokenizerConfig(const Tokenizer& tokenizer) {
       n->special_token_ids.push_back(i);
     } else {
       auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, n->special_underscore);
-      auto codepoints = Utf8StringToCodepoints(token.c_str());
+      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
       ICHECK(!codepoints.empty() &&
              codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
           << "Invalid token: " << token;
+      // std::cout << "token id: " << i << " token: " << token << " codepoints: ";
+      // for (auto codepoint : codepoints) {
+      //   std::cout << CodepointToPrintable(codepoint);
+      // }
+      // std::cout << "\n";
       n->sorted_token_and_ids.push_back({codepoints, i});
+      n->token_lookup_map[i] = {codepoints, i};
     }
   }
   std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
+  data_ = std::move(n);
 }
 
 }  // namespace serve

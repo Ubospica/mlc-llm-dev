@@ -117,6 +117,7 @@ class TokenizerConfigNode : public Object {
   std::vector<TokenAndId> sorted_token_and_ids;
   std::vector<int32_t> stop_token_ids;
   std::vector<int32_t> special_token_ids;
+  std::unordered_map<int32_t, TokenAndId> token_lookup_map;
   const std::string special_underscore = "▁";
 };
 

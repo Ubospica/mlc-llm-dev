@@ -15,7 +15,7 @@ from mlc_chat.serve import (
 from mlc_chat.serve.engine import ModelInfo
 
 prompts = [
-    "Generate a JSON string with 10 items: ",
+    "Generate a JSON string containing a object with 10 items. Directly return the json string:",
 ]
 
 
@@ -26,6 +26,7 @@ def create_requests(
     repetition_penalty: float = 1.0,
     max_tokens_low: int = 256,
     max_tokens_high: int = 257,
+    json_mode: bool = False,
     output_grammar: Optional[str] = None,
 ) -> List[Request]:
     assert num_requests >= 0 and num_requests <= len(prompts)
@@ -43,6 +44,7 @@ def create_requests(
                     repetition_penalty=repetition_penalty,
                     max_tokens=max_tokens,
                     stop_token_ids=stop_token_ids,
+                    json_mode=json_mode,
                     output_grammar=output_grammar,
                 ),
             )
@@ -63,15 +65,15 @@ def test_engine_basic():
     # Initialize model loading info and KV cache config
     model = ModelInfo(
         "dist/Llama-2-7b-chat-hf-q4f16_1-MLC",
-        model_lib_path="dist/Llama-2-7b-chat-hf-q4f16_1-MLC/Llama-2-7b-chat-hf-q4f16_1-MLC-cuda.so",
+        model_lib_path="dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so",
     )
     kv_cache_config = KVCacheConfig(page_size=16)
 
     # Hyperparameters for tests (you can try different combinations).
-    num_requests = 10  # [4, 8, 10]
+    num_requests = 1  # [4, 8, 10]
     temperature = 0.9  # [0, 0.8, 0.9, 1.0, 1.1]
     repetition_penalty = 1.0  # [1.0, 1.01]
-    max_tokens: int = 256  # [32, 128, 256]
+    max_tokens: int = 1024  # [32, 128, 256]
     np.random.seed(0)
 
     # Output list
@@ -94,7 +96,8 @@ def test_engine_basic():
         repetition_penalty=repetition_penalty,
         max_tokens_low=max_tokens,
         max_tokens_high=max_tokens + 1,
-        # output_grammar="/home/yxdong/code/mlc-llm-lora/tests/python/serve/json_simplified.ebnf",
+        # json_mode=True,
+        output_grammar="/home/yxdong/code/mlc-llm-lora/tests/python/serve/json_simplified_2.ebnf",
     )
 
     # Add all requests to engine

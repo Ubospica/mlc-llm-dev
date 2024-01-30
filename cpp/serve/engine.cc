@@ -169,7 +169,8 @@ class EngineImpl : public Engine {
       Array<Request> processed_requests = action->Step(estate_);
       if (!processed_requests.empty()) {
         ActionStepPostProcess(processed_requests, estate_, models_,
-                              request_stream_callback_.value(), max_single_sequence_length_);
+                              request_stream_callback_.value(), tokenizer_config_,
+                               max_single_sequence_length_);
         return;
       }
     }

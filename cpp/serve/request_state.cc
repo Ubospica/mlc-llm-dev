@@ -33,7 +33,7 @@ RequestModelState::RequestModelState(Request request, int model_id, int64_t inte
     buffer << file.rdbuf();
     std::string grammar_str = buffer.str();
 
-    auto grammar = BNFGrammar::FromJSON(grammar_str);
+    auto grammar = BNFGrammar::FromEBNFString(grammar_str, true, false);
     n->grammar_matcher = GrammarMatcher(grammar);
   } else if (request->generation_cfg->json_mode) {
     auto grammar = BNFGrammar::GetJSONGrammar();

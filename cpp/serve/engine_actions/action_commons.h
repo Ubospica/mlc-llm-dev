@@ -40,7 +40,7 @@ void RemoveRequestFromModel(EngineState estate, int64_t req_internal_id, Array<M
  * if a request is finished.
  */
 void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Model> models,
-                           FRequestStreamCallback request_stream_callback,
+                           FRequestStreamCallback request_stream_callback, TokenizerConfig tokenizer_config,
                            int max_single_sequence_length);
 
 /*!

@@ -267,7 +267,7 @@ class StackTopsWithHistory {
 
   const std::vector<int32_t>& LatestStackTops() const { return stack_tops_history_.back(); }
 
-  std::string PrintLatest(const BNFGrammar& grammar) const {
+  std::string PrintLatest() const {
     std::stringstream ss;
     ss << "Stacks list size: " << stack_tops_history_.back().size() << std::endl;
     int cnt = 0;
@@ -310,10 +310,13 @@ class GrammarMatcherNode : public Object {
  public:
   GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 0)
       : grammar_(grammar), tree_(grammar), stack_tops_with_history_(&tree_, max_rollback_steps) {
-    PushInitStackTops();
+    InitStackState();
   }
 
-  bool AcceptChar(TCodepoint codepoint, bool drop_old = true) {
+  bool AcceptChar(TCodepoint codepoint, bool drop_old = true, bool verbose = false) {
+    // if (verbose) {
+    //   std::cout << "before stack: " << PrintStackState() << std::endl;
+    // }
     auto prev_stack_tops = stack_tops_with_history_.LatestStackTops();
     std::vector<int32_t> new_stack_tops;
     for (auto old_top : prev_stack_tops) {
@@ -322,14 +325,19 @@ class GrammarMatcherNode : public Object {
                             stack_tops_to_add.end());
     }
     if (new_stack_tops.empty()) {
-      std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
-                << "\" Rejected" << std::endl;
+      // if (verbose) {
+      //   std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
+      //             << "\" Rejected" << std::endl;
+      // }
       return false;
     }
     stack_tops_with_history_.PushStackTops(new_stack_tops, drop_old);
-    std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
-              << "\" Stack size : " << stack_tops_with_history_.LatestStackTops().size()
-              << std::endl;
+    // if (verbose) {
+    //   std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
+    //             << "\" Stack size : " << stack_tops_with_history_.LatestStackTops().size()
+    //             << std::endl;
+      // std::cout << "after stack: " << PrintStackState() << std::endl;
+    // }
     return true;
   }
 
@@ -357,7 +365,20 @@ class GrammarMatcherNode : public Object {
   std::vector<int32_t> FindRejectedTokenIds(const std::vector<TokenAndId>& sorted_token_and_ids) {
     std::vector<int32_t> rejected_ids;
     int prev_matched_size = 0;
+    // std::cout << "Grammar state before matching: " << PrintStackState() << "\n";
+    // std::cout << "Accepted tokens: ";
     for (int i = 0; i < sorted_token_and_ids.size(); ++i) {
+      // std::cout << "Handling: Codepoints: ";
+      // for (auto i : sorted_token_and_ids[i].token) {
+      //   std::cout << i << " ";
+      // }
+      // std::cout << " Printed form: ";
+      // for (auto i : sorted_token_and_ids[i].token) {
+      //   std::cout << CodepointToPrintable(i);
+      // }
+      // std::cout << "\n";
+      // std::cout << "Current stack state: " << PrintStackState();
+
       // Step 1. Find the length of the previous token that is useful for matching the current
       // token. (denoted by prev_useful_size)
       // prev_useful_size = min(prev_matched_size, len(longest_common_prefix(prev_token,
@@ -373,30 +394,56 @@ class GrammarMatcherNode : public Object {
         }
       }
 
+      // std::cout << "Prev useful size: " << prev_useful_size << "\n";
+
       // Step 2. Rollback the stack before matching the current token.
       Rollback(prev_matched_size - prev_useful_size);
 
       // Step 3. Match the current token, and update the prev_matched_size.
       bool accepted = true;
+      prev_matched_size = prev_useful_size;
       for (int j = prev_useful_size; j < sorted_token_and_ids[i].token.size(); ++j) {
         if (!AcceptChar(sorted_token_and_ids[i].token[j], false)) {
-          Rollback(1);
           accepted = false;
           break;
         }
         prev_matched_size = j + 1;
       }
 
+      // std::cout << "Prev matched size: " << prev_matched_size << "\n";
+      // std::cout << (accepted ? "Accepted" : "Rejected") << "\n\n";
+
       // Step 4. If the current token is accepted, push its id to the result.
       if (!accepted) {
         rejected_ids.push_back(sorted_token_and_ids[i].id);
       }
+      if (accepted) {
+        // std::cout << sorted_token_and_ids[i].id << " ";
+        // std::cout << sorted_token_and_ids[i].id << " After state\n";
+        //   std::cout << PrintStackState();
+        // std::cout << "Accepted: ";
+        // for (auto i : sorted_token_and_ids[i].token) {
+        //   std::cout << i << " ";
+        // }
+        // std::cout << " Printed form: ";
+        // for (auto i : sorted_token_and_ids[i].token) {
+        //   std::cout << CodepointToPrintable(i);
+        // }
+        // std::cout << "\n";
+      }
     }
+    // std::cout << "\n";
     Rollback(prev_matched_size);
+    // for (auto i : rejected_ids) {
+    //   std::cout << i << " ";
+    // }
+    // std::cout << "Grammar state after matching: " << PrintStackState() << "\n";
     return rejected_ids;
   }
 
   void Rollback(int rollback_cnt) { stack_tops_with_history_.Rollback(rollback_cnt); }
+
+  std::string PrintStackState() const { return stack_tops_with_history_.PrintLatest(); }
 
   static constexpr const char* _type_key = "mlc.serve.GrammarMatcher";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -404,7 +451,7 @@ class GrammarMatcherNode : public Object {
   TVM_DECLARE_BASE_OBJECT_INFO(GrammarMatcherNode, Object);
 
  public:
-  void PushInitStackTops() {
+  void InitStackState() {
     auto main_rule = grammar_->GetRule(0);
     auto main_rule_expr = grammar_->GetRuleExpr(main_rule.rule_expr_id);
     std::vector<int32_t> new_stack_tops;
