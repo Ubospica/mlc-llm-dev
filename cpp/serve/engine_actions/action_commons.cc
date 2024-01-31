@@ -79,7 +79,7 @@ void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Mo
         }
         auto codepoints = tokenizer_config->token_lookup_map.at(id).token;
         for (auto codepoint : codepoints) {
-          rstate->mstates[0]->grammar_matcher.value()->AcceptChar(codepoint, true, true);
+          rstate->mstates[0]->grammar_matcher.value()->AcceptChar(codepoint, true);
         }
       }
       // std::cout << "<After: " << rstate->mstates[0]->grammar_matcher.value()->PrintStackState()

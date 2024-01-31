@@ -167,6 +167,7 @@ if __name__ == "__main__":
 
 
 # Average end-to-end latency: 846.4184 seconds for the entire batch
+
 # Single token prefill latency: 2033.5524 ms/tok
 # Single token decode latency: 38.0487 ms/tok
 # Engine prefill time: 30.9315 s

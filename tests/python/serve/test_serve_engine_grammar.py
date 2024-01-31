@@ -15,7 +15,7 @@ from mlc_chat.serve import (
 from mlc_chat.serve.engine import ModelInfo
 
 prompts = [
-    "Generate a JSON string containing a object with 10 items. Directly return the json string:",
+    "Generate a JSON string containing a object with 20 items. Directly return the json string:",
 ]
 
 

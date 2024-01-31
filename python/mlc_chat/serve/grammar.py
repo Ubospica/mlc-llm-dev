@@ -1,7 +1,9 @@
 """Classes handling the grammar guided generation of MLC LLM serving"""
+from typing import List
 import tvm._ffi
 from tvm.runtime import Object
 
+from ..tokenizer import Tokenizer
 from . import _ffi_api
 
 
@@ -20,7 +22,7 @@ class BNFGrammar(Object):
         r"""Parse a BNF grammar from a string in BNF/EBNF format.
 
         This method accepts the EBNF notation from the W3C XML Specification
-        (https://www.w3.org/TR/xml/#sec-notation), which is a popular standard, with the following
+        (https://www.w3.org/TR/xml/#sec-notatPion), which is a popular standard, with the following
         changes:
         - Using # as comment mark instead of /**/
         - Using C-style unicode escape sequence \u01AB, \U000001AB, \xAB instead of #x0123
@@ -120,3 +122,9 @@ class GrammarMatcher(Object):
     def match_complete_string(self, string: str) -> bool:
         """ """
         return _ffi_api.GrammarMatcherMatchCompleteString(self, string)
+
+    def get_rejected_token_ids_for_tokenizer(self, tokenizer: "Tokenizer") -> List[int]:
+        """ """
+        return _ffi_api.GrammarMatcherGetRejectedTokenIdsForTokenizer(  # type: ignore  # pylint: disable=no-member
+            self, tokenizer
+        )
