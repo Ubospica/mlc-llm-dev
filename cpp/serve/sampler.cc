@@ -344,6 +344,8 @@ class CPUSampler : public SamplerObj {
                                          TokenizerConfig tokenizer_config,
                                          std::vector<NDArray>* output_prob_dist,
                                          std::vector<float>* output_token_probs) final {
+    auto start = std::chrono::high_resolution_clock::now();
+
     auto original_device = logits_on_device->device;
     NDArray logits = ApplyGrammarMatcherForLogits(logits_on_device, /*cum_sequence_length=*/nullptr,
                                                   request_mstates, tokenizer_config);
@@ -367,6 +369,9 @@ class CPUSampler : public SamplerObj {
     //   std::cout << *(static_cast<float*>(__builtin_assume_aligned(probs_on_cpu->data, 4)) + (i))
     //             << "\n";
     // }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Sampling time: " << std::chrono::duration<double, std::milli>(end - start).count()
+              << " ms" << std::endl;
     return output_tokens;
   }
 

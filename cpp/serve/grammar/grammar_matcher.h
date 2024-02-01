@@ -26,77 +26,89 @@ namespace serve {
 
 using namespace tvm::runtime;
 
-class CodepointSet {
- private:
-  using RuleExpr = BNFGrammarNode::RuleExpr;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
+// class CodepointSet {
+//  private:
+//   using RuleExpr = BNFGrammarNode::RuleExpr;
+//   using RuleExprType = BNFGrammarNode::RuleExprType;
 
- public:
-  CodepointSet() = default;
+//  public:
+//   CodepointSet() = default;
 
-  explicit CodepointSet(const RuleExpr& rule_expr) {
-    ICHECK(rule_expr.type == RuleExprType::kCharacterRange ||
-           rule_expr.type == RuleExprType::kNegCharacterRange);
-    for (int i = 0; i < rule_expr.size(); i += 2) {
-      ranges_.push_back({rule_expr.data[i], rule_expr.data[i + 1]});
-    }
-    Simplify();
-    if (rule_expr.type == RuleExprType::kNegCharacterRange) {
-      ToNegative();
+//   explicit CodepointSet(const RuleExpr& rule_expr) {
+//     ICHECK(rule_expr.type == RuleExprType::kCharacterRange ||
+//            rule_expr.type == RuleExprType::kNegCharacterRange);
+//     for (int i = 0; i < rule_expr.size(); i += 2) {
+//       ranges_.push_back({rule_expr.data[i], rule_expr.data[i + 1]});
+//     }
+//     Simplify();
+//     if (rule_expr.type == RuleExprType::kNegCharacterRange) {
+//       ToNegative();
+//     }
+//   }
+
+//   bool Contains(int32_t codepoint) const {
+//     for (const auto& range : ranges_) {
+//       if (range.start <= codepoint && codepoint <= range.end) {
+//         return true;
+//       }
+//     }
+//     return false;
+//   }
+
+//   void Union(const CodepointSet& other) {
+//     ranges_.insert(ranges_.end(), other.ranges_.begin(), other.ranges_.end());
+//     Simplify();
+//   }
+
+//  private:
+//   void Simplify() {
+//     std::sort(ranges_.begin(), ranges_.end());
+//     for (auto it = ranges_.begin(); it != ranges_.end() - 1; ++it) {
+//       auto next = it + 1;
+//       if (it->end >= next->start) {
+//         it->end = std::max(it->end, next->end);
+//         ranges_.erase(next);
+//       }
+//     }
+//   }
+
+//   void ToNegative() {
+//     static constexpr int32_t kMaxCodepoint = 0x10FFFF;
+//     std::vector<Range> new_ranges;
+//     int32_t start = 0;
+//     for (const auto& range : ranges_) {
+//       if (start < range.start) {
+//         new_ranges.push_back({start, range.start - 1});
+//       }
+//       start = range.end + 1;
+//     }
+//     if (start <= kMaxCodepoint) {
+//       new_ranges.push_back({start, kMaxCodepoint});
+//     }
+//     ranges_ = std::move(new_ranges);
+//   }
+
+//   struct Range {
+//     int32_t start;
+//     int32_t end;
+//     bool operator<(const Range& other) const {
+//       return start == other.start ? end < other.end : start < other.start;
+//     }
+//   };
+//   std::vector<Range> ranges_;
+// };
+
+inline bool CharacterRangeContains(const BNFGrammarNode::RuleExpr& rule_expr,
+                                   TCodepoint codepoint) {
+  ICHECK(rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterRange ||
+         rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterRange);
+  for (int i = 0; i < rule_expr.size(); i += 2) {
+    if (rule_expr.data[i] <= codepoint && codepoint <= rule_expr.data[i + 1]) {
+      return rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterRange;
     }
   }
-
-  bool Contains(int32_t codepoint) const {
-    for (const auto& range : ranges_) {
-      if (range.start <= codepoint && codepoint <= range.end) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void Union(const CodepointSet& other) {
-    ranges_.insert(ranges_.end(), other.ranges_.begin(), other.ranges_.end());
-    Simplify();
-  }
-
- private:
-  void Simplify() {
-    std::sort(ranges_.begin(), ranges_.end());
-    for (auto it = ranges_.begin(); it != ranges_.end() - 1; ++it) {
-      auto next = it + 1;
-      if (it->end >= next->start) {
-        it->end = std::max(it->end, next->end);
-        ranges_.erase(next);
-      }
-    }
-  }
-
-  void ToNegative() {
-    static constexpr int32_t kMaxCodepoint = 0x10FFFF;
-    std::vector<Range> new_ranges;
-    int32_t start = 0;
-    for (const auto& range : ranges_) {
-      if (start < range.start) {
-        new_ranges.push_back({start, range.start - 1});
-      }
-      start = range.end + 1;
-    }
-    if (start <= kMaxCodepoint) {
-      new_ranges.push_back({start, kMaxCodepoint});
-    }
-    ranges_ = std::move(new_ranges);
-  }
-
-  struct Range {
-    int32_t start;
-    int32_t end;
-    bool operator<(const Range& other) const {
-      return start == other.start ? end < other.end : start < other.start;
-    }
-  };
-  std::vector<Range> ranges_;
-};
+  return rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterRange;
+}
 
 struct RulePosition {
   /*! \brief The rule's id. */
@@ -333,7 +345,8 @@ class GrammarMatcherNode : public Object {
       ICHECK(current_char_range.type == RuleExprType::kCharacterRange ||
              current_char_range.type == RuleExprType::kNegCharacterRange);
       auto start = std::chrono::high_resolution_clock::now();
-      auto ok = CodepointSet(current_char_range).Contains(codepoint);
+      // auto ok = CodepointSet(current_char_range).Contains(codepoint);
+      auto ok = CharacterRangeContains(current_char_range, codepoint);
       auto end = std::chrono::high_resolution_clock::now();
       codepoint_set_total_time += end - start;
       if (!ok) {
