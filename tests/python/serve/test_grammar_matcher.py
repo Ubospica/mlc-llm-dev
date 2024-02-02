@@ -218,26 +218,28 @@ def test_get_rejected_token_ids(json_grammar: BNFGrammar):
     tokenizer = Tokenizer(tokenizer_path)
     grammar_matcher = GrammarMatcher(json_grammar)
 
-    test_input_str = """{
-    "id": 1,
-    "name": "Example",
-    "active": True,
-    "tags": ["tag1", "tag2", "tag3"],
-    "details": {
-        "description": "A complex JSON example.",
-        "metrics": [0.1, 0.2, 0.3],
-        "nested": {
-            "level1": {
-                "level2": {
-                    "value": "deep"
-                },
-                "array": [1, 2, 3]
-            }
-        }
-    },
-    "additional": "This part might be adjusted to reach the desired length."
-}
-"""
+    #     test_input_str = """{
+    #     "id": 1,
+    #     "name": "Example",
+    #     "active": True,
+    #     "tags": ["tag1", "tag2", "tag3"],
+    #     "details": {
+    #         "description": "A complex JSON example.",
+    #         "metrics": [0.1, 0.2, 0.3],
+    #         "nested": {
+    #             "level1": {
+    #                 "level2": {
+    #                     "value": "deep"
+    #                 },
+    #                 "array": [1, 2, 3]
+    #             }
+    #         }
+    #     },
+    #     "additional": "This part might be adjusted to reach the desired length."
+    # }
+    # """
+
+    test_input_str = """{"id": 1,"name": "Example"}"""
     for c in test_input_str:
         rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(tokenizer)
         print("Accepting:", c)

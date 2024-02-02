@@ -41,27 +41,29 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, Tokenizer token
   }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = end - start;
-  std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
+  // std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
   // std::cout << "Stack: " << matcher->PrintStackState() << std::endl;
   start = std::chrono::high_resolution_clock::now();
   matcher->handle_past_time = std::chrono::milliseconds(0);
   matcher->rollback_total_time = std::chrono::milliseconds(0);
   matcher->accept_total_time = std::chrono::milliseconds(0);
   matcher->codepoint_set_total_time = std::chrono::milliseconds(0);
+  matcher->overhead_time = std::chrono::milliseconds(0);
   auto res = matcher->FindRejectedTokenIds(tokenizer_config->sorted_token_and_ids);
   end = std::chrono::high_resolution_clock::now();
   duration = end - start;
-  std::cout << "Step 2: " << duration.count() << " ms" << std::endl;
+  std::cout << "Total time: " << duration.count() << " ms" << std::endl;
   std::cout << "Handle past time: " << matcher->handle_past_time.count() << " ms" << std::endl;
   std::cout << "Rollback time: " << matcher->rollback_total_time.count() << " ms" << std::endl;
   std::cout << "Accept time: " << matcher->accept_total_time.count() << " ms" << std::endl;
+  std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
   std::cout << "Codepoint set time: " << matcher->codepoint_set_total_time.count() << " ms"
             << std::endl;
-  start = std::chrono::high_resolution_clock::now();
+  // start = std::chrono::high_resolution_clock::now();
   auto ret = IntTuple(std::vector<long>(res.begin(), res.end()));
-  end = std::chrono::high_resolution_clock::now();
-  duration = end - start;
-  std::cout << "Step 3: " << duration.count() << " ms" << std::endl;
+  // end = std::chrono::high_resolution_clock::now();
+  // duration = end - start;
+  // std::cout << "Step 3: " << duration.count() << " ms" << std::endl;
   return ret;
 }
 

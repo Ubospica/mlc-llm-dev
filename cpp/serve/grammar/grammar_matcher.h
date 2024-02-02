@@ -344,11 +344,14 @@ class GrammarMatcherNode : public Object {
       auto current_char_range = grammar_->GetRuleExpr(current_sequence[rule_position.element_id]);
       ICHECK(current_char_range.type == RuleExprType::kCharacterRange ||
              current_char_range.type == RuleExprType::kNegCharacterRange);
-      auto start = std::chrono::high_resolution_clock::now();
+      // auto start = std::chrono::high_resolution_clock::now();
       // auto ok = CodepointSet(current_char_range).Contains(codepoint);
       auto ok = CharacterRangeContains(current_char_range, codepoint);
-      auto end = std::chrono::high_resolution_clock::now();
-      codepoint_set_total_time += end - start;
+      // auto end = std::chrono::high_resolution_clock::now();
+      // codepoint_set_total_time += end - start;
+      // start = std::chrono::high_resolution_clock::now();
+      // end = std::chrono::high_resolution_clock::now();
+      // overhead_time += end - start;
       if (!ok) {
         continue;
       }
@@ -374,6 +377,9 @@ class GrammarMatcherNode : public Object {
     return true;
   }
 
+  std::chrono::duration<double, std::milli> codepoint_set_total_time;
+  std::chrono::duration<double, std::milli> overhead_time;
+
   bool MatchCompleteString(String str) {
     auto codepoints = Utf8StringToCodepoints(str.c_str());
     int accepted_cnt = 0;
@@ -398,7 +404,8 @@ class GrammarMatcherNode : public Object {
   std::vector<int32_t> FindRejectedTokenIds(const std::vector<TokenAndId>& sorted_token_and_ids) {
     std::vector<int32_t> rejected_ids;
     int prev_matched_size = 0;
-    for (int i = 0; i < sorted_token_and_ids.size(); ++i) {
+    std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() << std::endl;
+    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
       // Step 1. Find the length of the previous token that is useful for matching the current
       // token. (denoted by prev_useful_size)
       // prev_useful_size = min(prev_matched_size, len(longest_common_prefix(prev_token,
@@ -452,7 +459,6 @@ class GrammarMatcherNode : public Object {
   std::chrono::duration<double, std::milli> handle_past_time;
   std::chrono::duration<double, std::milli> rollback_total_time;
   std::chrono::duration<double, std::milli> accept_total_time;
-  std::chrono::duration<double, std::milli> codepoint_set_total_time;
 
   void Rollback(int rollback_steps) { stack_tops_with_history_.Rollback(rollback_steps); }
 
