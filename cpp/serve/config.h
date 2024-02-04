@@ -105,29 +105,6 @@ class EngineMode : public ObjectRef {
   TVM_DEFINE_OBJECT_REF_METHODS(EngineMode, ObjectRef, EngineModeNode);
 };
 
-struct TokenAndId {
-  std::vector<TCodepoint> token;
-  int32_t id;
-  bool operator<(const TokenAndId& other) const;
-};
-
-class TokenizerConfigNode : public Object {
- public:
-  size_t vocab_size;
-  std::vector<TokenAndId> sorted_token_and_ids;
-  std::vector<int32_t> stop_token_ids;
-  std::vector<int32_t> special_token_ids;
-  std::unordered_map<int32_t, TokenAndId> token_lookup_map;
-  const std::string special_underscore = "▁";
-};
-
-class TokenizerConfig : public ObjectRef {
- public:
-  explicit TokenizerConfig(const Tokenizer& tokenizer);
-
-  TVM_DEFINE_OBJECT_REF_METHODS(TokenizerConfig, ObjectRef, TokenizerConfigNode);
-};
-
 }  // namespace serve
 }  // namespace llm
 }  // namespace mlc

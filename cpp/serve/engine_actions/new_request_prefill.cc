@@ -19,7 +19,7 @@ namespace serve {
 class NewRequestPrefillActionObj : public EngineActionObj {
  public:
   explicit NewRequestPrefillActionObj(Array<Model> models, Sampler sampler,
-                                      TokenizerConfig tokenizer_config,
+                                      GrammarTokenizerConfig tokenizer_config,
                                       KVCacheConfig kv_cache_config, int max_single_sequence_length,
                                       Optional<EventTraceRecorder> trace_recorder)
       : models_(std::move(models)),
@@ -206,7 +206,7 @@ class NewRequestPrefillActionObj : public EngineActionObj {
   /*! \brief The sampler to sample new tokens. */
   Sampler sampler_;
   /*! \brief The tokenizer config. */
-  TokenizerConfig tokenizer_config_;
+  GrammarTokenizerConfig tokenizer_config_;
   /*! \brief The KV cache config to help decide prefill is doable. */
   KVCacheConfig kv_cache_config_;
   /*! \brief The max single sequence length to help decide if prefill is doable. */
@@ -216,7 +216,7 @@ class NewRequestPrefillActionObj : public EngineActionObj {
 };
 
 EngineAction EngineAction::NewRequestPrefill(Array<Model> models, Sampler sampler,
-                                             TokenizerConfig tokenizer_config,
+                                             GrammarTokenizerConfig tokenizer_config,
                                              KVCacheConfig kv_cache_config,
                                              int max_single_sequence_length,
                                              Optional<EventTraceRecorder> trace_recorder) {

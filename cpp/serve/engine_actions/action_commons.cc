@@ -47,7 +47,8 @@ void ProcessFinishedRequest(Array<Request> finished_requests, EngineState estate
 
 void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Model> models,
                            FRequestStreamCallback request_stream_callback,
-                           TokenizerConfig tokenizer_config, int max_single_sequence_length) {
+                           GrammarTokenizerConfig tokenizer_config,
+                           int max_single_sequence_length) {
   Array<Request> finished_requests;
   finished_requests.reserve(requests.size());
 

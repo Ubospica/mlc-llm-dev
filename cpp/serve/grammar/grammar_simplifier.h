@@ -50,9 +50,9 @@ class BNFGrammarMutator {
     if constexpr (std::is_same<T, int32_t>::value && std::is_same<ReturnType, BNFGrammar>::value) {
       for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
         auto rule = grammar_->GetRule(i);
-        auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-        auto new_rule_expr_id = VisitExpr(rule_expr);
-        builder_.AddRule(rule.name, new_rule_expr_id);
+        auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
+        auto new_body_expr_id = VisitExpr(rule_expr);
+        builder_.AddRule(rule.name, new_body_expr_id);
       }
       return builder_.Get();
     } else if constexpr (!std::is_same<ReturnType, void>::value) {
@@ -217,7 +217,7 @@ class RuleReachGraphFinder : public BNFGrammarMutator<void, RuleVisitGraph> {
     rule_visit_graph_ = RuleVisitGraph(grammar_->NumRules());
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       cur_rule_id_ = i;
       VisitExpr(rule_expr);
     }
@@ -289,9 +289,9 @@ class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
         continue;
       }
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
-      auto new_rule_expr_id = VisitExpr(rule_expr);
-      builder_.UpdateRuleBody(rule_id_map_[i], new_rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
+      auto new_body_expr_id = VisitExpr(rule_expr);
+      builder_.UpdateRuleBody(rule_id_map_[i], new_body_expr_id);
     }
   }
 
@@ -319,10 +319,10 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
     }
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       cur_rule_name_ = rule.name;
-      auto new_rule_expr_id = VisitRuleBody(rule_expr);
-      builder_.UpdateRuleBody(i, new_rule_expr_id);
+      auto new_body_expr_id = VisitRuleBody(rule_expr);
+      builder_.UpdateRuleBody(i, new_body_expr_id);
     }
     return builder_.Get();
   }
@@ -490,18 +490,18 @@ class MainRuleNormalizer : public BNFGrammarMutator<int32_t, BNFGrammar> {
 
     if (create_new_main) {
       auto rule = grammar_->GetRule(main_rule_id_);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       cur_rule_id_ = 0;
-      auto new_rule_expr_id = VisitExpr(rule_expr);
-      builder_.UpdateRuleBody(0, new_rule_expr_id);
+      auto new_body_expr_id = VisitExpr(rule_expr);
+      builder_.UpdateRuleBody(0, new_body_expr_id);
     }
 
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       cur_rule_id_ = rule_id_map_[i];
-      auto new_rule_expr_id = VisitExpr(rule_expr);
-      builder_.UpdateRuleBody(rule_id_map_[i], new_rule_expr_id);
+      auto new_body_expr_id = VisitExpr(rule_expr);
+      builder_.UpdateRuleBody(rule_id_map_[i], new_body_expr_id);
     }
   }
 
@@ -546,7 +546,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
   void CollectExplicitEpsilonRules() {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       if (grammar_->GetRuleExpr(rule_expr[0]).type == RuleExprType::kEmptyStr) {
         epsilon_rule_id_set_.insert(i);
         if (rule_expr.data_len == 1) {
@@ -569,7 +569,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
           continue;
         }
         auto rule = grammar_->GetRule(next_rule_id);
-        auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+        auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
 
         bool is_epsilon = std::any_of(rule_expr.begin(), rule_expr.end(), [&](int32_t i) {
           auto sub_expr = grammar_->GetRuleExpr(i);
@@ -597,7 +597,7 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
           continue;
         }
         auto rule = grammar_->GetRule(next_rule_id);
-        auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+        auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
 
         bool is_epsilon_only = std::all_of(rule_expr.begin(), rule_expr.end(), [&](int32_t i) {
           auto sub_expr = grammar_->GetRuleExpr(i);
@@ -631,11 +631,11 @@ class EpsilonEliminator : public BNFGrammarMutator<int32_t, std::tuple<BNFGramma
   void EliminateEpsilonRules() {
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
-      auto new_rule_expr_id = VisitChoices(rule_expr);
-      builder_.AddRule(rule.name, new_rule_expr_id);
+      auto new_body_expr_id = VisitChoices(rule_expr);
+      builder_.AddRule(rule.name, new_body_expr_id);
       if (rule.name == "main") {
         grammar_can_be_empty_ = epsilon_rule_id_set_.count(i);
         grammar_must_be_empty_ = epsilon_only_rule_id_set_.count(i);
@@ -715,11 +715,11 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     GetUnitClosure();
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
-      auto new_rule_expr_id = VisitChoices(rule_expr);
-      builder_.AddRule(rule.name, new_rule_expr_id);
+      auto new_body_expr_id = VisitChoices(rule_expr);
+      builder_.AddRule(rule.name, new_body_expr_id);
     }
     bool grammar_can_be_empty, grammar_must_be_empty;
     std::tie(grammar_, grammar_can_be_empty, grammar_must_be_empty) =
@@ -738,7 +738,7 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     unit_visit_graph_ = RuleVisitGraph(grammar_->NumRules());
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_expr.type == RuleExprType::kChoices);
       for (auto j : rule_expr) {
         auto sequence_expr = grammar_->GetRuleExpr(j);
@@ -782,7 +782,7 @@ class UnitProductionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
         continue;
       }
       auto rule = grammar_->GetRule(to);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_expr.type == RuleExprType::kChoices);
       auto choices_to_append = GetNonUnitChoices(rule_expr);
       new_choice_ids.insert(new_choice_ids.end(), choices_to_append.begin(),
@@ -827,12 +827,12 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
     }
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_expr.type == RuleExprType::kChoices);
       cur_rule_id_ = i;
       cur_rule_name_ = rule.name;
-      auto new_rule_expr_id = VisitChoices(rule_expr);
-      builder_.UpdateRuleBody(i, new_rule_expr_id);
+      auto new_body_expr_id = VisitChoices(rule_expr);
+      builder_.UpdateRuleBody(i, new_body_expr_id);
     }
     bool grammar_can_be_empty, grammar_must_be_empty;
     std::tie(grammar_, grammar_can_be_empty, grammar_must_be_empty) =
@@ -895,7 +895,7 @@ class LeftRecursionEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
                                                  std::vector<int32_t> rest_sequence) {
     std::vector<int32_t> new_choice_ids;
     auto referred_rule = builder_.GetRule(refered_rule_id);
-    auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.rule_expr_id);
+    auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.body_expr_id);
 
     ICHECK(referred_rule_expr.type == RuleExprType::kChoices);
     for (auto j : referred_rule_expr) {
@@ -976,7 +976,7 @@ class SequenceRuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
       if (rule.name == "main" || inlined_rules_.count(i)) {
         continue;
       }
-      auto rule_body = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_body = grammar_->GetRuleExpr(rule.body_expr_id);
       ICHECK(rule_body.type == RuleExprType::kChoices);
       if (rule_body.data_len > 1) {
         continue;
@@ -1005,7 +1005,7 @@ class SequenceRuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
     builder_ = BNFGrammarBuilder();
     for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       if (inlined_rules_.count(i)) {
         builder_.AddRule(rule.name, builder_.AddEmptyStr());
       } else {
@@ -1047,7 +1047,7 @@ class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
     }
     for (int i = static_cast<int>(grammar_->NumRules()) - 1; i >= 0; --i) {
       auto rule = grammar_->GetRule(i);
-      auto rule_expr = grammar_->GetRuleExpr(rule.rule_expr_id);
+      auto rule_expr = grammar_->GetRuleExpr(rule.body_expr_id);
       cur_rule_id_ = i;
       builder_.UpdateRuleBody(i, VisitExpr(rule_expr));
     }
@@ -1086,7 +1086,7 @@ class RuleInliner : public BNFGrammarMutator<int32_t, BNFGrammar> {
                                                  std::vector<int32_t> rest_sequence) {
     std::vector<int32_t> new_choice_ids;
     auto referred_rule = builder_.GetRule(refered_rule_id);
-    auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.rule_expr_id);
+    auto referred_rule_expr = builder_.GetRuleExpr(referred_rule.body_expr_id);
 
     ICHECK(referred_rule_expr.type == RuleExprType::kChoices);
     for (auto j : referred_rule_expr) {

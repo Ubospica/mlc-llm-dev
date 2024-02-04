@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2023 by Contributors
- * \file serve/grammar/grammar.cc
+ * \file serve/grammar/grammar_simplifier.cc
  */
 
 #include "grammar_simplifier.h"

@@ -6,10 +6,10 @@
 #ifndef MLC_LLM_SERVE_ENGINE_ACTIONS_ACTION_COMMONS_H_
 #define MLC_LLM_SERVE_ENGINE_ACTIONS_ACTION_COMMONS_H_
 
-#include "../../tokenizers.h"
 #include "../engine.h"
 #include "../engine_state.h"
 #include "../event_trace_recorder.h"
+#include "../grammar/grammar_tokenizer_config.h"
 #include "../model.h"
 
 namespace mlc {
@@ -40,8 +40,8 @@ void RemoveRequestFromModel(EngineState estate, int64_t req_internal_id, Array<M
  * if a request is finished.
  */
 void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Model> models,
-                           FRequestStreamCallback request_stream_callback, TokenizerConfig tokenizer_config,
-                           int max_single_sequence_length);
+                           FRequestStreamCallback request_stream_callback,
+                           GrammarTokenizerConfig tokenizer_config, int max_single_sequence_length);
 
 /*!
  * \brief Preempt the last running requests from `running_queue`,

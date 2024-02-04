@@ -18,7 +18,7 @@ namespace serve {
 using namespace tvm::runtime;
 
 std::string BNFGrammarPrinter::PrintRule(const Rule& rule) {
-  return rule.name + " ::= " + PrintRuleExpr(rule.rule_expr_id);
+  return rule.name + " ::= " + PrintRuleExpr(rule.body_expr_id);
 }
 
 std::string BNFGrammarPrinter::PrintRule(int32_t rule_id) {
@@ -121,7 +121,7 @@ String BNFGrammarJSONSerializer::ToString() {
   for (const auto& rule : grammar_->rules_) {
     picojson::object rule_json;
     rule_json["name"] = picojson::value(rule.name);
-    rule_json["rule_expr_id"] = picojson::value(static_cast<int64_t>(rule.rule_expr_id));
+    rule_json["body_expr_id"] = picojson::value(static_cast<int64_t>(rule.body_expr_id));
     rules_json.push_back(picojson::value(rule_json));
   }
   grammar_json["rules"] = picojson::value(rules_json);

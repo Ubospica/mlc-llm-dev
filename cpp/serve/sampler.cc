@@ -341,7 +341,7 @@ class CPUSampler : public SamplerObj {
                                          Array<RequestModelState> request_mstates,
                                          Array<GenerationConfig> generation_cfg,
                                          const std::vector<RandomGenerator*>& rngs,
-                                         TokenizerConfig tokenizer_config,
+                                         GrammarTokenizerConfig tokenizer_config,
                                          std::vector<NDArray>* output_prob_dist,
                                          std::vector<float>* output_token_probs) final {
     auto start = std::chrono::high_resolution_clock::now();
@@ -513,7 +513,7 @@ class CPUSampler : public SamplerObj {
   NDArray ApplyGrammarMatcherForLogits(NDArray logits_on_device,
                                        const std::vector<int>* cum_sequence_length,
                                        Array<RequestModelState> request_mstates,
-                                       TokenizerConfig tokenizer_config) {
+                                       GrammarTokenizerConfig tokenizer_config) {
     bool require_grammar_match = std::any_of(
         request_mstates.begin(), request_mstates.end(),
         [](const RequestModelState& mstate) { return mstate->grammar_matcher.defined(); });
@@ -541,8 +541,7 @@ class CPUSampler : public SamplerObj {
       RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
                    "start finding rejected tokens for grammar");
       // std::cout << tokenizer_config->sorted_token_and_ids.size();
-      std::vector<int32_t> rejected_token_ids =
-          matcher->FindRejectedTokenIds(tokenizer_config->sorted_token_and_ids);
+      std::vector<int32_t> rejected_token_ids = matcher->FindRejectedTokenIds(tokenizer_config);
       rejected_token_ids.insert(rejected_token_ids.end(),
                                 tokenizer_config->special_token_ids.begin(),
                                 tokenizer_config->special_token_ids.end());

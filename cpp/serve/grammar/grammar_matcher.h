@@ -19,84 +19,13 @@
 #include "../encoding.h"
 #include "grammar.h"
 #include "grammar_serializer.h"
+#include "grammar_tokenizer_config.h"
 
 namespace mlc {
 namespace llm {
 namespace serve {
 
 using namespace tvm::runtime;
-
-// class CodepointSet {
-//  private:
-//   using RuleExpr = BNFGrammarNode::RuleExpr;
-//   using RuleExprType = BNFGrammarNode::RuleExprType;
-
-//  public:
-//   CodepointSet() = default;
-
-//   explicit CodepointSet(const RuleExpr& rule_expr) {
-//     ICHECK(rule_expr.type == RuleExprType::kCharacterRange ||
-//            rule_expr.type == RuleExprType::kNegCharacterRange);
-//     for (int i = 0; i < rule_expr.size(); i += 2) {
-//       ranges_.push_back({rule_expr.data[i], rule_expr.data[i + 1]});
-//     }
-//     Simplify();
-//     if (rule_expr.type == RuleExprType::kNegCharacterRange) {
-//       ToNegative();
-//     }
-//   }
-
-//   bool Contains(int32_t codepoint) const {
-//     for (const auto& range : ranges_) {
-//       if (range.start <= codepoint && codepoint <= range.end) {
-//         return true;
-//       }
-//     }
-//     return false;
-//   }
-
-//   void Union(const CodepointSet& other) {
-//     ranges_.insert(ranges_.end(), other.ranges_.begin(), other.ranges_.end());
-//     Simplify();
-//   }
-
-//  private:
-//   void Simplify() {
-//     std::sort(ranges_.begin(), ranges_.end());
-//     for (auto it = ranges_.begin(); it != ranges_.end() - 1; ++it) {
-//       auto next = it + 1;
-//       if (it->end >= next->start) {
-//         it->end = std::max(it->end, next->end);
-//         ranges_.erase(next);
-//       }
-//     }
-//   }
-
-//   void ToNegative() {
-//     static constexpr int32_t kMaxCodepoint = 0x10FFFF;
-//     std::vector<Range> new_ranges;
-//     int32_t start = 0;
-//     for (const auto& range : ranges_) {
-//       if (start < range.start) {
-//         new_ranges.push_back({start, range.start - 1});
-//       }
-//       start = range.end + 1;
-//     }
-//     if (start <= kMaxCodepoint) {
-//       new_ranges.push_back({start, kMaxCodepoint});
-//     }
-//     ranges_ = std::move(new_ranges);
-//   }
-
-//   struct Range {
-//     int32_t start;
-//     int32_t end;
-//     bool operator<(const Range& other) const {
-//       return start == other.start ? end < other.end : start < other.start;
-//     }
-//   };
-//   std::vector<Range> ranges_;
-// };
 
 inline bool CharacterRangeContains(const BNFGrammarNode::RuleExpr& rule_expr,
                                    TCodepoint codepoint) {
@@ -128,10 +57,10 @@ struct RulePosition {
   bool operator!=(const RulePosition& other) const { return !(*this == other); }
 };
 
+inline constexpr RulePosition kInvalidRulePosition = {-1, -1, -1, -1, 0};
+
 class RulePositionBuffer {
  public:
-  static constexpr RulePosition kInvalidRulePosition = {-1, -1, -1, -1, 0};
-
   int32_t Allocate(RulePosition rule_position) {
     int32_t id;
     if (free_nodes_.empty()) {
@@ -182,7 +111,7 @@ class RulePositionTree {
 
   RulePosition GetNextPosition(const RulePosition& rule_position) const {
     if (IsEndPosition(rule_position)) {
-      return RulePositionBuffer::kInvalidRulePosition;
+      return kInvalidRulePosition;
     }
     auto rule_id = rule_position.rule_id;
     auto sequence_id = rule_position.sequence_id;
@@ -295,19 +224,19 @@ class StackTopsWithHistory {
 
  private:
   void PopFront() {
-    auto old_stack_tops = stack_tops_history_.front();
-    stack_tops_history_.pop_front();
+    const auto& old_stack_tops = stack_tops_history_.front();
     for (auto id : old_stack_tops) {
       tree_->RemoveRefTo(id);
     }
+    stack_tops_history_.pop_front();
   }
 
   void PopBack() {
-    auto new_stack_tops = stack_tops_history_.back();
-    stack_tops_history_.pop_back();
+    const auto& new_stack_tops = stack_tops_history_.back();
     for (auto id : new_stack_tops) {
       tree_->RemoveRefTo(id);
     }
+    stack_tops_history_.pop_back();
   }
 
   RulePositionTree* tree_;
@@ -321,9 +250,10 @@ class GrammarMatcherNode : public Object {
   using RuleExprType = BNFGrammarNode::RuleExprType;
 
  public:
-  GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 0)
+  GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 0,
+                     RulePosition init_rule_position = kInvalidRulePosition)
       : grammar_(grammar), tree_(grammar), stack_tops_with_history_(&tree_, max_rollback_steps) {
-    InitStackState();
+    InitStackState(init_rule_position);
   }
 
   bool AcceptChar(TCodepoint codepoint, bool drop_old = true, bool verbose = false) {
@@ -331,7 +261,7 @@ class GrammarMatcherNode : public Object {
       std::cout << "before stack: " << PrintStackState() << std::endl;
     }
     auto prev_stack_tops = stack_tops_with_history_.LatestStackTops();
-    std::vector<int32_t> new_stack_tops;
+    accept_char_stack_tops_buffer_.clear();
     for (auto old_top : prev_stack_tops) {
       const auto& rule_position = tree_[old_top];
       auto current_sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
@@ -355,19 +285,16 @@ class GrammarMatcherNode : public Object {
       if (!ok) {
         continue;
       }
-      auto next_rule_positions = GetNextRulePositions(old_top);
-      for (auto rule_position : next_rule_positions) {
-        new_stack_tops.push_back(tree_.NewNode(rule_position));
-      }
+      AddNewStackTops(old_top, &accept_char_stack_tops_buffer_);
     }
-    if (new_stack_tops.empty()) {
+    if (accept_char_stack_tops_buffer_.empty()) {
       if (verbose) {
         std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
                   << "\" Rejected" << std::endl;
       }
       return false;
     }
-    stack_tops_with_history_.PushStackTops(new_stack_tops, drop_old);
+    stack_tops_with_history_.PushStackTops(accept_char_stack_tops_buffer_, drop_old);
     if (verbose) {
       std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
                 << "\" Stack size : " << stack_tops_with_history_.LatestStackTops().size()
@@ -401,7 +328,9 @@ class GrammarMatcherNode : public Object {
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
 
-  std::vector<int32_t> FindRejectedTokenIds(const std::vector<TokenAndId>& sorted_token_and_ids) {
+  std::vector<int32_t> FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config) {
+    const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
+    const auto& known_state_tokens = tokenizer_config->known_state_tokens;
     std::vector<int32_t> rejected_ids;
     int prev_matched_size = 0;
     std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() << std::endl;
@@ -460,6 +389,38 @@ class GrammarMatcherNode : public Object {
   std::chrono::duration<double, std::milli> rollback_total_time;
   std::chrono::duration<double, std::milli> accept_total_time;
 
+  KnownStateTokens GetKnownStateTokens(
+      const std::vector<TokenAndId>& sorted_token_and_ids,
+      const std::unordered_map<int32_t, TokenAndId>* token_lookup_map) {
+    std::unordered_set<int32_t> accepted_ids;
+    std::unordered_set<int32_t> rejected_ids;
+    std::unordered_set<int32_t> unknown_state_ids;
+    int prev_matched_size = 0;
+    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+      const auto& token = sorted_token_and_ids[i].token;
+      bool see_end = false;
+      bool rejected = false;
+      for (auto character : token) {
+        if (CanAcceptEnd()) {
+          see_end = true;
+        }
+        if (!AcceptChar(character)) {
+          rejected = true;
+          break;
+        }
+      }
+
+      if (!rejected) {
+        accepted_ids.insert(sorted_token_and_ids[i].id);
+      } else if (see_end) {
+        unknown_state_ids.insert(sorted_token_and_ids[i].id);
+      } else {
+        rejected_ids.insert(sorted_token_and_ids[i].id);
+      }
+    }
+    return KnownStateTokens(token_lookup_map, accepted_ids, rejected_ids, unknown_state_ids);
+  }
+
   void Rollback(int rollback_steps) { stack_tops_with_history_.Rollback(rollback_steps); }
 
   std::string PrintStackState() const { return stack_tops_with_history_.PrintLatest(); }
@@ -470,16 +431,23 @@ class GrammarMatcherNode : public Object {
   TVM_DECLARE_BASE_OBJECT_INFO(GrammarMatcherNode, Object);
 
  public:
-  void InitStackState() {
-    auto main_rule = grammar_->GetRule(0);
-    auto main_rule_expr = grammar_->GetRuleExpr(main_rule.rule_expr_id);
-    std::vector<int32_t> new_stack_tops;
-    for (auto i : main_rule_expr) {
-      auto sequence = grammar_->GetRuleExpr(i);
-      ICHECK(sequence.type == RuleExprType::kSequence || sequence.type == RuleExprType::kEmptyStr);
-      new_stack_tops.push_back(tree_.NewNode(RulePosition{0, i, 0, RulePositionTree::kNoParent}));
+  void InitStackState(RulePosition init_rule_position) {
+    if (init_rule_position == kInvalidRulePosition) {
+      // Initialize the stack with the main rule.
+      auto main_rule = grammar_->GetRule(0);
+      auto main_rule_expr = grammar_->GetRuleExpr(main_rule.body_expr_id);
+      std::vector<int32_t> new_stack_tops;
+      for (auto i : main_rule_expr) {
+        auto sequence = grammar_->GetRuleExpr(i);
+        ICHECK(sequence.type == RuleExprType::kSequence ||
+               sequence.type == RuleExprType::kEmptyStr);
+        new_stack_tops.push_back(tree_.NewNode(RulePosition{0, i, 0, RulePositionTree::kNoParent}));
+      }
+      stack_tops_with_history_.PushStackTops(new_stack_tops);
+    } else {
+      init_rule_position.parent_id = RulePositionTree::kNoParent;
+      stack_tops_with_history_.PushStackTops({tree_.NewNode(init_rule_position)});
     }
-    stack_tops_with_history_.PushStackTops(new_stack_tops);
   }
 
   // bool CanReachEnd(int32_t old_top) const {
@@ -512,7 +480,7 @@ class GrammarMatcherNode : public Object {
   //       ICHECK(element.type == RuleExprType::kRuleRef);
   //       auto new_rule_id = element[0];
   //       auto new_rule = grammar_->GetRule(new_rule_id);
-  //       auto new_rule_expr = grammar_->GetRuleExpr(new_rule.rule_expr_id);
+  //       auto new_rule_expr = grammar_->GetRuleExpr(new_rule.body_expr_id);
   //       ICHECK(new_rule_expr.type == RuleExprType::kChoices);
 
   //       bool contain_empty = false;
@@ -544,9 +512,7 @@ class GrammarMatcherNode : public Object {
   //   return new_stack_tops;
   // }
 
-  std::vector<RulePosition> GetNextRulePositions(int32_t old_rule_position_id) {
-    std::vector<RulePosition> new_rule_positions;
-
+  void AddNewStackTops(int32_t old_rule_position_id, std::vector<int32_t>* new_stack_tops) {
     auto cur_rule_position = tree_.GetNextPosition(tree_[old_rule_position_id]);
 
     while (!tree_.IsEndPosition(cur_rule_position)) {
@@ -554,13 +520,13 @@ class GrammarMatcherNode : public Object {
       auto element = grammar_->GetRuleExpr(sequence[cur_rule_position.element_id]);
       if (element.type == RuleExprType::kCharacterRange ||
           element.type == RuleExprType::kNegCharacterRange) {
-        new_rule_positions.push_back(cur_rule_position);
+        new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
         break;
       } else {
         ICHECK(element.type == RuleExprType::kRuleRef);
         auto new_rule_id = element[0];
         auto new_rule = grammar_->GetRule(new_rule_id);
-        auto new_rule_expr = grammar_->GetRuleExpr(new_rule.rule_expr_id);
+        auto new_rule_expr = grammar_->GetRuleExpr(new_rule.body_expr_id);
         ICHECK(new_rule_expr.type == RuleExprType::kChoices);
 
         bool contain_empty = false;
@@ -577,7 +543,7 @@ class GrammarMatcherNode : public Object {
                  sequence_first_element.type == RuleExprType::kNegCharacterRange);
           // Note: rule_position is not inserted to the tree yet, so it need to be inserted first
           auto parent_id = tree_.NewNode(cur_rule_position);
-          new_rule_positions.push_back(RulePosition{new_rule_id, j, 0, parent_id});
+          new_stack_tops->push_back(tree_.NewNode(RulePosition{new_rule_id, j, 0, parent_id}));
         }
 
         if (!contain_empty) {
@@ -588,21 +554,23 @@ class GrammarMatcherNode : public Object {
     }
 
     if (tree_.IsEndPosition(cur_rule_position)) {
-      new_rule_positions.push_back(cur_rule_position);
+      new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
     }
-
-    return new_rule_positions;
   }
 
   BNFGrammar grammar_;
   RulePositionTree tree_;
   StackTopsWithHistory stack_tops_with_history_;
+
+  std::vector<int32_t> accept_char_stack_tops_buffer_;
 };
 
 class GrammarMatcher : public ObjectRef {
  public:
-  GrammarMatcher(const BNFGrammar& grammar, int max_rollback_steps = 0)
-      : ObjectRef(make_object<GrammarMatcherNode>(grammar, max_rollback_steps)) {}
+  GrammarMatcher(const BNFGrammar& grammar, int max_rollback_steps = 0,
+                 RulePosition init_rule_position = kInvalidRulePosition)
+      : ObjectRef(
+            make_object<GrammarMatcherNode>(grammar, max_rollback_steps, init_rule_position)) {}
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(GrammarMatcher, ObjectRef, GrammarMatcherNode);
 };

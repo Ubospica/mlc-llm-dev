@@ -19,6 +19,7 @@
 #include "engine_actions/action_commons.h"
 #include "engine_state.h"
 #include "event_trace_recorder.h"
+#include "grammar/grammar_tokenizer_config.h"
 #include "model.h"
 #include "request.h"
 #include "request_state.h"
@@ -55,7 +56,8 @@ class EngineImpl : public Engine {
     this->trace_recorder_ = trace_recorder;
     this->sampler_ = Sampler::Create(/*sampler_kind=*/"cpu", trace_recorder_);
     this->tokenizer_ = Tokenizer::FromPath(tokenizer_path);
-    this->tokenizer_config_ = TokenizerConfig(this->tokenizer_);
+    this->json_tokenizer_config_ =
+        GrammarTokenizerConfig(this->tokenizer_, BNFGrammar::GetJSONGrammar());
     // Step 2. Initialize each model independently.
     this->models_.clear();
     for (const auto& model_info : model_infos) {
@@ -78,10 +80,10 @@ class EngineImpl : public Engine {
       this->actions_ = {
           EngineAction::NewRequestPrefill(this->models_,            //
                                           this->sampler_,           //
-                                          this->tokenizer_config_,  //
+                                          this->json_tokenizer_config_,  //
                                           this->kv_cache_config_,   //
                                           this->max_single_sequence_length_, this->trace_recorder_),
-          EngineAction::BatchDraft(this->models_, this->sampler_, this->tokenizer_config_,
+          EngineAction::BatchDraft(this->models_, this->sampler_, this->json_tokenizer_config_,
                                    this->trace_recorder_, this->engine_mode_->spec_draft_length),
           EngineAction::BatchVerify(this->models_, this->sampler_, this->kv_cache_config_,
                                     this->max_single_sequence_length_, this->trace_recorder_)};
@@ -89,10 +91,10 @@ class EngineImpl : public Engine {
       this->actions_ = {
           EngineAction::NewRequestPrefill(this->models_,            //
                                           this->sampler_,           //
-                                          this->tokenizer_config_,  //
+                                          this->json_tokenizer_config_,  //
                                           this->kv_cache_config_,   //
                                           this->max_single_sequence_length_, this->trace_recorder_),
-          EngineAction::BatchDecode(this->models_, this->sampler_, this->tokenizer_config_,
+          EngineAction::BatchDecode(this->models_, this->sampler_, this->json_tokenizer_config_,
                                     this->trace_recorder_)};
     }
   }
@@ -170,7 +172,7 @@ class EngineImpl : public Engine {
       if (!processed_requests.empty()) {
         ActionStepPostProcess(processed_requests, estate_, models_,
                               request_stream_callback_.value(), tokenizer_config_,
-                               max_single_sequence_length_);
+                              max_single_sequence_length_);
         return;
       }
     }
@@ -188,7 +190,7 @@ class EngineImpl : public Engine {
   int max_single_sequence_length_;
   Sampler sampler_;
   Tokenizer tokenizer_;
-  TokenizerConfig tokenizer_config_;
+  GrammarTokenizerConfig json_tokenizer_config_;
   // Models
   Array<Model> models_;
   // Request stream callback function

@@ -186,10 +186,10 @@ b ::= "bcd"
 c ::= [a-z]
 """
     expected = (
-        '{"rule_expr_indptr":[0,2,4,7,9,11,14,17,20,23,26,30,32,35,37],"rule_expr_data"'
-        ":[3,1,3,2,4,0,1,3,1,3,0,4,3,4,5,2,5,0,98,98,0,99,99,0,100,100,4,7,8,9,5,10,0,97,"
-        '122,4,12,5,13],"rules":[{"rule_expr_id":6,"name":"main"},'
-        '{"rule_expr_id":11,"name":"b"},{"rule_expr_id":14,"name":"c"}]}'
+        '{"rule_expr_indptr":[0,3,6,10,13,16,20,24,28,32,36,41,44,48,51],"rule_expr_data"'
+        ':[3,1,1,3,1,2,4,2,0,1,3,1,1,3,1,0,4,2,3,4,5,2,2,5,0,2,98,98,0,2,99,99,0,2,100,100,'
+        '4,3,7,8,9,5,1,10,0,2,97,122,4,1,12,5,1,13],"rules":[{"body_expr_id":6,"name":"main"},'
+        '{"body_expr_id":11,"name":"b"},{"body_expr_id":14,"name":"c"}]}'
     )
     bnf_grammar = BNFGrammar.from_ebnf_string(before, True, False)
     after = bnf_grammar.to_json(False)

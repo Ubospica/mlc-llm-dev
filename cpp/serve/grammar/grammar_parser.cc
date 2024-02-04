@@ -395,7 +395,7 @@ BNFGrammar EBNFParserImpl::DoParse(String ebnf_string) {
   ConsumeSpace();
   while (Peek()) {
     auto new_rule = ParseRule();
-    builder_.UpdateRuleBody(new_rule.name, new_rule.rule_expr_id);
+    builder_.UpdateRuleBody(new_rule.name, new_rule.body_expr_id);
 
     ConsumeSpace();
   }
@@ -420,7 +420,7 @@ BNFGrammar BNFJSONParser::Parse(String json_string) {
     auto rule_json_obj = rule_json.get<picojson::object>();
     auto name = json::Lookup<std::string>(rule_json.get<picojson::object>(), "name");
     auto rule_expr = static_cast<int32_t>(
-        json::Lookup<int64_t>(rule_json.get<picojson::object>(), "rule_expr_id"));
+        json::Lookup<int64_t>(rule_json.get<picojson::object>(), "body_expr_id"));
     node->rules_.push_back(BNFGrammarNode::Rule({name, rule_expr}));
   }
   auto rule_expr_data_json = json::Lookup<picojson::array>(grammar_json, "rule_expr_data");

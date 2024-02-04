@@ -21,7 +21,7 @@ namespace serve {
 class BatchDraftActionObj : public EngineActionObj {
  public:
   explicit BatchDraftActionObj(Array<Model> models, Sampler sampler,
-                               TokenizerConfig tokenizer_config,
+                               GrammarTokenizerConfig tokenizer_config,
                                Optional<EventTraceRecorder> trace_recorder, int draft_length)
       : models_(std::move(models)),
         sampler_(std::move(sampler)),
@@ -149,7 +149,7 @@ class BatchDraftActionObj : public EngineActionObj {
   /*! \brief The sampler to sample new tokens. */
   Sampler sampler_;
   /*! \brief The tokenizer config. */
-  TokenizerConfig tokenizer_config_;
+  GrammarTokenizerConfig tokenizer_config_;
   /*! \brief Event trace recorder. */
   Optional<EventTraceRecorder> trace_recorder_;
   /*! \brief Draft proposal length */
@@ -157,7 +157,7 @@ class BatchDraftActionObj : public EngineActionObj {
 };
 
 EngineAction EngineAction::BatchDraft(Array<Model> models, Sampler sampler,
-                                      TokenizerConfig tokenizer_config,
+                                      GrammarTokenizerConfig tokenizer_config,
                                       Optional<EventTraceRecorder> trace_recorder,
                                       int draft_length) {
   return EngineAction(make_object<BatchDraftActionObj>(std::move(models), std::move(sampler),

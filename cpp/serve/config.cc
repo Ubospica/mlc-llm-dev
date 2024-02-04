@@ -267,67 +267,6 @@ String EngineModeNode::AsJSONString() const {
   return picojson::value(config).serialize(true);
 }
 
-bool TokenAndId::operator<(const TokenAndId& other) const {
-  for (size_t i = 0; i < token.size(); ++i) {
-    if (i >= other.token.size()) {
-      return false;
-    }
-    if (token[i] < other.token[i]) {
-      return true;
-    } else if (token[i] > other.token[i]) {
-      return false;
-    }
-  }
-  return token.size() < other.token.size();
-}
-
-std::string ReplaceUnderscoreWithSpace(const std::string& str,
-                                       const std::string& special_underscore) {
-  std::string res;
-  size_t pos = 0;
-  while (pos < str.size()) {
-    size_t found = str.find(special_underscore, pos);
-    if (found == std::string::npos) {
-      res += str.substr(pos);
-      break;
-    }
-    res += str.substr(pos, found - pos) + " ";
-    pos = found + special_underscore.size();
-  }
-  // std::cout << "str before: " << str << " str after: " << res << "\n";
-  return res;
-}
-
-TokenizerConfig::TokenizerConfig(const Tokenizer& tokenizer) {
-  ObjectPtr<TokenizerConfigNode> n = make_object<TokenizerConfigNode>();
-  n->vocab_size = tokenizer->GetVocabSize();
-  for (int i = 0; i < tokenizer->GetVocabSize(); ++i) {
-    auto token = tokenizer->IdToToken(i);
-    if (token == "<unk>" || token == "<pad>" || token == "<s>") {
-      n->special_token_ids.push_back(i);
-    } else if (token == "</s>") {
-      n->stop_token_ids.push_back(i);
-    } else if (token[0] == '<' && token[token.size() - 1] == '>') {
-      n->special_token_ids.push_back(i);
-    } else {
-      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, n->special_underscore);
-      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
-      ICHECK(!codepoints.empty() &&
-             codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
-          << "Invalid token: " << token;
-      // std::cout << "token id: " << i << " token: " << token << " codepoints: ";
-      // for (auto codepoint : codepoints) {
-      //   std::cout << CodepointToPrintable(codepoint);
-      // }
-      // std::cout << "\n";
-      n->sorted_token_and_ids.push_back({codepoints, i});
-      n->token_lookup_map[i] = {codepoints, i};
-    }
-  }
-  std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
-  data_ = std::move(n);
-}
-
 }  // namespace serve
 }  // namespace llm
 }  // namespace mlc

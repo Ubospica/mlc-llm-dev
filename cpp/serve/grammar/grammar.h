@@ -58,15 +58,15 @@ class BNFGrammarNode : public Object {
   struct Rule {
     /*! \brief The name of the rule. */
     std::string name;
-    /*! \brief The RuleExpr id of the definition of the rule. */
-    int32_t rule_expr_id;
+    /*! \brief The RuleExpr id of the body of the rule. */
+    int32_t body_expr_id;
   };
 
   /*! \brief Get the number of rules. */
   size_t NumRules() const { return rules_.size(); }
   /*! \brief Get the rule with the given id. */
   const Rule& GetRule(int32_t rule_id) const {
-    CHECK(rule_id >= 0 && rule_id < static_cast<int32_t>(rules_.size()))
+    DCHECK(rule_id >= 0 && rule_id < static_cast<int32_t>(rules_.size()))
         << "rule_id " << rule_id << " is out of bound";
     return rules_[rule_id];
   }
@@ -95,12 +95,12 @@ class BNFGrammarNode : public Object {
     /*! \brief The data of the RuleExpr. A variable-length array. */
     const int32_t* data;
     /*! \brief The length of the data array. */
-    size_t data_len;
+    int32_t data_len;
 
-    const size_t size() const { return data_len; }
+    const int32_t size() const { return data_len; }
     /*! \brief Get the i-th element of the data array. */
     const int32_t& operator[](int i) const {
-      ICHECK(i >= 0 && i < static_cast<int32_t>(data_len)) << "Index " << i << " is out of bound";
+      DCHECK(i >= 0 && i < static_cast<int32_t>(data_len)) << "Index " << i << " is out of bound";
       return data[i];
     }
     const int32_t* begin() const { return data; }
@@ -111,20 +111,14 @@ class BNFGrammarNode : public Object {
   size_t NumRuleExprs() const { return rule_expr_indptr_.size(); }
   /*! \brief Get the rule_expr with the given id. */
   RuleExpr GetRuleExpr(int32_t rule_expr_id) const {
-    CHECK(rule_expr_id >= 0 && rule_expr_id < static_cast<int32_t>(rule_expr_indptr_.size()))
+    DCHECK(rule_expr_id >= 0 && rule_expr_id < static_cast<int32_t>(rule_expr_indptr_.size()))
         << "rule_expr_id " << rule_expr_id << " is out of bound";
     int start_index = rule_expr_indptr_[rule_expr_id];
-    RuleExprType type = static_cast<RuleExprType>(rule_expr_data_[start_index]);
-    ++start_index;
-    int end_index;
-    if (rule_expr_id == static_cast<int32_t>(rule_expr_indptr_.size()) - 1) {
-      end_index = rule_expr_data_.size();
-    } else {
-      end_index = rule_expr_indptr_[rule_expr_id + 1];
-    }
-    ICHECK_GE(end_index, start_index);
-    return {type, rule_expr_data_.data() + start_index,
-            static_cast<size_t>(end_index - start_index)};
+    auto start_ptr = rule_expr_data_.data() + start_index;
+    auto type = static_cast<RuleExprType>(start_ptr[0]);
+    auto data_ptr = start_ptr + 2;
+    auto data_len = start_ptr[1];
+    return {type, data_ptr, data_len};
   }
 
   /*! \brief Whether the grammar can generate empty string. */

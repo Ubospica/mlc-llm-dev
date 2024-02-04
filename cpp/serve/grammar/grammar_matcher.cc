@@ -31,13 +31,16 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
       return matcher->MatchCompleteString(str);
     });
 
-IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, Tokenizer tokenizer) {
+IntTuple GetRejectedTokenIdsForTokenizer(BNFGrammar grammar, GrammarMatcher matcher,
+                                         Tokenizer tokenizer) {
   auto start = std::chrono::high_resolution_clock::now();
+  static BNFGrammar cached_grammar = grammar;
   static Tokenizer cached_tokenizer = tokenizer;
-  static TokenizerConfig tokenizer_config = TokenizerConfig(tokenizer);
-  if (cached_tokenizer != tokenizer) {
-    tokenizer_config = TokenizerConfig(tokenizer);
+  static GrammarTokenizerConfig tokenizer_config = GrammarTokenizerConfig(tokenizer, grammar);
+  if (cached_tokenizer != tokenizer || cached_grammar != grammar) {
+    tokenizer_config = GrammarTokenizerConfig(tokenizer, cached_grammar);
     cached_tokenizer = tokenizer;
+    cached_grammar = grammar;
   }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = end - start;
@@ -49,7 +52,7 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, Tokenizer token
   matcher->accept_total_time = std::chrono::milliseconds(0);
   matcher->codepoint_set_total_time = std::chrono::milliseconds(0);
   matcher->overhead_time = std::chrono::milliseconds(0);
-  auto res = matcher->FindRejectedTokenIds(tokenizer_config->sorted_token_and_ids);
+  auto res = matcher->FindRejectedTokenIds(tokenizer_config);
   end = std::chrono::high_resolution_clock::now();
   duration = end - start;
   std::cout << "Total time: " << duration.count() << " ms" << std::endl;
