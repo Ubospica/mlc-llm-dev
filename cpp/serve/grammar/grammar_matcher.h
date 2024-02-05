@@ -274,11 +274,7 @@ class GrammarMatcherNode : public Object {
       auto current_char_range = grammar_->GetRuleExpr(current_sequence[rule_position.element_id]);
       ICHECK(current_char_range.type == RuleExprType::kCharacterRange ||
              current_char_range.type == RuleExprType::kNegCharacterRange);
-      // auto start = std::chrono::high_resolution_clock::now();
-      // auto ok = CodepointSet(current_char_range).Contains(codepoint);
       auto ok = CharacterRangeContains(current_char_range, codepoint);
-      // auto end = std::chrono::high_resolution_clock::now();
-      // codepoint_set_total_time += end - start;
       // start = std::chrono::high_resolution_clock::now();
       // end = std::chrono::high_resolution_clock::now();
       // overhead_time += end - start;
