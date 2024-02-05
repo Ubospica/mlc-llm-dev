@@ -123,8 +123,10 @@ class GrammarMatcher(Object):
         """ """
         return _ffi_api.GrammarMatcherMatchCompleteString(self, string)
 
-    def get_rejected_token_ids_for_tokenizer(self, tokenizer: "Tokenizer") -> List[int]:
+    def get_rejected_token_ids_for_tokenizer(self, grammar: BNFGrammar,
+                                              tokenizer: "Tokenizer",
+                                             ) -> List[int]:
         """ """
         return _ffi_api.GrammarMatcherGetRejectedTokenIdsForTokenizer(  # type: ignore  # pylint: disable=no-member
-            self, tokenizer
+            self, grammar, tokenizer
         )

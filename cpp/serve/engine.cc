@@ -78,10 +78,10 @@ class EngineImpl : public Engine {
       // Speculative decoding is only possible for more than one model.
       ICHECK_GT(this->models_.size(), 1U);
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,            //
-                                          this->sampler_,           //
+          EngineAction::NewRequestPrefill(this->models_,                 //
+                                          this->sampler_,                //
                                           this->json_tokenizer_config_,  //
-                                          this->kv_cache_config_,   //
+                                          this->kv_cache_config_,        //
                                           this->max_single_sequence_length_, this->trace_recorder_),
           EngineAction::BatchDraft(this->models_, this->sampler_, this->json_tokenizer_config_,
                                    this->trace_recorder_, this->engine_mode_->spec_draft_length),
@@ -89,10 +89,10 @@ class EngineImpl : public Engine {
                                     this->max_single_sequence_length_, this->trace_recorder_)};
     } else {
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,            //
-                                          this->sampler_,           //
+          EngineAction::NewRequestPrefill(this->models_,                 //
+                                          this->sampler_,                //
                                           this->json_tokenizer_config_,  //
-                                          this->kv_cache_config_,   //
+                                          this->kv_cache_config_,        //
                                           this->max_single_sequence_length_, this->trace_recorder_),
           EngineAction::BatchDecode(this->models_, this->sampler_, this->json_tokenizer_config_,
                                     this->trace_recorder_)};
@@ -171,7 +171,7 @@ class EngineImpl : public Engine {
       Array<Request> processed_requests = action->Step(estate_);
       if (!processed_requests.empty()) {
         ActionStepPostProcess(processed_requests, estate_, models_,
-                              request_stream_callback_.value(), tokenizer_config_,
+                              request_stream_callback_.value(), json_tokenizer_config_,
                               max_single_sequence_length_);
         return;
       }

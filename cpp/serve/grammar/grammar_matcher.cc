@@ -31,7 +31,7 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
       return matcher->MatchCompleteString(str);
     });
 
-IntTuple GetRejectedTokenIdsForTokenizer(BNFGrammar grammar, GrammarMatcher matcher,
+IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar grammar,
                                          Tokenizer tokenizer) {
   auto start = std::chrono::high_resolution_clock::now();
   static BNFGrammar cached_grammar = grammar;

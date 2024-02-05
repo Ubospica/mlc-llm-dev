@@ -241,7 +241,9 @@ def test_get_rejected_token_ids(json_grammar: BNFGrammar):
 
     test_input_str = """{"id": 1,"name": "Example"}"""
     for c in test_input_str:
-        rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(tokenizer)
+        rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(
+            json_grammar, tokenizer
+        )
         print("Accepting:", c)
         grammar_matcher.accept_char(ord(c))
 
