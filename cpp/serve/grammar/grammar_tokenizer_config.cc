@@ -65,28 +65,28 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
   }
   std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
 
-  for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
-    auto rule = grammar->GetRule(i);
-    auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
-    for (auto sequence_id : rule_expr) {
-      auto sequence_expr = grammar->GetRuleExpr(sequence_id);
-      if (sequence_expr.type == BNFGrammarNode::RuleExprType::kEmptyStr) {
-        continue;
-      }
-      ICHECK(sequence_expr.type == BNFGrammarNode::RuleExprType::kSequence);
-      for (int element_id = 0; element_id < sequence_expr.size(); ++element_id) {
-        auto element_expr = grammar->GetRuleExpr(sequence_expr[element_id]);
-        if (element_expr.type == BNFGrammarNode::RuleExprType::kRuleRef) {
-          continue;
-        }
-        auto cur_rule_position = RulePosition{i, sequence_id, element_id};
-        auto cur_known_state_tokens =
-            GrammarMatcher(grammar, 0, cur_rule_position)
-                ->GetKnownStateTokens(n->sorted_token_and_ids, &n->token_lookup_map);
-        n->known_state_tokens[{sequence_id, element_id}] = cur_known_state_tokens;
-      }
-    }
-  }
+  // for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
+  //   auto rule = grammar->GetRule(i);
+  //   auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
+  //   for (auto sequence_id : rule_expr) {
+  //     auto sequence_expr = grammar->GetRuleExpr(sequence_id);
+  //     if (sequence_expr.type == BNFGrammarNode::RuleExprType::kEmptyStr) {
+  //       continue;
+  //     }
+  //     ICHECK(sequence_expr.type == BNFGrammarNode::RuleExprType::kSequence);
+  //     for (int element_id = 0; element_id < sequence_expr.size(); ++element_id) {
+  //       auto element_expr = grammar->GetRuleExpr(sequence_expr[element_id]);
+  //       if (element_expr.type == BNFGrammarNode::RuleExprType::kRuleRef) {
+  //         continue;
+  //       }
+  //       auto cur_rule_position = RulePosition{i, sequence_id, element_id};
+  //       auto cur_known_state_tokens =
+  //           GrammarMatcher(grammar, 0, cur_rule_position)
+  //               ->GetKnownStateTokens(n->sorted_token_and_ids, &n->token_lookup_map);
+  //       n->known_state_tokens[{sequence_id, element_id}] = cur_known_state_tokens;
+  //     }
+  //   }
+  // }
   data_ = std::move(n);
 }
 
