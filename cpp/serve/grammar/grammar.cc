@@ -48,13 +48,11 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String jso
 const std::string kJSONGrammarString = R"(
 main ::= (
     "{" members_or_ws "}" ws |
-    "[" elements "]" ws |
-    "[" ws "]" ws
+    "[" elements_or_ws "]" ws
 )
 value ::= (
     "{" members_or_ws "}" |
-    "[" ws "]" |
-    "[" elements "]" |
+    "[" elements_or_ws "]" |
     "\"" characters "\"" |
     [0-9] fraction exponent |
     [1-9] digits fraction exponent |
@@ -65,24 +63,16 @@ value ::= (
 members_or_ws ::= (
     "" |
     "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u0020" ws members_or_ws_rest |
-    "\u000A" ws members_or_ws_rest |
-    "\u000D" ws members_or_ws_rest |
-    "\u0009" ws members_or_ws_rest
+    "\u0020" members_or_ws |
+    "\u000A" members_or_ws |
+    "\u000D" members_or_ws |
+    "\u0009" members_or_ws
 )
-members_or_ws_rest ::= "" | "\"" characters "\"" ws ":" ws value ws members_rest
-members ::= (
-    "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u0020" ws "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u000A" ws "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u000D" ws "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u0009" ws "\"" characters "\"" ws ":" ws value ws members_rest
-)
-members_rest ::= "" | "," members
-elements ::= (
+members_rest ::= "" | "," ws "\"" characters "\"" ws ":" ws value ws members_rest
+elements_or_ws ::= (
+    "" |
     "{" members_or_ws "}" ws elements_rest |
-    "[" ws "]" ws elements_rest |
-    "[" elements "]" ws elements_rest |
+    "[" elements_or_ws "]" ws elements_rest |
     "\"" characters "\"" ws elements_rest |
     [0-9] fraction exponent ws elements_rest |
     [1-9] digits fraction exponent ws elements_rest |
@@ -91,12 +81,24 @@ elements ::= (
     "true" ws elements_rest |
     "false" ws elements_rest |
     "null" ws elements_rest |
-    "\u0020" ws value ws elements_rest |
-    "\u000A" ws value ws elements_rest |
-    "\u000D" ws value ws elements_rest |
-    "\u0009" ws value ws elements_rest
+    "\u0020" elements_or_ws |
+    "\u000A" elements_or_ws |
+    "\u000D" elements_or_ws |
+    "\u0009" elements_or_ws
 )
-elements_rest ::= "" | "," elements
+elements ::= (
+    "{" members_or_ws "}" ws elements_rest |
+    "[" elements_or_ws "]" ws elements_rest |
+    "\"" characters "\"" ws elements_rest |
+    [0-9] fraction exponent ws elements_rest |
+    [1-9] digits fraction exponent ws elements_rest |
+    "-" [0-9] fraction exponent ws elements_rest |
+    "-" [1-9] digits fraction exponent ws elements_rest |
+    "true" ws elements_rest |
+    "false" ws elements_rest |
+    "null" ws elements_rest
+)
+elements_rest ::= "" | "," ws elements
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
 digits ::= [0-9] | [0-9] digits

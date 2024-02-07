@@ -222,14 +222,12 @@
 
 # v5: enhance members_or_ws and elements_or_ws
 main ::= (
-    "{" members "}" ws |
-    "[" elements "]" ws |
-    "[" ws "]" ws
+    "{" members_or_ws "}" ws |
+    "[" elements_or_ws "]" ws
 )
 value ::= (
-    "{" members "}" |
-    "[" ws "]" |
-    "[" elements "]" |
+    "{" members_or_ws "}" |
+    "[" elements_or_ws "]" |
     "\"" characters "\"" |
     [0-9] fraction exponent |
     [1-9] digits fraction exponent |
@@ -237,18 +235,19 @@ value ::= (
     "-" [1-9] digits fraction exponent |
     "true" | "false" | "null"
 )
-members ::= (
+members_or_ws ::= (
+    "" |
     "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u0020" members |
-    "\u000A" members |
-    "\u000D" members |
-    "\u0009" members
+    "\u0020" members_or_ws |
+    "\u000A" members_or_ws |
+    "\u000D" members_or_ws |
+    "\u0009" members_or_ws
 )
 members_rest ::= "" | "," ws "\"" characters "\"" ws ":" ws value ws members_rest
-elements ::= (
-    "{" members "}" ws elements_rest |
-    "[" ws "]" ws elements_rest |
-    "[" elements "]" ws elements_rest |
+elements_or_ws ::= (
+    "" |
+    "{" members_or_ws "}" ws elements_rest |
+    "[" elements_or_ws "]" ws elements_rest |
     "\"" characters "\"" ws elements_rest |
     [0-9] fraction exponent ws elements_rest |
     [1-9] digits fraction exponent ws elements_rest |
@@ -257,12 +256,24 @@ elements ::= (
     "true" ws elements_rest |
     "false" ws elements_rest |
     "null" ws elements_rest |
-    "\u0020" ws value ws elements_rest |
-    "\u000A" ws value ws elements_rest |
-    "\u000D" ws value ws elements_rest |
-    "\u0009" ws value ws elements_rest
+    "\u0020" elements_or_ws |
+    "\u000A" elements_or_ws |
+    "\u000D" elements_or_ws |
+    "\u0009" elements_or_ws
 )
-elements_rest ::= "" | "," elements
+elements ::= (
+    "{" members_or_ws "}" ws elements_rest |
+    "[" elements_or_ws "]" ws elements_rest |
+    "\"" characters "\"" ws elements_rest |
+    [0-9] fraction exponent ws elements_rest |
+    [1-9] digits fraction exponent ws elements_rest |
+    "-" [0-9] fraction exponent ws elements_rest |
+    "-" [1-9] digits fraction exponent ws elements_rest |
+    "true" ws elements_rest |
+    "false" ws elements_rest |
+    "null" ws elements_rest
+)
+elements_rest ::= "" | "," ws elements
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
 digits ::= [0-9] | [0-9] digits

@@ -8,13 +8,14 @@ from mlc_chat.serve import BNFGrammar, GrammarMatcher
 from mlc_chat.tokenizer import Tokenizer
 
 
-# @pytest.fixture(scope="function")
+@pytest.fixture(scope="function")
 def json_grammar():
     return BNFGrammar.get_json_grammar()
 
 
 (json_inputs_accepted,) = tvm.testing.parameters(
     ('{"name": "John"}',),
+    ('{ "name" : "John" } \n\r',),
     ("{}",),
     ("[]",),
     ('{"name": "Alice", "age": 30, "city": "New York"}',),
@@ -78,7 +79,7 @@ def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
 (json_inputs_pressure,) = tvm.testing.parameters(
     # Extra long string: 1k chars
     (
-        '"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent '
+        '["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent '
         "libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum "
         "imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper "
         "porta. Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent taciti sociosqu "
@@ -94,7 +95,7 @@ def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
         "Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. "
         "Proin quam. Etiam ultrices. Suspendisse in justo eu magna luctus suscipit. Sed lectus. "
         "Integer euismod lacus luctus magna. Quisque cursus, metus vitae pharetra auctor, sem "
-        'massa mattis sem, at interdum magna augue eget diam."',
+        'massa mattis sem, at interdum magna augue eget diam."]',
     ),
     # long and complex json: 3k chars
     (
@@ -206,43 +207,43 @@ def test_json_pressure(json_grammar: BNFGrammar, json_inputs_pressure):
     assert GrammarMatcher(json_grammar).match_complete_string(json_inputs_pressure)
 
 
-def test_get_rejected_token_ids(json_grammar: BNFGrammar):
-    tokenizer_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
-    tokenizer = Tokenizer(tokenizer_path)
-    grammar_matcher = GrammarMatcher(json_grammar)
+# def test_get_rejected_token_ids(json_grammar: BNFGrammar):
+#     tokenizer_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
+#     tokenizer = Tokenizer(tokenizer_path)
+#     grammar_matcher = GrammarMatcher(json_grammar)
 
-    #     test_input_str = """{
-    #     "id": 1,
-    #     "name": "Example",
-    #     "active": True,
-    #     "tags": ["tag1", "tag2", "tag3"],
-    #     "details": {
-    #         "description": "A complex JSON example.",
-    #         "metrics": [0.1, 0.2, 0.3],
-    #         "nested": {
-    #             "level1": {
-    #                 "level2": {
-    #                     "value": "deep"
-    #                 },
-    #                 "array": [1, 2, 3]
-    #             }
-    #         }
-    #     },
-    #     "additional": "This part might be adjusted to reach the desired length."
-    # }
-    # """
+#     #     test_input_str = """{
+#     #     "id": 1,
+#     #     "name": "Example",
+#     #     "active": True,
+#     #     "tags": ["tag1", "tag2", "tag3"],
+#     #     "details": {
+#     #         "description": "A complex JSON example.",
+#     #         "metrics": [0.1, 0.2, 0.3],
+#     #         "nested": {
+#     #             "level1": {
+#     #                 "level2": {
+#     #                     "value": "deep"
+#     #                 },
+#     #                 "array": [1, 2, 3]
+#     #             }
+#     #         }
+#     #     },
+#     #     "additional": "This part might be adjusted to reach the desired length."
+#     # }
+#     # """
 
-    test_input_str = """{"id": 1,"name": "Example"}"""
-    for c in test_input_str:
-        rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(
-            json_grammar, tokenizer
-        )
-        print("Accepting:", c)
-        grammar_matcher.accept_char(ord(c))
+#     test_input_str = """{"id": 1,"name": "Example"}"""
+#     for c in test_input_str:
+#         rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(
+#             json_grammar, tokenizer
+#         )
+#         print("Accepting:", c)
+#         grammar_matcher.accept_char(ord(c))
 
 
-test_get_rejected_token_ids(json_grammar())
-exit()
+# test_get_rejected_token_ids(json_grammar())
+# exit()
 
 
 if __name__ == "__main__":
