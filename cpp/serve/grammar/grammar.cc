@@ -49,17 +49,7 @@ const std::string kJSONGrammarString = R"(
 main ::= (
     "{" members_or_ws "}" ws |
     "[" elements "]" ws |
-    "[" ws "]" ws |
-    "\"" characters "\"" ws |
-    [0-9] fraction exponent ws |
-    [1-9] digits fraction exponent ws |
-    "-" [0-9] fraction exponent ws |
-    "-" [1-9] digits fraction exponent ws |
-    "true" ws | "false" ws | "null" ws
-    "\u0020" ws value ws |
-    "\u000A" ws value ws |
-    "\u000D" ws value ws |
-    "\u0009" ws value ws
+    "[" ws "]" ws
 )
 value ::= (
     "{" members_or_ws "}" |

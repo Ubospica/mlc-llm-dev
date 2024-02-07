@@ -6,6 +6,7 @@
 #include "grammar_tokenizer_config.h"
 
 #include "grammar_matcher.h"
+#include "grammar_serializer.h"
 
 namespace mlc {
 namespace llm {
@@ -65,6 +66,8 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
   }
   std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
 
+  std::chrono::duration<double, std::milli> duration;
+
   for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
     auto rule = grammar->GetRule(i);
     auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
@@ -80,10 +83,25 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
           continue;
         }
         auto cur_rule_position = RulePosition{i, sequence_id, element_id};
-        auto cur_known_state_tokens =
-            GrammarMatcher(grammar, 0, cur_rule_position)
-                ->GetKnownStateTokens(n->sorted_token_and_ids, &n->token_lookup_map);
-        n->known_state_tokens[{sequence_id, element_id}] = cur_known_state_tokens;
+
+        std::cout << "Rule: " << rule.name
+                  << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
+                  << " Position: " << element_id << std::endl;
+
+        auto start = std::chrono::high_resolution_clock::now();
+      auto grammar_matcher = GrammarMatcher(grammar, 0, cur_rule_position);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto cur_catagorized_tokens_for_grammar =
+            grammar_matcher->GetCatagorizedTokens(n->sorted_token_and_ids, i == 0);
+        auto end1 = std::chrono::high_resolution_clock::now();
+        std::cout << "preprocess step1: "
+                  << std::chrono::duration<double, std::milli>(end - start).count() << " ms"
+                  << std::endl;
+        std::cout << "preprocess step2: "
+                  << std::chrono::duration<double, std::milli>(end1 - end).count() << " ms"
+                  << std::endl;
+        n->catagorized_tokens_for_grammar[{sequence_id, element_id}] =
+            cur_catagorized_tokens_for_grammar;
       }
     }
   }

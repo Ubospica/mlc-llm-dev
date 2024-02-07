@@ -45,46 +45,35 @@ struct SequenceIdAndPositionHash {
   }
 };
 
-struct KnownStateTokens {
-  std::unordered_set<int32_t> accepted_ids;
-  std::unordered_set<int32_t> rejected_ids;
-  std::unordered_set<int32_t> unknown_state_ids;
-  const std::unordered_map<int32_t, TokenAndId>* token_lookup_map = nullptr;
+struct CatagorizedTokensForGrammar {
+  std::unordered_set<int32_t> accepted_indices;
+  std::unordered_set<int32_t> rejected_indices;
+  std::unordered_set<int32_t> uncertain_indices;
+  enum class NotSavedIndex { kAccepted = 0, kRejected = 1, kUncertain = 2 };
+  NotSavedIndex not_saved_index;
 
-  KnownStateTokens() = default;
+  CatagorizedTokensForGrammar() = default;
 
-  KnownStateTokens(const std::unordered_map<int32_t, TokenAndId>* token_lookup_map,
-                   const std::unordered_set<int32_t>& accepted_ids,
-                   const std::unordered_set<int32_t>& rejected_ids,
-                   const std::unordered_set<int32_t>& unknown_state_ids)
-      : token_lookup_map(token_lookup_map) {
-    auto size_acc = accepted_ids.size();
-    auto size_rej = rejected_ids.size();
-    auto size_unk = unknown_state_ids.size();
-    int not_save_index =
-        size_acc < size_rej && size_acc < size_unk ? 0 : (size_rej < size_unk ? 1 : 2);
+  CatagorizedTokensForGrammar(const std::unordered_set<int32_t>& accepted_indices,
+                              const std::unordered_set<int32_t>& rejected_indices,
+                              const std::unordered_set<int32_t>& uncertain_indices) {
+    auto size_acc = accepted_indices.size();
+    auto size_rej = rejected_indices.size();
+    auto size_unc = uncertain_indices.size();
+    not_saved_index =
+        size_acc < size_rej && size_acc < size_unc
+            ? NotSavedIndex::kAccepted
+            : (size_rej < size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
 
-    if (not_save_index != 0) {
-      this->accepted_ids = accepted_ids;
+    if (not_saved_index != NotSavedIndex::kAccepted) {
+      this->accepted_indices = accepted_indices;
     }
-    if (not_save_index != 1) {
-      this->rejected_ids = rejected_ids;
+    if (not_saved_index != NotSavedIndex::kRejected) {
+      this->rejected_indices = rejected_indices;
     }
-    if (not_save_index != 2) {
-      this->unknown_state_ids = unknown_state_ids;
+    if (not_saved_index != NotSavedIndex::kUncertain) {
+      this->uncertain_indices = uncertain_indices;
     }
-  }
-
-  bool IsAccepted(int32_t token_id) const {
-    return accepted_ids.count(token_id) > 0 ||
-           (token_lookup_map->count(token_id) && !rejected_ids.count(token_id) &&
-            !unknown_state_ids.count(token_id));
-  }
-
-  bool IsRejected(int32_t token_id) const {
-    return rejected_ids.count(token_id) > 0 ||
-           (token_lookup_map->count(token_id) && !accepted_ids.count(token_id) &&
-            !unknown_state_ids.count(token_id));
   }
 };
 
@@ -95,16 +84,8 @@ class GrammarTokenizerConfigNode : public Object {
   std::vector<int32_t> stop_token_ids;
   std::vector<int32_t> special_token_ids;
   std::unordered_map<int32_t, TokenAndId> token_lookup_map;
-  std::unordered_map<SequenceIdAndPosition, KnownStateTokens, SequenceIdAndPositionHash>
-      known_state_tokens;
-
-  bool IsTokenRejectedForRulePosition(int32_t token_id, int32_t rule_id, int32_t element_id) const {
-    auto it = known_state_tokens.find({rule_id, element_id});
-    if (it == known_state_tokens.end()) {
-      return false;
-    }
-    return it->second.IsRejected(token_id);
-  }
+  std::unordered_map<SequenceIdAndPosition, CatagorizedTokensForGrammar, SequenceIdAndPositionHash>
+      catagorized_tokens_for_grammar;
 
   static constexpr const char* kSpecialUnderscore = "▁";
 };

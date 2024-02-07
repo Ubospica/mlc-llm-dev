@@ -1,7 +1,4 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring
-from lib2to3.pgen2 import grammar
-import os
-
 import pytest
 import tvm
 import tvm.testing
@@ -52,10 +49,6 @@ def json_grammar():
 
 def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
     assert GrammarMatcher(json_grammar).match_complete_string(json_inputs_accepted)
-
-
-# test_json_accept(json_grammar(), '{"name": "John"}')
-# exit()
 
 
 (json_inputs_refused,) = tvm.testing.parameters(
