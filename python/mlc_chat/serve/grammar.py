@@ -115,9 +115,9 @@ class GrammarMatcher(Object):
             self, codepoint, drop_old
         )
 
-    def can_accept_end(self) -> bool:
+    def can_reach_end(self) -> bool:
         """ """
-        return _ffi_api.GrammarMatcherCanAcceptEnd(self)
+        return _ffi_api.GrammarMatcherCanReachEnd(self)
 
     def match_complete_string(self, string: str) -> bool:
         """ """

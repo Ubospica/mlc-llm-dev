@@ -96,8 +96,8 @@ def test_engine_basic():
         repetition_penalty=repetition_penalty,
         max_tokens_low=max_tokens,
         max_tokens_high=max_tokens + 1,
-        # json_mode=True,
-        output_grammar="/home/yxdong/code/mlc-llm-lora/tests/python/serve/json_simplified_2.ebnf",
+        json_mode=True,
+        # output_grammar="/home/yxdong/code/mlc-llm-lora/tests/python/serve/json_simplified_2.ebnf",
     )
 
     # Add all requests to engine

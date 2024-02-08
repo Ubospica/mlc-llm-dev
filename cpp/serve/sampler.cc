@@ -349,6 +349,7 @@ class CPUSampler : public SamplerObj {
     auto original_device = logits_on_device->device;
     NDArray logits = ApplyGrammarMatcherForLogits(logits_on_device, /*cum_sequence_length=*/nullptr,
                                                   request_mstates, tokenizer_config);
+    auto end = std::chrono::high_resolution_clock::now();
     auto logits_copy = logits.CopyTo(DLDevice{kDLCPU, 0});
 
     NDArray probs_on_cpu = BatchComputeProb(logits, /*cum_sequence_length=*/nullptr, model,
@@ -369,9 +370,12 @@ class CPUSampler : public SamplerObj {
     //   std::cout << *(static_cast<float*>(__builtin_assume_aligned(probs_on_cpu->data, 4)) + (i))
     //             << "\n";
     // }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Sampling time: " << std::chrono::duration<double, std::milli>(end - start).count()
+    auto end1 = std::chrono::high_resolution_clock::now();
+    std::cout << "Mask time: " << std::chrono::duration<double, std::milli>(end - start).count()
               << " ms" << std::endl;
+    std::cout << "Sampling time: "
+              << std::chrono::duration<double, std::milli>(end1 - start).count() << " ms"
+              << std::endl;
     return output_tokens;
   }
 
@@ -541,14 +545,15 @@ class CPUSampler : public SamplerObj {
       RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
                    "start finding rejected tokens for grammar");
       // std::cout << tokenizer_config->sorted_token_and_ids.size();
-      std::vector<int32_t> rejected_token_ids = matcher->FindRejectedTokenIds(tokenizer_config);
-      rejected_token_ids.insert(rejected_token_ids.end(),
-                                tokenizer_config->special_token_ids.begin(),
-                                tokenizer_config->special_token_ids.end());
-      if (!matcher->CanAcceptEnd()) {
-        rejected_token_ids.insert(rejected_token_ids.end(),
-                                  tokenizer_config->stop_token_ids.begin(),
-                                  tokenizer_config->stop_token_ids.end());
+      DynamicBitSet rejected_token_ids;
+      matcher->FindRejectedTokenIds(tokenizer_config, &rejected_token_ids);
+      for (auto id : tokenizer_config->special_token_ids) {
+        rejected_token_ids.SetConst(id);
+      }
+      if (!matcher->CanReachEnd()) {
+        for (auto id : tokenizer_config->stop_token_ids) {
+          rejected_token_ids.SetConst(id);
+        }
       }
       RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
                    "finish finding rejected tokens for grammar");
@@ -559,8 +564,10 @@ class CPUSampler : public SamplerObj {
           static_cast<float*>(__builtin_assume_aligned(logits_on_cpu->data, 4)) + (i * vocab_size);
       float neg_inf = -std::numeric_limits<float>::infinity();
 
-      for (int32_t token_id : rejected_token_ids) {
-        logits_raw_data[token_id] = neg_inf;
+      for (int id = 0; id < vocab_size; ++id) {
+        if (rejected_token_ids[id]) {
+          logits_raw_data[id] = neg_inf;
+        }
       }
 
       RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,

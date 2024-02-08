@@ -11,7 +11,7 @@ print(tokenizer.backend_tokenizer)
 # )
 
 # str_used = "粪 水 123"
-str_used = "abc	abc"
+str_used = "abc	abc\n"
 utf8_bytes = str_used.encode("utf-8")
 # utf8_bytes = [229, 155, 191]
 print(type(utf8_bytes))

@@ -23,8 +23,8 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherAcceptChar")
       return matcher->AcceptChar(codepoint, drop_old);
     });
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanAcceptEnd")
-    .set_body_typed([](GrammarMatcher matcher) { return matcher->CanAcceptEnd(); });
+TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanReachEnd")
+    .set_body_typed([](GrammarMatcher matcher) { return matcher->CanReachEnd(); });
 
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
     .set_body_typed([](GrammarMatcher matcher, String str) {
@@ -46,13 +46,14 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
   std::chrono::duration<double, std::milli> duration = end - start;
   // std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
   // std::cout << "Stack: " << matcher->PrintStackState() << std::endl;
-  start = std::chrono::high_resolution_clock::now();
   matcher->handle_past_time = std::chrono::milliseconds(0);
   matcher->rollback_total_time = std::chrono::milliseconds(0);
   matcher->accept_total_time = std::chrono::milliseconds(0);
   matcher->codepoint_set_total_time = std::chrono::milliseconds(0);
   matcher->overhead_time = std::chrono::milliseconds(0);
-  auto res = matcher->FindRejectedTokenIds(tokenizer_config);
+  DynamicBitSet bitset;
+  start = std::chrono::high_resolution_clock::now();
+  matcher->FindRejectedTokenIds(tokenizer_config, &bitset);
   end = std::chrono::high_resolution_clock::now();
   duration = end - start;
   std::cout << "Total time: " << duration.count() << " ms" << std::endl;
@@ -62,8 +63,16 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
   std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
   std::cout << "Codepoint set time: " << matcher->codepoint_set_total_time.count() << " ms"
             << std::endl;
+
   // start = std::chrono::high_resolution_clock::now();
-  auto ret = IntTuple(std::vector<long>(res.begin(), res.end()));
+
+  std::vector<long> res_vector;
+  for (int i = 0; i < bitset.Size(); i++) {
+    if (bitset[i]) {
+      res_vector.push_back(i);
+    }
+  }
+  auto ret = IntTuple(res_vector);
   // end = std::chrono::high_resolution_clock::now();
   // duration = end - start;
   // std::cout << "Step 3: " << duration.count() << " ms" << std::endl;

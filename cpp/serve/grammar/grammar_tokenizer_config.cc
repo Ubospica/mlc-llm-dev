@@ -68,6 +68,7 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
 
   std::chrono::duration<double, std::milli> duration;
 
+  auto start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
     auto rule = grammar->GetRule(i);
     auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
@@ -84,27 +85,30 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
         }
         auto cur_rule_position = RulePosition{i, sequence_id, element_id};
 
-        std::cout << "Rule: " << rule.name
-                  << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
-                  << " Position: " << element_id << std::endl;
+        // std::cout << "Rule: " << rule.name
+        //           << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
+        //           << " Position: " << element_id << std::endl;
 
-        auto start = std::chrono::high_resolution_clock::now();
-      auto grammar_matcher = GrammarMatcher(grammar, 0, cur_rule_position);
-        auto end = std::chrono::high_resolution_clock::now();
+        // auto start = std::chrono::high_resolution_clock::now();
+        auto grammar_matcher = GrammarMatcher(grammar, 0, cur_rule_position);
+        // auto end = std::chrono::high_resolution_clock::now();
         auto cur_catagorized_tokens_for_grammar =
             grammar_matcher->GetCatagorizedTokens(n->sorted_token_and_ids, i == 0);
-        auto end1 = std::chrono::high_resolution_clock::now();
-        std::cout << "preprocess step1: "
-                  << std::chrono::duration<double, std::milli>(end - start).count() << " ms"
-                  << std::endl;
-        std::cout << "preprocess step2: "
-                  << std::chrono::duration<double, std::milli>(end1 - end).count() << " ms"
-                  << std::endl;
+        // auto end1 = std::chrono::high_resolution_clock::now();
+        // std::cout << "preprocess step1: "
+        //           << std::chrono::duration<double, std::milli>(end - start).count() << " ms"
+        //           << std::endl;
+        // std::cout << "preprocess step2: "
+        //           << std::chrono::duration<double, std::milli>(end1 - end).count() << " ms"
+        //           << std::endl;
         n->catagorized_tokens_for_grammar[{sequence_id, element_id}] =
             cur_catagorized_tokens_for_grammar;
       }
     }
   }
+  auto end = std::chrono::high_resolution_clock::now();
+  duration = end - start;
+  std::cout << "Preprocess time: " << duration.count() << " ms" << std::endl;
   data_ = std::move(n);
 }
 

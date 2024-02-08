@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "../../support/dynamic_bitset.h"
 #include "../config.h"
 #include "../encoding.h"
 #include "grammar.h"
@@ -82,6 +83,30 @@ class RulePositionBuffer {
     free_nodes_.push_back(id);
   }
 
+  size_t Capacity() const { return buffer_.size(); }
+
+  size_t Size() const {
+    DCHECK(buffer_.size() >= free_nodes_.size());
+    return buffer_.size() - free_nodes_.size();
+  }
+
+  bool IsWellFormed() const {
+    static std::unordered_set<int32_t> free_nodes_set;
+    free_nodes_set = std::unordered_set<int32_t>(free_nodes_.begin(), free_nodes_.end());
+    for (int i = 0; i < static_cast<int32_t>(buffer_.size()); ++i) {
+      if (free_nodes_set.count(i)) {
+        if (buffer_[i] != kInvalidRulePosition) {
+          return false;
+        }
+      } else {
+        if (buffer_[i] == kInvalidRulePosition || buffer_[i].reference_count <= 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   RulePosition& operator[](int32_t id) { return buffer_[id]; }
   const RulePosition& operator[](int32_t id) const { return buffer_[id]; }
 
@@ -99,6 +124,8 @@ class RulePositionTree {
   int32_t NewNode(const RulePosition& rule_position) {
     auto id = node_buffer_.Allocate(rule_position);
     if (rule_position.parent_id != kNoParent) {
+      DCHECK(rule_position.parent_id < static_cast<int32_t>(node_buffer_.Capacity()) &&
+             node_buffer_[rule_position.parent_id] != kInvalidRulePosition);
       node_buffer_[rule_position.parent_id].reference_count++;
     }
     return id;
@@ -168,6 +195,10 @@ class RulePositionTree {
     return ss.str();
   }
 
+  size_t NodeCount() const { return node_buffer_.Size(); }
+  size_t BufferCapacity() const { return node_buffer_.Capacity(); }
+  bool IsBufferWellFormed() const { return node_buffer_.IsWellFormed(); }
+
  private:
   BNFGrammar grammar_;
   RulePositionBuffer node_buffer_;
@@ -208,8 +239,9 @@ class StackTopsWithHistory {
 
   const std::vector<int32_t>& LatestStackTops() const { return stack_tops_history_.back(); }
 
-  std::string PrintLatest() const {
-    const auto& latest_tops = LatestStackTops();
+  std::string PrintStackTops(int steps_behind_latest = 0) const {
+    const auto& latest_tops =
+        stack_tops_history_[stack_tops_history_.size() - 1 - steps_behind_latest];
     std::stringstream ss;
     ss << "Stacks list size: " << latest_tops.size() << std::endl;
     int cnt = 0;
@@ -258,7 +290,7 @@ class GrammarMatcherNode : public Object {
 
   bool AcceptChar(TCodepoint codepoint, bool drop_old = true, bool verbose = false) {
     if (verbose) {
-      std::cout << "before stack: " << PrintStackState() << std::endl;
+      std::cout << "before stack: " << PrintStackTops() << std::endl;
     }
     auto prev_stack_tops = stack_tops_with_history_.LatestStackTops();
     accept_char_stack_tops_buffer_.clear();
@@ -281,7 +313,7 @@ class GrammarMatcherNode : public Object {
       if (!ok) {
         continue;
       }
-      AddNewStackTops(old_top, &accept_char_stack_tops_buffer_);
+      UpdateNewStackTops(old_top, &accept_char_stack_tops_buffer_);
     }
     if (accept_char_stack_tops_buffer_.empty()) {
       if (verbose) {
@@ -295,7 +327,7 @@ class GrammarMatcherNode : public Object {
       std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
                 << "\" Stack size : " << stack_tops_with_history_.LatestStackTops().size()
                 << std::endl;
-      std::cout << "after stack: " << PrintStackState() << std::endl;
+      std::cout << "after stack: " << PrintStackTops() << std::endl;
     }
     return true;
   }
@@ -313,72 +345,297 @@ class GrammarMatcherNode : public Object {
       }
       ++accepted_cnt;
     }
-    auto accepted = CanAcceptEnd();
+    auto accepted = CanReachEnd();
     Rollback(accepted_cnt);
     return accepted;
   }
 
-  bool CanAcceptEnd() const {
+  bool CanReachEnd() const {
     auto last_stack_tops = stack_tops_with_history_.LatestStackTops();
     return std::any_of(last_stack_tops.begin(), last_stack_tops.end(),
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
 
-  std::vector<int32_t> FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config) {
-    const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
-    const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
-    std::vector<int32_t> rejected_ids;
-    int prev_matched_size = 0;
-    std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() << std::endl;
-    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
-      // Step 1. Find the length of the previous token that is useful for matching the current
-      // token. (denoted by prev_useful_size)
-      // prev_useful_size = min(prev_matched_size, len(longest_common_prefix(prev_token,
-      // current_token))
-      auto start = std::chrono::high_resolution_clock::now();
-      auto prev_useful_size =
-          std::min(prev_matched_size, static_cast<int>(sorted_token_and_ids[i].token.size()));
-      if (i > 0) {
-        for (int j = 0; j < prev_useful_size; ++j) {
-          if (sorted_token_and_ids[i].token[j] != sorted_token_and_ids[i - 1].token[j]) {
-            prev_useful_size = j;
-            break;
-          }
-        }
-      }
-      auto end = std::chrono::high_resolution_clock::now();
-      handle_past_time += end - start;
+  // void FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config,
+  //                           DynamicBitSet* rejected_ids) {
+  //   const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
+  //   const auto& catagorized_tokens_for_grammar =
+  //   tokenizer_config->catagorized_tokens_for_grammar;
+  //   rejected_ids->Reset(tokenizer_config->vocab_size);
+  //   int prev_matched_size = 0;
+  //   std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() <<
+  //   std::endl; for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+  //     const auto& token = sorted_token_and_ids[i].token;
+  //     const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
+  //     // Step 1. Find the length of the previous token that is useful for matching the current
+  //     // token. (denoted by prev_useful_size)
+  //     // prev_useful_size = min(prev_matched_size, len(longest_common_prefix(prev_token,
+  //     // current_token))
+  //     auto start = std::chrono::high_resolution_clock::now();
+  //     auto prev_useful_size = 0;
+  //     if (prev_token) {
+  //       prev_useful_size = std::min(prev_matched_size, static_cast<int>(token.size()));
+  //       for (int j = 0; j < prev_useful_size; ++j) {
+  //         if (token[j] != (*prev_token)[j]) {
+  //           prev_useful_size = j;
+  //           break;
+  //         }
+  //       }
+  //       Rollback(prev_matched_size - prev_useful_size);
+  //     }
+  //     auto end = std::chrono::high_resolution_clock::now();
+  //     handle_past_time += end - start;
 
-      // Step 2. Rollback the stack before matching the current token.
-      start = std::chrono::high_resolution_clock::now();
-      Rollback(prev_matched_size - prev_useful_size);
-      end = std::chrono::high_resolution_clock::now();
-      rollback_total_time += end - start;
+  //     // Step 3. Match the current token, and update the prev_matched_size.
+  //     start = std::chrono::high_resolution_clock::now();
+  //     bool accepted = true;
+  //     prev_matched_size = prev_useful_size;
+  //     for (int j = prev_useful_size; j < token.size(); ++j) {
+  //       if (!AcceptChar(token[j], false, false)) {
+  //         accepted = false;
+  //         break;
+  //       }
+  //       prev_matched_size = j + 1;
+  //     }
+  //     end = std::chrono::high_resolution_clock::now();
+  //     accept_total_time += end - start;
 
-      // Step 3. Match the current token, and update the prev_matched_size.
-      start = std::chrono::high_resolution_clock::now();
-      bool accepted = true;
-      prev_matched_size = prev_useful_size;
-      for (int j = prev_useful_size; j < sorted_token_and_ids[i].token.size(); ++j) {
-        if (!AcceptChar(sorted_token_and_ids[i].token[j], false, false)) {
-          accepted = false;
-          break;
-        }
-        prev_matched_size = j + 1;
-      }
-      end = std::chrono::high_resolution_clock::now();
-      accept_total_time += end - start;
+  //     // Step 4. If the current token is accepted, push its id to the result.
+  //     if (!accepted) {
+  //       rejected_ids->SetConst(sorted_token_and_ids[i].id);
+  //     }
+  //   }
+  //   auto start = std::chrono::high_resolution_clock::now();
+  //   Rollback(prev_matched_size);
+  //   auto end = std::chrono::high_resolution_clock::now();
+  //   rollback_total_time += end - start;
+  // }
 
-      // Step 4. If the current token is accepted, push its id to the result.
-      if (!accepted) {
-        rejected_ids.push_back(sorted_token_and_ids[i].id);
+  static void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
+    // target and source are sorted, and avoid memory allocation in this function
+    static std::vector<int32_t> result;
+    result.clear();
+    result.reserve(target->size() + source.size());
+    auto it1 = target->begin();
+    auto it2 = source.begin();
+    while (it1 != target->end() && it2 != source.end()) {
+      if (*it1 < *it2) {
+        result.push_back(*it1);
+        ++it1;
+      } else if (*it1 > *it2) {
+        result.push_back(*it2);
+        ++it2;
+      } else {
+        result.push_back(*it1);
+        ++it1;
+        ++it2;
       }
     }
-    auto start = std::chrono::high_resolution_clock::now();
-    Rollback(prev_matched_size);
-    auto end = std::chrono::high_resolution_clock::now();
-    rollback_total_time += end - start;
-    return rejected_ids;
+    while (it1 != target->end()) {
+      result.push_back(*it1);
+      ++it1;
+    }
+    while (it2 != source.end()) {
+      result.push_back(*it2);
+      ++it2;
+    }
+    target->swap(result);
+  }
+
+  static void IntersectWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
+    // target and source are sorted, and avoid memory allocation in this function
+    static std::vector<int32_t> result;
+
+    if (!target->empty() && target->at(0) == -1) {
+      *target = source;
+      return;
+    }
+
+    result.clear();
+    result.reserve(std::min(target->size(), source.size()));
+    auto it1 = target->begin();
+    auto it2 = source.begin();
+    while (it1 != target->end() && it2 != source.end()) {
+      if (*it1 < *it2) {
+        ++it1;
+      } else if (*it1 > *it2) {
+        ++it2;
+      } else {
+        result.push_back(*it1);
+        ++it1;
+        ++it2;
+      }
+    }
+    target->swap(result);
+  }
+
+  static void DifferenceWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
+    // target and source are sorted, and avoid memory allocation in this function
+    static std::vector<int32_t> result;
+    result.clear();
+    result.reserve(target->size());
+    auto it1 = target->begin();
+    auto it2 = source.begin();
+    while (it1 != target->end() && it2 != source.end()) {
+      if (*it1 < *it2) {
+        result.push_back(*it1);
+        ++it1;
+      } else if (*it1 > *it2) {
+        ++it2;
+      } else {
+        ++it1;
+        ++it2;
+      }
+    }
+    while (it1 != target->end()) {
+      result.push_back(*it1);
+      ++it1;
+    }
+    target->swap(result);
+  }
+
+  void FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config,
+                            DynamicBitSet* rejected_ids) {
+    const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
+    const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
+    const auto& latest_stack_tops = stack_tops_with_history_.LatestStackTops();
+
+    std::vector<int32_t> accepted_indices;
+    std::vector<int32_t> rejected_indices{-1};
+    std::vector<int32_t> accepted_indices_delta;
+    std::vector<int32_t> rejected_indices_delta;
+
+    for (auto top : latest_stack_tops) {
+      const auto& top_rule_position = tree_[latest_stack_tops[0]];
+      const auto& catagorized_tokens = catagorized_tokens_for_grammar.at(
+          {top_rule_position.sequence_id, top_rule_position.element_id});
+
+      // std::cout << "Tree top: " << tree_[top].rule_id << " " << tree_[top].sequence_id << " "
+      //           << tree_[top].element_id << " " << tree_[top].parent_id << std::endl;
+
+      stack_tops_with_history_.PushStackTops({tree_.NewNode(tree_[top])}, false);
+
+      bool is_accepted_saved = catagorized_tokens.not_saved_index !=
+                               CatagorizedTokensForGrammar::NotSavedIndex::kAccepted;
+      bool is_uncertain_saved = catagorized_tokens.not_saved_index ==
+                                CatagorizedTokensForGrammar::NotSavedIndex::kUncertain;
+
+      int idx = -1;
+      int idx_acc = 0;
+      int idx_rej = 0;
+      const std::vector<TCodepoint>* cur_token;
+      const std::vector<TCodepoint>* prev_token = nullptr;
+
+      int prev_matched_size = 0;
+      while (true) {
+        if (is_uncertain_saved) {
+          ++idx;
+          if (idx >= static_cast<int>(catagorized_tokens.uncertain_indices.size())) {
+            break;
+          }
+          cur_token = &sorted_token_and_ids[catagorized_tokens.uncertain_indices[idx]].token;
+        } else {
+          ++idx;
+          // idx should be the index of sorted_token_and_ids, but should not included in
+          // accepted_indices and rejected_indices accepted_indices and rejected_indices are sorted,
+          // so we can use a linear search to find the index
+          while (idx < static_cast<int>(sorted_token_and_ids.size())) {
+            while (idx_acc < static_cast<int>(catagorized_tokens.accepted_indices.size()) &&
+                   catagorized_tokens.accepted_indices[idx_acc] < idx) {
+              ++idx_acc;
+            }
+            if (idx_acc < static_cast<int>(catagorized_tokens.accepted_indices.size()) &&
+                catagorized_tokens.accepted_indices[idx_acc] == idx) {
+              ++idx_acc;
+              ++idx;
+              continue;
+            }
+            while (idx_rej < static_cast<int>(catagorized_tokens.rejected_indices.size()) &&
+                   catagorized_tokens.rejected_indices[idx_rej] < idx) {
+              ++idx_rej;
+            }
+            if (idx_rej < static_cast<int>(catagorized_tokens.rejected_indices.size()) &&
+                catagorized_tokens.rejected_indices[idx_rej] == idx) {
+              ++idx_rej;
+              ++idx;
+              continue;
+            }
+            break;
+          }
+          if (idx >= static_cast<int>(sorted_token_and_ids.size())) {
+            break;
+          }
+          cur_token = &sorted_token_and_ids[idx].token;
+        }
+
+        int prev_useful_size = 0;
+        if (prev_token) {
+          int prev_useful_size = std::min(prev_matched_size, static_cast<int>(cur_token->size()));
+          for (int j = 0; j < prev_useful_size; ++j) {
+            if ((*cur_token)[j] != (*prev_token)[j]) {
+              prev_useful_size = j;
+              break;
+            }
+          }
+          Rollback(prev_matched_size - prev_useful_size);
+        }
+
+        bool accepted = true;
+        prev_matched_size = prev_useful_size;
+        for (int j = prev_useful_size; j < cur_token->size(); ++j) {
+          if (!AcceptChar((*cur_token)[j], false, false)) {
+            accepted = false;
+            break;
+          }
+          prev_matched_size = j + 1;
+        }
+
+        // Step 4. If the current token is accepted, push its id to the result.
+        if (accepted && is_accepted_saved) {
+          accepted_indices_delta.push_back(idx);
+        } else if (!accepted && !is_accepted_saved) {
+          rejected_indices_delta.push_back(idx);
+        }
+
+        prev_token = cur_token;
+      }
+
+      Rollback(prev_matched_size + 1);
+
+      if (is_accepted_saved) {
+        UnionizeWith(&accepted_indices_delta, catagorized_tokens.accepted_indices);
+        UnionizeWith(&accepted_indices, accepted_indices_delta);
+      } else {
+        UnionizeWith(&rejected_indices_delta, catagorized_tokens.rejected_indices);
+        IntersectWith(&rejected_indices, rejected_indices_delta);
+      }
+    }
+
+    rejected_ids->Reset(tokenizer_config->vocab_size);
+    // Find all indices that is not in accepted_indices, but in rejected_indices
+    int idx_acc = 0;
+    int idx_rej = 0;
+    if (!rejected_indices.empty() && rejected_indices[0] == -1) {
+      for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+        if (idx_acc < static_cast<int>(accepted_indices.size()) && accepted_indices[idx_acc] == i) {
+          ++idx_acc;
+          continue;
+        }
+        while (idx_rej < static_cast<int>(rejected_indices.size()) &&
+               rejected_indices[idx_rej] < i) {
+          ++idx_rej;
+        }
+        if (idx_rej < static_cast<int>(rejected_indices.size()) && rejected_indices[idx_rej] == i) {
+          rejected_ids->SetConst(sorted_token_and_ids[i].id);
+          ++idx_rej;
+        }
+      }
+    } else {
+      DifferenceWith(&rejected_indices, accepted_indices);
+      for (int idx : rejected_indices) {
+        rejected_ids->SetConst(sorted_token_and_ids[idx].id);
+      }
+    }
   }
 
   std::chrono::duration<double, std::milli> handle_past_time;
@@ -387,12 +644,11 @@ class GrammarMatcherNode : public Object {
 
   CatagorizedTokensForGrammar GetCatagorizedTokens(
       const std::vector<TokenAndId>& sorted_token_and_ids, bool is_root_rule) {
-    std::unordered_set<int32_t> accepted_indices;
-    std::unordered_set<int32_t> rejected_indices;
-    std::unordered_set<int32_t> uncertain_indices;
-    std::vector<bool> can_see_end_stack{CanAcceptEnd()};
+    std::vector<int32_t> accepted_indices;
+    std::vector<int32_t> rejected_indices;
+    std::vector<int32_t> uncertain_indices;
+    std::vector<bool> can_see_end_stack{CanReachEnd()};
     int prev_matched_size = 0;
-    std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() << std::endl;
     for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
       const auto& token = sorted_token_and_ids[i].token;
       const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
@@ -419,66 +675,87 @@ class GrammarMatcherNode : public Object {
           accepted = false;
           break;
         }
-        if (CanAcceptEnd()) {
+        if (CanReachEnd()) {
           can_see_end = true;
         }
         can_see_end_stack.push_back(can_see_end);
         prev_matched_size = j + 1;
       }
       if (accepted) {
-        accepted_indices.insert(i);
+        accepted_indices.push_back(i);
       } else if (can_see_end && !is_root_rule) {
-        uncertain_indices.insert(i);
+        uncertain_indices.push_back(i);
       } else {
-        rejected_indices.insert(i);
+        rejected_indices.push_back(i);
+      }
+      if (!tree_.IsBufferWellFormed() || tree_.BufferCapacity() > 1000) {
+        std::cout << "Buffer capacity: " << tree_.BufferCapacity()
+                  << " Node count: " << tree_.NodeCount()
+                  << " Well formed: " << tree_.IsBufferWellFormed() << std::endl;
+        std::cout << "History count: " << stack_tops_with_history_.Size() << std::endl;
+        std::cout << "token: <";
+        for (auto t : token) {
+          std::cout << CodepointToPrintable(t);
+        }
+        std::cout << ">\n";
+        std::cout << "stack:\n";
+        for (int i = 0; i < stack_tops_with_history_.Size(); ++i) {
+          std::cout << "prior " << i << " steps: " << stack_tops_with_history_.PrintStackTops(i)
+                    << "\n";
+        }
+
+        DCHECK(tree_.BufferCapacity() < 1000);
+        DCHECK(tree_.IsBufferWellFormed());
       }
     }
     Rollback(prev_matched_size);
-    std::cout << "Accepted: " << accepted_indices.size();
-    if (accepted_indices.size() < 100) {
-      std::cout << " (";
-      for (auto i : accepted_indices) {
-        std::cout << "<";
-        for (auto cp : sorted_token_and_ids[i].token) {
-          std::cout << CodepointToPrintable(cp);
-        }
-        std::cout << "> ";
-      }
-      std::cout << ")";
-    }
-    std::cout << std::endl;
-    std::cout << "Rejected: " << rejected_indices.size();
-    if (rejected_indices.size() < 100) {
-      std::cout << " (";
-      for (auto i : rejected_indices) {
-        std::cout << "<";
-        for (auto cp : sorted_token_and_ids[i].token) {
-          std::cout << CodepointToPrintable(cp);
-        }
-        std::cout << "> ";
-      }
-      std::cout << ")";
-    }
-    std::cout << std::endl;
-    std::cout << "Uncertain: " << uncertain_indices.size();
-    if (uncertain_indices.size() < 100) {
-      std::cout << " (";
-      for (auto i : uncertain_indices) {
-        std::cout << "<";
-        for (auto cp : sorted_token_and_ids[i].token) {
-          std::cout << CodepointToPrintable(cp);
-        }
-        std::cout << "> ";
-      }
-      std::cout << ")";
-    }
-    std::cout << std::endl;
+    // std::cout << "Accepted: " << accepted_indices.size();
+    // if (accepted_indices.size() < 200) {
+    //   std::cout << " (";
+    //   for (auto i : accepted_indices) {
+    //     std::cout << "<";
+    //     for (auto cp : sorted_token_and_ids[i].token) {
+    //       std::cout << CodepointToPrintable(cp);
+    //     }
+    //     std::cout << "> ";
+    //   }
+    //   std::cout << ")";
+    // }
+    // std::cout << std::endl;
+    // std::cout << "Rejected: " << rejected_indices.size();
+    // if (rejected_indices.size() < 200) {
+    //   std::cout << " (";
+    //   for (auto i : rejected_indices) {
+    //     std::cout << "<";
+    //     for (auto cp : sorted_token_and_ids[i].token) {
+    //       std::cout << CodepointToPrintable(cp);
+    //     }
+    //     std::cout << "> ";
+    //   }
+    //   std::cout << ")";
+    // }
+    // std::cout << std::endl;
+    // std::cout << "Uncertain: " << uncertain_indices.size();
+    // if (uncertain_indices.size() < 200) {
+    //   std::cout << " (";
+    //   for (auto i : uncertain_indices) {
+    //     std::cout << "<";
+    //     for (auto cp : sorted_token_and_ids[i].token) {
+    //       std::cout << CodepointToPrintable(cp);
+    //     }
+    //     std::cout << "> ";
+    //   }
+    //   std::cout << ")";
+    // }
+    // std::cout << std::endl;
     return CatagorizedTokensForGrammar(accepted_indices, rejected_indices, uncertain_indices);
   }
 
   void Rollback(int rollback_steps) { stack_tops_with_history_.Rollback(rollback_steps); }
 
-  std::string PrintStackState() const { return stack_tops_with_history_.PrintLatest(); }
+  std::string PrintStackTops(int steps_behind_latest = 0) const {
+    return stack_tops_with_history_.PrintStackTops(steps_behind_latest);
+  }
 
   static constexpr const char* _type_key = "mlc.serve.GrammarMatcher";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -504,7 +781,7 @@ class GrammarMatcherNode : public Object {
     }
   }
 
-  void AddNewStackTops(int32_t old_rule_position_id, std::vector<int32_t>* new_stack_tops) {
+  void UpdateNewStackTops(int32_t old_rule_position_id, std::vector<int32_t>* new_stack_tops) {
     auto cur_rule_position = tree_.GetNextPosition(tree_[old_rule_position_id]);
 
     while (!tree_.IsEndPosition(cur_rule_position)) {
