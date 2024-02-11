@@ -88,6 +88,7 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
         // std::cout << "Rule: " << rule.name
         //           << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
         //           << " Position: " << element_id << std::endl;
+        // std::cout << "Rule id: " << i << " Sequence id: " << sequence_id << std::endl;
 
         // auto start = std::chrono::high_resolution_clock::now();
         auto grammar_matcher = GrammarMatcher(grammar, 0, cur_rule_position);

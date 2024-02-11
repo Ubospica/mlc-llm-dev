@@ -108,6 +108,7 @@ class RulePositionTree {
 
   int32_t NewNode(const RulePosition& rule_position) {
     auto id = node_buffer_.Allocate(rule_position);
+    // std::cout << "parent: " << rule_position.parent_id << std::endl;
     if (rule_position.parent_id != RulePosition::kNoParent) {
       DCHECK(rule_position.parent_id < static_cast<int32_t>(node_buffer_.Capacity()) &&
              node_buffer_[rule_position.parent_id] != kInvalidRulePosition);
@@ -173,14 +174,19 @@ class RulePositionTree {
     }
     ss << "{\n";
     for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
-      const auto& rule_position = node_buffer_[*it];
-      ss << "id: " << *it << ", rule: " << grammar_->GetRule(rule_position.rule_id).name
-         << ", sequence: " << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id)
-         << ", element id: " << rule_position.element_id
-         << ", parent id: " << rule_position.parent_id
-         << ", ref count: " << rule_position.reference_count << "\n";
+      ss << PrintNode(*it) << "\n";
     }
     ss << "}";
+    return ss.str();
+  }
+
+  std::string PrintNode(int32_t id) const {
+    std::stringstream ss;
+    const auto& rule_position = node_buffer_[id];
+    ss << "id: " << id << ", rule: " << grammar_->GetRule(rule_position.rule_id).name
+       << ", sequence: " << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id)
+       << ", element id: " << rule_position.element_id << ", parent id: " << rule_position.parent_id
+       << ", ref count: " << rule_position.reference_count;
     return ss.str();
   }
 
@@ -398,15 +404,16 @@ class GrammarMatcherNode : public Object {
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
 
-  // void FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config,
-  //                           DynamicBitSet* rejected_ids) {
+  // void FindRejectedTokenIds0(const GrammarTokenizerConfig& tokenizer_config,
+  //                            DynamicBitSet* rejected_ids) {
   //   const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
   //   const auto& catagorized_tokens_for_grammar =
   //   tokenizer_config->catagorized_tokens_for_grammar;
   //   rejected_ids->Reset(tokenizer_config->vocab_size);
   //   int prev_matched_size = 0;
   //   std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() <<
-  //   std::endl; for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+  //   std::endl; std::vector<int32_t> accepted_indices; for (int i = 0; i <
+  //   static_cast<int>(sorted_token_and_ids.size()); ++i) {
   //     const auto& token = sorted_token_and_ids[i].token;
   //     const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
   //     // Step 1. Find the length of the previous token that is useful for matching the current
@@ -445,7 +452,20 @@ class GrammarMatcherNode : public Object {
   //     // Step 4. If the current token is accepted, push its id to the result.
   //     if (!accepted) {
   //       rejected_ids->SetConst(sorted_token_and_ids[i].id);
+  //     } else {
+  //       accepted_indices.push_back(i);
   //     }
+  //   }
+  //   if (accepted_indices.size() < 200) {
+  //     std::cout << "Accepted size: " << accepted_indices.size() << " contents: (";
+  //     for (auto i : accepted_indices) {
+  //       std::cout << "<";
+  //       for (auto cp : sorted_token_and_ids[i].token) {
+  //         std::cout << CodepointToPrintable(cp);
+  //       }
+  //       std::cout << "> ";
+  //     }
+  //     std::cout << ")" << std::endl;
   //   }
   //   auto start = std::chrono::high_resolution_clock::now();
   //   Rollback(prev_matched_size);
@@ -548,39 +568,45 @@ class GrammarMatcherNode : public Object {
     std::vector<int32_t> rejected_indices_delta;
 
     for (auto top : latest_stack_tops) {
-      const auto& top_rule_position = tree_[latest_stack_tops[0]];
+      auto cur_rule_position = tree_[top];
       const auto& catagorized_tokens = catagorized_tokens_for_grammar.at(
-          {top_rule_position.sequence_id, top_rule_position.element_id});
+          {cur_rule_position.sequence_id, cur_rule_position.element_id});
 
-      std::cout << "Tree top: " << tree_[top].rule_id << " " << tree_[top].sequence_id << " "
-                << tree_[top].element_id << " " << tree_[top].parent_id << std::endl;
+      stack_tops_with_history_.PushStackTops({tree_.NewNode(cur_rule_position)}, false);
 
-      stack_tops_with_history_.PushStackTops({tree_.NewNode(tree_[top])}, false);
+      // std::cout << "top: " << tree_.PrintNode(top) << std::endl;
+      // std::cout << "catagorized_tokens sizes: " << catagorized_tokens.accepted_indices.size() <<
+      // " "
+      //           << catagorized_tokens.rejected_indices.size() << " "
+      //           << catagorized_tokens.uncertain_indices.size()
+      //           << " Unsaved: " << static_cast<int>(catagorized_tokens.not_saved_index)
+      //           << std::endl;
 
-      bool is_accepted_saved = catagorized_tokens.not_saved_index !=
-                               CatagorizedTokensForGrammar::NotSavedIndex::kAccepted;
-      bool is_uncertain_saved = catagorized_tokens.not_saved_index ==
+      bool is_find_accept_mode = catagorized_tokens.not_saved_index !=
+                                 CatagorizedTokensForGrammar::NotSavedIndex::kAccepted;
+      bool is_uncertain_saved = catagorized_tokens.not_saved_index !=
                                 CatagorizedTokensForGrammar::NotSavedIndex::kUncertain;
 
       int idx = -1;
+      int idx_unc = -1;
       int idx_acc = 0;
       int idx_rej = 0;
       const std::vector<TCodepoint>* cur_token;
       const std::vector<TCodepoint>* prev_token = nullptr;
 
+      accepted_indices_delta.clear();
+      rejected_indices_delta.clear();
+
       int prev_matched_size = 0;
       while (true) {
         if (is_uncertain_saved) {
-          ++idx;
-          if (idx >= static_cast<int>(catagorized_tokens.uncertain_indices.size())) {
+          ++idx_unc;
+          if (idx_unc >= static_cast<int>(catagorized_tokens.uncertain_indices.size())) {
             break;
           }
-          cur_token = &sorted_token_and_ids[catagorized_tokens.uncertain_indices[idx]].token;
+          idx = catagorized_tokens.uncertain_indices[idx_unc];
         } else {
           ++idx;
-          // idx should be the index of sorted_token_and_ids, but should not included in
-          // accepted_indices and rejected_indices accepted_indices and rejected_indices are sorted,
-          // so we can use a linear search to find the index
           while (idx < static_cast<int>(sorted_token_and_ids.size())) {
             while (idx_acc < static_cast<int>(catagorized_tokens.accepted_indices.size()) &&
                    catagorized_tokens.accepted_indices[idx_acc] < idx) {
@@ -607,12 +633,13 @@ class GrammarMatcherNode : public Object {
           if (idx >= static_cast<int>(sorted_token_and_ids.size())) {
             break;
           }
-          cur_token = &sorted_token_and_ids[idx].token;
         }
+
+        cur_token = &sorted_token_and_ids[idx].token;
 
         int prev_useful_size = 0;
         if (prev_token) {
-          int prev_useful_size = std::min(prev_matched_size, static_cast<int>(cur_token->size()));
+          prev_useful_size = std::min(prev_matched_size, static_cast<int>(cur_token->size()));
           for (int j = 0; j < prev_useful_size; ++j) {
             if ((*cur_token)[j] != (*prev_token)[j]) {
               prev_useful_size = j;
@@ -633,9 +660,9 @@ class GrammarMatcherNode : public Object {
         }
 
         // Step 4. If the current token is accepted, push its id to the result.
-        if (accepted && is_accepted_saved) {
+        if (accepted && is_find_accept_mode) {
           accepted_indices_delta.push_back(idx);
-        } else if (!accepted && !is_accepted_saved) {
+        } else if (!accepted && !is_find_accept_mode) {
           rejected_indices_delta.push_back(idx);
         }
 
@@ -644,7 +671,7 @@ class GrammarMatcherNode : public Object {
 
       Rollback(prev_matched_size + 1);
 
-      if (is_accepted_saved) {
+      if (is_find_accept_mode) {
         UnionizeWith(&accepted_indices_delta, catagorized_tokens.accepted_indices);
         UnionizeWith(&accepted_indices, accepted_indices_delta);
       } else {
@@ -657,20 +684,19 @@ class GrammarMatcherNode : public Object {
     // Find all indices that is not in accepted_indices, but in rejected_indices
     int idx_acc = 0;
     int idx_rej = 0;
-    if (!rejected_indices.empty() && rejected_indices[0] == -1) {
+    if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
+      int cnt = 0;
       for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+        while (idx_acc < static_cast<int>(accepted_indices.size()) &&
+               accepted_indices[idx_acc] < i) {
+          ++idx_acc;
+        }
         if (idx_acc < static_cast<int>(accepted_indices.size()) && accepted_indices[idx_acc] == i) {
           ++idx_acc;
           continue;
         }
-        while (idx_rej < static_cast<int>(rejected_indices.size()) &&
-               rejected_indices[idx_rej] < i) {
-          ++idx_rej;
-        }
-        if (idx_rej < static_cast<int>(rejected_indices.size()) && rejected_indices[idx_rej] == i) {
-          rejected_ids->SetConst(sorted_token_and_ids[i].id);
-          ++idx_rej;
-        }
+        ++cnt;
+        rejected_ids->SetConst(sorted_token_and_ids[i].id);
       }
     } else {
       DifferenceWith(&rejected_indices, accepted_indices);

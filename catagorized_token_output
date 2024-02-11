@@ -1,847 +1,606 @@
 Rule: main Sequence: ([{] members_or_ws [}] ws) Position: 0
-Stack size: 1
-Accepted: 4 (<{}> <{\"> <{\r> <{> )
+Rule id: 0 Sequence id: 4
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.000952 ms
-preprocess step2: 2.37587 ms
 Rule: main Sequence: ([{] members_or_ws [}] ws) Position: 2
-Stack size: 1
-Accepted: 2 (<}\r> <}> )
+Rule id: 0 Sequence id: 4
+Accepted: 2 (<}> <}\r> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.000311 ms
-preprocess step2: 2.63425 ms
 Rule: main Sequence: ([[] elements_or_ws [\]] ws) Position: 0
-Stack size: 1
-Accepted: 6 (<[{> <[]> <[[> <[-> <[\"> <[> )
+Rule id: 0 Sequence id: 9
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
 Rejected: 31734
 Uncertain: 0 ()
-preprocess step1: 0.000271 ms
-preprocess step2: 2.66679 ms
 Rule: main Sequence: ([[] elements_or_ws [\]] ws) Position: 2
-Stack size: 1
+Rule id: 0 Sequence id: 9
 Accepted: 1 (<]> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.66601 ms
 Rule: value Sequence: ([{] members_or_ws [}]) Position: 0
-Stack size: 1
-Accepted: 4 (<{}> <{\"> <{\r> <{> )
+Rule id: 1 Sequence id: 14
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.65313 ms
 Rule: value Sequence: ([{] members_or_ws [}]) Position: 2
-Stack size: 1
+Rule id: 1 Sequence id: 14
 Accepted: 1 (<}> )
 Rejected: 31655
-Uncertain: 84 (<}}}\\> <}}}> <}}{\\> <}}{> <}}_{\\> <}}_{> <}}_> <}}^{> <}}^> <}}\\> <}}=> <}}.> <}},> <}})> <}}(\\> <}}(> <}}%> <}}$.> <}}$,> <}}$> <}}> <}|> <}{|> <}{\\> <}{(> <},{> <},\\> <},> <}+\\> <}+> <})^> <})\\> <});> <}).> <}),> <}))> <})$.> <})$,> <})$> <})> <}(\\> <}\r> <}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> )
-preprocess step1: 0.000211 ms
-preprocess step2: 3.0031 ms
+Uncertain: 84 (<}\r> <}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},> <},\\> <},{> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
 Rule: value Sequence: ([[] elements_or_ws [\]]) Position: 0
-Stack size: 1
-Accepted: 6 (<[{> <[]> <[[> <[-> <[\"> <[> )
+Rule id: 1 Sequence id: 18
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
 Rejected: 31732
-Uncertain: 2 (<[]{> <[])> )
-preprocess step1: 0.00031 ms
-preprocess step2: 2.68253 ms
+Uncertain: 2 (<[])> <[]{> )
 Rule: value Sequence: ([[] elements_or_ws [\]]) Position: 2
-Stack size: 1
+Rule id: 1 Sequence id: 18
 Accepted: 1 (<]> )
 Rejected: 31700
-Uncertain: 39 (<]}> <]{\\> <]{\'> <]{> <]`.> <]`> <]_> <]];> <]],> <]])> <]);> <]).> <]),> <]))> <])> <](/> <](#)> <](#> <](> <]$.> <]$,> <]$> <]\"> <]*> <]+> <],> <],[> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> )
-preprocess step1: 0.00017 ms
-preprocess step2: 2.8008 ms
+Uncertain: 39 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <],> <],[> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
 Rule: value Sequence: ([\"] characters [\"]) Position: 0
-Stack size: 1
-Accepted: 41 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\"></> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\"> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> )
+Rule id: 1 Sequence id: 22
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rejected: 31699
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.82725 ms
 Rule: value Sequence: ([\"] characters [\"]) Position: 2
-Stack size: 1
+Rule id: 1 Sequence id: 22
 Accepted: 1 (<\"> )
 Rejected: 31699
-Uncertain: 40 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\",> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> )
-preprocess step1: 0.000171 ms
-preprocess step2: 2.80773 ms
+Uncertain: 40 (<\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rule: value Sequence: ([0-9] fraction exponent) Position: 0
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 1 Sequence id: 26
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.00019 ms
-preprocess step2: 2.68904 ms
 Rule: value Sequence: ([1-9] digits fraction exponent) Position: 0
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 1 Sequence id: 31
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.69499 ms
 Rule: value Sequence: ([\-] [0-9] fraction exponent) Position: 0
-Stack size: 1
+Rule id: 1 Sequence id: 36
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.000231 ms
-preprocess step2: 2.62813 ms
 Rule: value Sequence: ([\-] [0-9] fraction exponent) Position: 1
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 1 Sequence id: 36
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.65955 ms
 Rule: value Sequence: ([\-] [1-9] digits fraction exponent) Position: 0
-Stack size: 1
+Rule id: 1 Sequence id: 42
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.64262 ms
 Rule: value Sequence: ([\-] [1-9] digits fraction exponent) Position: 1
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 1 Sequence id: 42
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.00023 ms
-preprocess step2: 2.61513 ms
 Rule: value Sequence: ([t] [r] [u] [e]) Position: 0
-Stack size: 1
-Accepted: 3 (<true> <tr> <t> )
+Rule id: 1 Sequence id: 47
+Accepted: 3 (<t> <tr> <true> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.58047 ms
 Rule: value Sequence: ([t] [r] [u] [e]) Position: 1
-Stack size: 1
-Accepted: 2 (<ru> <r> )
+Rule id: 1 Sequence id: 47
+Accepted: 2 (<r> <ru> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.000181 ms
-preprocess step2: 2.63191 ms
 Rule: value Sequence: ([t] [r] [u] [e]) Position: 2
-Stack size: 1
-Accepted: 2 (<ue> <u> )
+Rule id: 1 Sequence id: 47
+Accepted: 2 (<u> <ue> )
 Rejected: 31719
-Uncertain: 19 (<uez> <uetooth> <uet> <uesto> <uest> <uese> <ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> )
-preprocess step1: 0.00017 ms
-preprocess step2: 2.64789 ms
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
 Rule: value Sequence: ([t] [r] [u] [e]) Position: 3
-Stack size: 1
+Rule id: 1 Sequence id: 47
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.000271 ms
-preprocess step2: 2.59439 ms
 Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 0
-Stack size: 1
-Accepted: 4 (<false> <fal> <fa> <f> )
+Rule id: 1 Sequence id: 53
+Accepted: 4 (<f> <fa> <fal> <false> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.00029 ms
-preprocess step2: 2.65486 ms
 Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 1
-Stack size: 1
-Accepted: 4 (<alse> <als> <al> <a> )
+Rule id: 1 Sequence id: 53
+Accepted: 4 (<a> <al> <als> <alse> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.66985 ms
 Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 2
-Stack size: 1
-Accepted: 2 (<ls> <l> )
+Rule id: 1 Sequence id: 53
+Accepted: 2 (<l> <ls> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.64041 ms
 Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 3
-Stack size: 1
-Accepted: 2 (<se> <s> )
+Rule id: 1 Sequence id: 53
+Accepted: 2 (<s> <se> )
 Rejected: 31667
-Uncertain: 71 (<sey> <sex> <setup> <settings> <setting> <sett> <sets> <setopt> <setminus> <setText> <setState> <setAttribute> <selenium> <selector> <selection> <selected> <select> <sel> <seite> <sein> <seh> <segu> <segment> <seg> <sef> <seen> <seed> <see> <search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> )
-preprocess step1: 0.000201 ms
-preprocess step2: 3.11012 ms
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
 Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 4
-Stack size: 1
+Rule id: 1 Sequence id: 53
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.000251 ms
-preprocess step2: 2.62809 ms
 Rule: value Sequence: ([n] [u] [l] [l]) Position: 0
-Stack size: 1
-Accepted: 3 (<null> <nu> <n> )
+Rule id: 1 Sequence id: 58
+Accepted: 3 (<n> <nu> <null> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.60349 ms
 Rule: value Sequence: ([n] [u] [l] [l]) Position: 1
-Stack size: 1
-Accepted: 3 (<ull> <ul> <u> )
+Rule id: 1 Sequence id: 58
+Accepted: 3 (<u> <ul> <ull> )
 Rejected: 31735
-Uncertain: 2 (<ulle> <ulla> )
-preprocess step1: 0.0002 ms
-preprocess step2: 2.57354 ms
+Uncertain: 2 (<ulla> <ulle> )
 Rule: value Sequence: ([n] [u] [l] [l]) Position: 2
-Stack size: 1
-Accepted: 2 (<ll> <l> )
+Rule id: 1 Sequence id: 58
+Accepted: 2 (<l> <ll> )
 Rejected: 31734
-Uncertain: 4 (<lles> <lle> <lla\u00e7os> <lla> )
-preprocess step1: 0.00018 ms
-preprocess step2: 2.60005 ms
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
 Rule: value Sequence: ([n] [u] [l] [l]) Position: 3
-Stack size: 1
+Rule id: 1 Sequence id: 58
 Accepted: 1 (<l> )
 Rejected: 31401
 Uncertain: 338
-preprocess step1: 0.00018 ms
-preprocess step2: 2.65128 ms
 Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 0
-Stack size: 1
-Accepted: 41 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\"></> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\"> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> )
+Rule id: 2 Sequence id: 69
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rejected: 31699
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.77444 ms
 Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 2
-Stack size: 1
-Accepted: 5 (<\":{\"> <\":\"> <\":> <\"\r> <\"> )
+Rule id: 2 Sequence id: 69
+Accepted: 5 (<\"> <\"\r> <\":> <\":\"> <\":{\"> )
 Rejected: 31735
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.65497 ms
 Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 4
-Stack size: 1
-Accepted: 5 (<:[> <:{> <:-> <:\"> <:> )
+Rule id: 2 Sequence id: 69
+Accepted: 5 (<:> <:\"> <:-> <:[> <:{> )
 Rejected: 31735
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.69624 ms
 Rule: members_or_ws Sequence: ([ ] members_or_ws) Position: 0
-Stack size: 1
-Accepted: 46 (< \"{> < \"`> < \"_> < \"^> < \"\\> < \"[> < \"@> < \"</> < \"<> < \";> < \":> < \"/> < \"...> < \".> < \"-> < \",\"> < \",> <            > <           > <          > <         > <        > <       > < \"+> <      > < \"*> <     > < \");> <    > < \")> <   > < \"(> <  > < \"\'> < \r> < \"%> < > < \"${> <             > <              > <               > <                > < \"> < \"\"> < \"#> < \"$> )
+Rule id: 2 Sequence id: 72
+Accepted: 46 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > < \"> < \"\"> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"^> < \"_> < \"`> < \"{> )
 Rejected: 15331
 Uncertain: 16363
-preprocess step1: 0.00025 ms
-preprocess step2: 3.12421 ms
 Rule: members_or_ws Sequence: ([\n] members_or_ws) Position: 0
-Stack size: 1
+Rule id: 2 Sequence id: 75
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.00022 ms
-preprocess step2: 2.63173 ms
 Rule: members_or_ws Sequence: ([\r] members_or_ws) Position: 0
-Stack size: 1
+Rule id: 2 Sequence id: 78
 Accepted: 1 (<\r> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.61797 ms
 Rule: members_or_ws Sequence: ([\t] members_or_ws) Position: 0
-Stack size: 1
+Rule id: 2 Sequence id: 81
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.000181 ms
-preprocess step2: 2.57087 ms
 Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 0
-Stack size: 1
-Accepted: 3 (<,\"> <,\r> <,> )
+Rule id: 3 Sequence id: 95
+Accepted: 3 (<,> <,\r> <,\"> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.63328 ms
 Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 2
-Stack size: 1
-Accepted: 41 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\"></> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\"> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> )
+Rule id: 3 Sequence id: 95
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rejected: 31699
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.69729 ms
 Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 4
-Stack size: 1
-Accepted: 5 (<\":{\"> <\":\"> <\":> <\"\r> <\"> )
+Rule id: 3 Sequence id: 95
+Accepted: 5 (<\"> <\"\r> <\":> <\":\"> <\":{\"> )
 Rejected: 31735
 Uncertain: 0 ()
-preprocess step1: 0.00022 ms
-preprocess step2: 2.6204 ms
 Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 6
-Stack size: 1
-Accepted: 5 (<:[> <:{> <:-> <:\"> <:> )
+Rule id: 3 Sequence id: 95
+Accepted: 5 (<:> <:\"> <:-> <:[> <:{> )
 Rejected: 31735
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.63026 ms
 Rule: elements_or_ws Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 4 (<{}> <{\"> <{\r> <{> )
+Rule id: 4 Sequence id: 103
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.00016 ms
-preprocess step2: 2.64065 ms
 Rule: elements_or_ws Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 4 (<},{> <},> <}\r> <}> )
+Rule id: 4 Sequence id: 103
+Accepted: 4 (<}> <}\r> <},> <},{> )
 Rejected: 31655
-Uncertain: 81 (<}}}\\> <}}}> <}}{\\> <}}{> <}}_{\\> <}}_{> <}}_> <}}^{> <}}^> <}}\\> <}}=> <}}.> <}},> <}})> <}}(\\> <}}(> <}}%> <}}$.> <}}$,> <}}$> <}}> <}|> <}-> <},\\> <}+\\> <}+> <})^> <})\\> <});> <}).> <}),> <}))> <})$.> <})$,> <})$> <})> <}-\\> <}\"> <}{\\> <}.> <}\")> <}{|> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> )
-preprocess step1: 0.00018 ms
-preprocess step2: 2.95205 ms
+Uncertain: 81 (<}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},\\> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
 Rule: elements_or_ws Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 6 (<[{> <[]> <[[> <[-> <[\"> <[> )
+Rule id: 4 Sequence id: 109
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
 Rejected: 31732
-Uncertain: 2 (<[]{> <[])> )
-preprocess step1: 0.00025 ms
-preprocess step2: 2.66096 ms
+Uncertain: 2 (<[])> <[]{> )
 Rule: elements_or_ws Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 3 (<],[> <],> <]> )
+Rule id: 4 Sequence id: 109
+Accepted: 3 (<]> <],> <],[> )
 Rejected: 31700
-Uncertain: 37 (<]}> <]{\\> <]{\'> <]{> <]`.> <]`> <]_> <]];> <]);> <]).> <]),> <]))> <])> <](/> <](#)> <](#> <](> <]$.> <]$,> <]$> <]],> <]\"> <]])> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> )
-preprocess step1: 0.00019 ms
-preprocess step2: 2.77298 ms
+Uncertain: 37 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
 Rule: elements_or_ws Sequence: ([\"] characters [\"] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 41 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\"></> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\"> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> )
+Rule id: 4 Sequence id: 115
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rejected: 31699
 Uncertain: 0 ()
-preprocess step1: 0.000151 ms
-preprocess step2: 2.72977 ms
 Rule: elements_or_ws Sequence: ([\"] characters [\"] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 5 (<\",\"> <\",\r> <\"\r> <\",> <\"> )
+Rule id: 4 Sequence id: 115
+Accepted: 5 (<\"> <\"\r> <\",> <\",\r> <\",\"> )
 Rejected: 31699
-Uncertain: 36 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\".$> <\"))> <\"]> <\".> <\")> <\"\\> <\"\"> <\"\?>> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> )
-preprocess step1: 0.00019 ms
-preprocess step2: 2.7176 ms
+Uncertain: 36 (<\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rule: elements_or_ws Sequence: ([0-9] fraction exponent ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 4 Sequence id: 121
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.000211 ms
-preprocess step2: 2.61231 ms
 Rule: elements_or_ws Sequence: ([1-9] digits fraction exponent ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 4 Sequence id: 128
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.55681 ms
 Rule: elements_or_ws Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 0
-Stack size: 1
+Rule id: 4 Sequence id: 135
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00023 ms
-preprocess step2: 2.6116 ms
 Rule: elements_or_ws Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 4 Sequence id: 135
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.65318 ms
 Rule: elements_or_ws Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 0
-Stack size: 1
+Rule id: 4 Sequence id: 143
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00015 ms
-preprocess step2: 2.64749 ms
 Rule: elements_or_ws Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 4 Sequence id: 143
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.00017 ms
-preprocess step2: 2.64633 ms
 Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 3 (<true> <tr> <t> )
+Rule id: 4 Sequence id: 150
+Accepted: 3 (<t> <tr> <true> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.00017 ms
-preprocess step2: 2.61819 ms
 Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 2 (<ru> <r> )
+Rule id: 4 Sequence id: 150
+Accepted: 2 (<r> <ru> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.00017 ms
-preprocess step2: 2.65475 ms
 Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ue> <u> )
+Rule id: 4 Sequence id: 150
+Accepted: 2 (<u> <ue> )
 Rejected: 31719
-Uncertain: 19 (<uez> <uetooth> <uet> <uesto> <uest> <uese> <ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> )
-preprocess step1: 0.00029 ms
-preprocess step2: 2.73796 ms
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
 Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 3
-Stack size: 1
+Rule id: 4 Sequence id: 150
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.000201 ms
-preprocess step2: 2.64265 ms
 Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 4 (<false> <fal> <fa> <f> )
+Rule id: 4 Sequence id: 158
+Accepted: 4 (<f> <fa> <fal> <false> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.00022 ms
-preprocess step2: 2.58435 ms
 Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 4 (<alse> <als> <al> <a> )
+Rule id: 4 Sequence id: 158
+Accepted: 4 (<a> <al> <als> <alse> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.62155 ms
 Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ls> <l> )
+Rule id: 4 Sequence id: 158
+Accepted: 2 (<l> <ls> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.66144 ms
 Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 3
-Stack size: 1
-Accepted: 2 (<se> <s> )
+Rule id: 4 Sequence id: 158
+Accepted: 2 (<s> <se> )
 Rejected: 31667
-Uncertain: 71 (<sey> <sex> <setup> <settings> <setting> <sett> <sets> <setopt> <setminus> <setText> <setState> <setAttribute> <selenium> <selector> <selection> <selected> <select> <sel> <seite> <sein> <seh> <segu> <segment> <seg> <sef> <seen> <seed> <see> <search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> )
-preprocess step1: 0.00018 ms
-preprocess step2: 3.04367 ms
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
 Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 4
-Stack size: 1
+Rule id: 4 Sequence id: 158
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.000181 ms
-preprocess step2: 2.56994 ms
 Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 3 (<null> <nu> <n> )
+Rule id: 4 Sequence id: 165
+Accepted: 3 (<n> <nu> <null> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.53097 ms
 Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 3 (<ull> <ul> <u> )
+Rule id: 4 Sequence id: 165
+Accepted: 3 (<u> <ul> <ull> )
 Rejected: 31735
-Uncertain: 2 (<ulle> <ulla> )
-preprocess step1: 0.00017 ms
-preprocess step2: 2.54448 ms
+Uncertain: 2 (<ulla> <ulle> )
 Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ll> <l> )
+Rule id: 4 Sequence id: 165
+Accepted: 2 (<l> <ll> )
 Rejected: 31734
-Uncertain: 4 (<lles> <lle> <lla\u00e7os> <lla> )
-preprocess step1: 0.00018 ms
-preprocess step2: 2.57452 ms
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
 Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 3
-Stack size: 1
+Rule id: 4 Sequence id: 165
 Accepted: 1 (<l> )
 Rejected: 31401
 Uncertain: 338
-preprocess step1: 0.00019 ms
-preprocess step2: 2.49463 ms
 Rule: elements_or_ws Sequence: ([ ] elements_or_ws) Position: 0
-Stack size: 1
-Accepted: 70 (< true> < t> < n> < \"$> < \"#> < \"\",> < \"\"> < \"> <                > <               > <              > <             > < \"${> < [> < > < \"%> < [\"> < \r> < \"\'> <  > < \"(> <   > < \")> < [-> <    > < f> < \");> <     > < fa> < \"*> <      > <       > <        > <         > <          > <           > <            > < \"+> < [[> < \",> < \",\"> < []> < \"-> < [],> < {> < \".> < {\r> < nu> < \"...> < {\"> < tr> < \"/> < false> < [{> < \";> < \"<> < \"</> < \"@> < \"[> < null> < \"\\> < {}> < fal> < \"^> < {},> < \"_> < \":> < -> < \"`> < \"{> )
+Rule id: 4 Sequence id: 168
+Accepted: 70 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > < \"> < \"\"> < \"\",> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"^> < \"_> < \"`> < \"{> < -> < [> < [\"> < [-> < [[> < []> < [],> < [{> < f> < fa> < fal> < false> < n> < nu> < null> < t> < tr> < true> < {> < {\r> < {\"> < {}> < {},> )
 Rejected: 15331
 Uncertain: 16339
-preprocess step1: 0.00024 ms
-preprocess step2: 3.41898 ms
 Rule: elements_or_ws Sequence: ([\n] elements_or_ws) Position: 0
-Stack size: 1
+Rule id: 4 Sequence id: 171
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.000331 ms
-preprocess step2: 2.48741 ms
 Rule: elements_or_ws Sequence: ([\r] elements_or_ws) Position: 0
-Stack size: 1
+Rule id: 4 Sequence id: 174
 Accepted: 1 (<\r> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.48088 ms
 Rule: elements_or_ws Sequence: ([\t] elements_or_ws) Position: 0
-Stack size: 1
+Rule id: 4 Sequence id: 177
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.00016 ms
-preprocess step2: 2.47701 ms
 Rule: elements Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 4 (<{}> <{\"> <{\r> <{> )
+Rule id: 5 Sequence id: 185
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.000211 ms
-preprocess step2: 2.51244 ms
 Rule: elements Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 4 (<},{> <},> <}\r> <}> )
+Rule id: 5 Sequence id: 185
+Accepted: 4 (<}> <}\r> <},> <},{> )
 Rejected: 31655
-Uncertain: 81 (<}}}\\> <}}}> <}}{\\> <}}{> <}}_{\\> <}}_{> <}}_> <}}^{> <}}^> <}}\\> <}}=> <}}.> <}},> <}})> <}}(\\> <}}(> <}}%> <}}$.> <}}$,> <}}$> <}}> <}|> <}-> <},\\> <}+\\> <}+> <})^> <})\\> <});> <}).> <}),> <}))> <})$.> <})$,> <})$> <})> <}-\\> <}\"> <}{\\> <}.> <}\")> <}{|> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> )
-preprocess step1: 0.00021 ms
-preprocess step2: 2.86274 ms
+Uncertain: 81 (<}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},\\> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
 Rule: elements Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 6 (<[{> <[]> <[[> <[-> <[\"> <[> )
+Rule id: 5 Sequence id: 191
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
 Rejected: 31732
-Uncertain: 2 (<[]{> <[])> )
-preprocess step1: 0.000181 ms
-preprocess step2: 2.60618 ms
+Uncertain: 2 (<[])> <[]{> )
 Rule: elements Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 3 (<],[> <],> <]> )
+Rule id: 5 Sequence id: 191
+Accepted: 3 (<]> <],> <],[> )
 Rejected: 31700
-Uncertain: 37 (<]}> <]{\\> <]{\'> <]{> <]`.> <]`> <]_> <]];> <]);> <]).> <]),> <]))> <])> <](/> <](#)> <](#> <](> <]$.> <]$,> <]$> <]],> <]\"> <]])> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> )
-preprocess step1: 0.0002 ms
-preprocess step2: 2.65064 ms
+Uncertain: 37 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
 Rule: elements Sequence: ([\"] characters [\"] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 41 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\"></> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\"> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> )
+Rule id: 5 Sequence id: 197
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rejected: 31699
 Uncertain: 0 ()
-preprocess step1: 0.00021 ms
-preprocess step2: 2.60671 ms
 Rule: elements Sequence: ([\"] characters [\"] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 5 (<\",\"> <\",\r> <\"\r> <\",> <\"> )
+Rule id: 5 Sequence id: 197
+Accepted: 5 (<\"> <\"\r> <\",> <\",\r> <\",\"> )
 Rejected: 31699
-Uncertain: 36 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\".$> <\"))> <\"]> <\".> <\")> <\"\\> <\"\"> <\"\?>> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> )
-preprocess step1: 0.00018 ms
-preprocess step2: 2.78382 ms
+Uncertain: 36 (<\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rule: elements Sequence: ([0-9] fraction exponent ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 5 Sequence id: 203
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.000291 ms
-preprocess step2: 2.66897 ms
 Rule: elements Sequence: ([1-9] digits fraction exponent ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 5 Sequence id: 210
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.62142 ms
 Rule: elements Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 0
-Stack size: 1
+Rule id: 5 Sequence id: 217
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00017 ms
-preprocess step2: 2.5625 ms
 Rule: elements Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 5 Sequence id: 217
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.61264 ms
 Rule: elements Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 0
-Stack size: 1
+Rule id: 5 Sequence id: 225
 Accepted: 1 (<-> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00022 ms
-preprocess step2: 2.54551 ms
 Rule: elements Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 9 (<9> <8> <7> <6> <5> <4> <3> <2> <1> )
+Rule id: 5 Sequence id: 225
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31731
 Uncertain: 0 ()
-preprocess step1: 0.00017 ms
-preprocess step2: 2.53088 ms
 Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 3 (<true> <tr> <t> )
+Rule id: 5 Sequence id: 232
+Accepted: 3 (<t> <tr> <true> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.00019 ms
-preprocess step2: 2.50786 ms
 Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 2 (<ru> <r> )
+Rule id: 5 Sequence id: 232
+Accepted: 2 (<r> <ru> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.00026 ms
-preprocess step2: 2.58814 ms
 Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ue> <u> )
+Rule id: 5 Sequence id: 232
+Accepted: 2 (<u> <ue> )
 Rejected: 31719
-Uncertain: 19 (<uez> <uetooth> <uet> <uesto> <uest> <uese> <ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> )
-preprocess step1: 0.000201 ms
-preprocess step2: 2.67419 ms
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
 Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 3
-Stack size: 1
+Rule id: 5 Sequence id: 232
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.000181 ms
-preprocess step2: 2.61187 ms
 Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 4 (<false> <fal> <fa> <f> )
+Rule id: 5 Sequence id: 240
+Accepted: 4 (<f> <fa> <fal> <false> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.00033 ms
-preprocess step2: 2.64205 ms
 Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 4 (<alse> <als> <al> <a> )
+Rule id: 5 Sequence id: 240
+Accepted: 4 (<a> <al> <als> <alse> )
 Rejected: 31736
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.69411 ms
 Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ls> <l> )
+Rule id: 5 Sequence id: 240
+Accepted: 2 (<l> <ls> )
 Rejected: 31738
 Uncertain: 0 ()
-preprocess step1: 0.000241 ms
-preprocess step2: 2.62316 ms
 Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 3
-Stack size: 1
-Accepted: 2 (<se> <s> )
+Rule id: 5 Sequence id: 240
+Accepted: 2 (<s> <se> )
 Rejected: 31667
-Uncertain: 71 (<sey> <sex> <setup> <settings> <setting> <sett> <sets> <setopt> <setminus> <setText> <setState> <setAttribute> <selenium> <selector> <selection> <selected> <select> <sel> <seite> <sein> <seh> <segu> <segment> <seg> <sef> <seen> <seed> <see> <search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> )
-preprocess step1: 0.000251 ms
-preprocess step2: 3.03289 ms
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
 Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 4
-Stack size: 1
+Rule id: 5 Sequence id: 240
 Accepted: 1 (<e> )
 Rejected: 31110
 Uncertain: 629
-preprocess step1: 0.00022 ms
-preprocess step2: 2.63633 ms
 Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 0
-Stack size: 1
-Accepted: 3 (<null> <nu> <n> )
+Rule id: 5 Sequence id: 247
+Accepted: 3 (<n> <nu> <null> )
 Rejected: 31737
 Uncertain: 0 ()
-preprocess step1: 0.000221 ms
-preprocess step2: 2.66211 ms
 Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 1
-Stack size: 1
-Accepted: 3 (<ull> <ul> <u> )
+Rule id: 5 Sequence id: 247
+Accepted: 3 (<u> <ul> <ull> )
 Rejected: 31735
-Uncertain: 2 (<ulle> <ulla> )
-preprocess step1: 0.00017 ms
-preprocess step2: 2.51829 ms
+Uncertain: 2 (<ulla> <ulle> )
 Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 2
-Stack size: 1
-Accepted: 2 (<ll> <l> )
+Rule id: 5 Sequence id: 247
+Accepted: 2 (<l> <ll> )
 Rejected: 31734
-Uncertain: 4 (<lles> <lle> <lla\u00e7os> <lla> )
-preprocess step1: 0.00026 ms
-preprocess step2: 2.54577 ms
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
 Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 3
-Stack size: 1
+Rule id: 5 Sequence id: 247
 Accepted: 1 (<l> )
 Rejected: 31401
 Uncertain: 338
-preprocess step1: 0.000191 ms
-preprocess step2: 2.61765 ms
 Rule: elements_rest Sequence: ([,] ws elements) Position: 0
-Stack size: 1
-Accepted: 5 (<,[> <,-> <,\"> <,\r> <,> )
+Rule id: 6 Sequence id: 252
+Accepted: 5 (<,> <,\r> <,\"> <,-> <,[> )
 Rejected: 31735
 Uncertain: 0 ()
-preprocess step1: 0.00024 ms
-preprocess step2: 2.59442 ms
 Rule: characters Sequence: ([^\"\\] characters) Position: 0
-Stack size: 1
+Rule id: 7 Sequence id: 257
 Accepted: 31545
-Rejected: 68 (<\\}\\> <\\}$.> <\\}$,> <\\}$> <\\}> <\\|_{> <\\|> <\\{\\> <\\{> <\":{\"> <\":\"> <\":> <\"/>> <\"/> <\".$> <\".> <\",\"> <\",\r> <\",> <\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\\\\> <\"`> <\\]> <\"}> <\\_> <\"},> <\";> <\\> <\";\r> <\\\"> <\"=>> <\\\",> <\">> <\\\":> <\">\r> <\\%> <\"><> <\\\'> <\"></> <\\)> <\"\?> <\\).> <\"\?>> <\\,> <\"\\> <\\,\\> <\"]> <\\.> <\"])> <\\/> <\"],> <\\;> <\"].> <\\<> <\"];> <\\<^> )
-Uncertain: 127 (<{\"> <@\",> <@\"> <]\"> <\?\"> <>\\<^> <>\\<> <=\\{> <;\">> <;\"> </\"> <.\")> <,\\,> <,\"> <+\"> <*\"> <)\")> <)\"> <(@\"> <(\"\\> <:\"> <%\"> <(\"%> < \"\\> <]=\"> < \\({\\> <(\"#> < \"[> < \\(\\> <(\"> < \"@> < \\(> < \"</> <)\",> < \\$> < \"<> < \";> < \":> <}\\,\\> <=\"{> < \"...> <}\\,> <=\"@+> < \".> <}\\)> <=\"@> < \"-> < =\"> <=\"<\?> <...\"> < \",\"> <=\"/> <)\\,> < \",> <=\".> <)\\)> < \"+> <=\"${> < \"*> <=\"$> < \");> <.\");> < \"> <_\"> <.\",> < \"\"> < $\\{> < \"\"\"> < \"\")> < \"/> < {\"> < \"\",> < \"\";> < \"#> < \"$> <.\"> < (\\<> <!\"> < \"${> <!\");> < \"%> < [\"> <=\"> < \"\'> <=\"\"> < \"(> <=\"#> <!(\"> < \")> <(\",> < \"\\<> < \\)> <(\".> < \"^> <--\"> < \\,> <[\"> <(\"/> < \"_> < \\;> <==\"> <(\"<> < \"`> < \\<> <(\"@> < \"{> < \'\"> < @\"> < \\[> <>\"> < $(\"> <>\",> < $(\"#> <>\";> <()\"> < $(\".> <}\")> < (\"> <}\"> <:@\"> < \\[\\> <}\",> < \\]> < \\{> <\'\"> < \\|> < `\"> )
-preprocess step1: 0.00019 ms
-preprocess step2: 9.03967 ms
+Rejected: 68 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> <\\> <\\\"> <\\\",> <\\\":> <\\%> <\\\'> <\\)> <\\).> <\\,> <\\,\\> <\\.> <\\/> <\\;> <\\<> <\\<^> <\\\\> <\\]> <\\_> <\\{> <\\{\\> <\\|> <\\|_{> <\\}> <\\}$> <\\}$,> <\\}$.> <\\}\\> )
+Uncertain: 127 (< \"> < \"\"> < \"\"\"> < \"\")> < \"\",> < \"\";> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"\\<> < \"^> < \"_> < \"`> < \"{> < $(\"> < $(\"#> < $(\".> < $\\{> < \'\"> < (\"> < (\\<> < =\"> < @\"> < [\"> < \\$> < \\(> < \\(\\> < \\({\\> < \\)> < \\,> < \\;> < \\<> < \\[> < \\[\\> < \\]> < \\{> < \\|> < `\"> < {\"> <!\"> <!\");> <!(\"> <%\"> <\'\"> <(\"> <(\"#> <(\"%> <(\",> <(\".> <(\"/> <(\"<> <(\"@> <(\"\\> <()\"> <(@\"> <)\"> <)\")> <)\",> <)\\)> <)\\,> <*\"> <+\"> <,\"> <,\\,> <--\"> <.\"> <.\")> <.\");> <.\",> <...\"> </\"> <:\"> <:@\"> <;\"> <;\">> <=\"> <=\"\"> <=\"#> <=\"$> <=\"${> <=\".> <=\"/> <=\"<\?> <=\"@> <=\"@+> <=\"{> <==\"> <=\\{> <>\"> <>\",> <>\";> <>\\<> <>\\<^> <\?\"> <@\"> <@\",> <[\"> <]\"> <]=\"> <_\"> <{\"> <}\"> <}\")> <}\",> <}\\)> <}\\,> <}\\,\\> )
 Rule: characters Sequence: ([\\] escape characters) Position: 0
-Stack size: 1
-Accepted: 6 (<\\/> <\\\":> <\\\\> <\\\",> <\\\"> <\\> )
+Rule id: 7 Sequence id: 261
+Accepted: 6 (<\\> <\\\"> <\\\",> <\\\":> <\\/> <\\\\> )
 Rejected: 31734
 Uncertain: 0 ()
-preprocess step1: 0.000191 ms
-preprocess step2: 2.39861 ms
 Rule: escape Sequence: ([\"]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 265
 Accepted: 1 (<\"> )
 Rejected: 31699
-Uncertain: 40 (<\"},> <\"}> <\"`> <\"];> <\"].> <\"],> <\"])> <\"]> <\"\\> <\"\?>> <\"\?> <\",> <\"+> <\")`> <\")]> <\");\r> <\");> <\").> <\"),> <\"));> <\"))> <\")> <\"\"> <\"\r> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> )
-preprocess step1: 0.000221 ms
-preprocess step2: 2.522 ms
+Uncertain: 40 (<\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
 Rule: escape Sequence: ([\\]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 267
 Accepted: 1 (<\\> )
 Rejected: 31713
-Uncertain: 26 (<\\}\\> <\\}$.> <\\}$,> <\\}$> <\\}> <\\|_{> <\\|> <\\{\\> <\\{> <\\_> <\\]> <\\\\> <\\<^> <\\\"> <\\\",> <\\\":> <\\%> <\\\'> <\\)> <\\).> <\\,> <\\,\\> <\\.> <\\/> <\\;> <\\<> )
-preprocess step1: 0.000271 ms
-preprocess step2: 2.5595 ms
+Uncertain: 26 (<\\\"> <\\\",> <\\\":> <\\%> <\\\'> <\\)> <\\).> <\\,> <\\,\\> <\\.> <\\/> <\\;> <\\<> <\\<^> <\\\\> <\\]> <\\_> <\\{> <\\{\\> <\\|> <\\|_{> <\\}> <\\}$> <\\}$,> <\\}$.> <\\}\\> )
 Rule: escape Sequence: ([/]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 269
 Accepted: 1 (</> )
 Rejected: 31711
-Uncertain: 28 (</~> </{> </`> </_> </\\> </@> </\?> </>> </:> <////////////////> <////////> <////> <///> <//> </.> </\"> </#> </$> </%> </\'> </(> </)> </),> </).> </*> </**> </,> </-> )
-preprocess step1: 0.00017 ms
-preprocess step2: 2.7262 ms
+Uncertain: 28 (</\"> </#> </$> </%> </\'> </(> </)> </),> </).> </*> </**> </,> </-> </.> <//> <///> <////> <////////> <////////////////> </:> </>> </\?> </@> </\\> </_> </`> </{> </~> )
 Rule: escape Sequence: ([b]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 271
 Accepted: 1 (<b> )
 Rejected: 31495
 Uncertain: 244
-preprocess step1: 0.00017 ms
-preprocess step2: 2.60304 ms
 Rule: escape Sequence: ([f]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 273
 Accepted: 1 (<f> )
 Rejected: 31516
 Uncertain: 223
-preprocess step1: 0.000181 ms
-preprocess step2: 2.61944 ms
 Rule: escape Sequence: ([n]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 275
 Accepted: 1 (<n> )
 Rejected: 31544
-Uncertain: 195 (<n\u011b> <n\u0119> <n\u0105> <n\u00fdch> <n\u00fd> <n\u00edm> <n\u00edk> <n\u00edho> <n\u00edch> <n\u00ed> <n\u00e9e> <n\u00e9> <n\u00e1> <nym> <nych> <ny> <nx> <nut> <nungen> <nung> <numpy> <numeric> <numerable> <numer> <numbers> <number> <num> <null> <nu> <ntil> <nth> <nten> <nt> <nsylvan> <ns> <nr> <npm> <np> <no\u015b\u0107> <no\u015bci> <nown> <now> <nov> <nou> <notin> <notify> <notification> <nothing> <notes> <note> <notation> <not> <nosti> <nost> <nos> <normal> <norm> <noreferrer> <nor> <nonumber> <none> <non> <nome> <nom> <noindent> <nog> <nofollow> <nof> <nelle> <nell> <nel> <nek> <nej> <nehmer> <nehmen> <nehm> <neh> <nego> <negative> <neg> <need> <nederb\u00f6rd> <ned> <nection> <nect> <necess> <near> <nea> <ne> <nder> <nde> <nd> <nc> <nbsp> <nb> <navigation> <navbar> <nav> <nake> <nak> <naire> <naio> <nahmen> <nahme> <nahm> <nah> <nad> <nach> <nabla> <nab> <na> <nal> <nam> <name> <named> <names> <namespace> <nan> <nant> <nap> <napshot> <nar> <nas> <nat> <native> <nats> <natural> <nem> <nement> <nen> <neo> <neq> <ner> <nero> <ners> <nes> <ness> <nest> <nested> <net> <nete> <nett> <network> <neum> <neur> <neut> <new> <newcommand> <news> <nex> <next> <ney> <nez> <ng> <nginx> <ni> <nia> <nic> <nica> <nice> <nick> <nico> <nie> <niej> <niejs> <nier> <nig> <night> <nih> <nik> <nika> <nil> <nim> <ning> <ningar> <ningen> <ninger> <nings> <nio> <nis> <nisse> <nit> <nitt> <nitz> <niu> <nius> <ni\u0119> <nja> <nl> <nm> <nn> <no> <noc> <node> <nodes> )
-preprocess step1: 0.00022 ms
-preprocess step2: 3.50265 ms
+Uncertain: 195 (<na> <nab> <nabla> <nach> <nad> <nah> <nahm> <nahme> <nahmen> <naio> <naire> <nak> <nake> <nal> <nam> <name> <named> <names> <namespace> <nan> <nant> <nap> <napshot> <nar> <nas> <nat> <native> <nats> <natural> <nav> <navbar> <navigation> <nb> <nbsp> <nc> <nd> <nde> <nder> <ne> <nea> <near> <necess> <nect> <nection> <ned> <nederb\u00f6rd> <need> <neg> <negative> <nego> <neh> <nehm> <nehmen> <nehmer> <nej> <nek> <nel> <nell> <nelle> <nem> <nement> <nen> <neo> <neq> <ner> <nero> <ners> <nes> <ness> <nest> <nested> <net> <nete> <nett> <network> <neum> <neur> <neut> <new> <newcommand> <news> <nex> <next> <ney> <nez> <ng> <nginx> <ni> <nia> <nic> <nica> <nice> <nick> <nico> <nie> <niej> <niejs> <nier> <nig> <night> <nih> <nik> <nika> <nil> <nim> <ning> <ningar> <ningen> <ninger> <nings> <nio> <nis> <nisse> <nit> <nitt> <nitz> <niu> <nius> <ni\u0119> <nja> <nl> <nm> <nn> <no> <noc> <node> <nodes> <nof> <nofollow> <nog> <noindent> <nom> <nome> <non> <none> <nonumber> <nor> <noreferrer> <norm> <normal> <nos> <nost> <nosti> <not> <notation> <note> <notes> <nothing> <notification> <notify> <notin> <nou> <nov> <now> <nown> <no\u015bci> <no\u015b\u0107> <np> <npm> <nr> <ns> <nsylvan> <nt> <nten> <nth> <ntil> <nu> <null> <num> <number> <numbers> <numer> <numerable> <numeric> <numpy> <nung> <nungen> <nut> <nx> <ny> <nych> <nym> <n\u00e1> <n\u00e9> <n\u00e9e> <n\u00ed> <n\u00edch> <n\u00edho> <n\u00edk> <n\u00edm> <n\u00fd> <n\u00fdch> <n\u0105> <n\u0119> <n\u011b> )
 Rule: escape Sequence: ([r]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 277
 Accepted: 1 (<r> )
 Rejected: 31303
 Uncertain: 436
-preprocess step1: 0.000321 ms
-preprocess step2: 2.57036 ms
 Rule: escape Sequence: ([t]) Position: 0
-Stack size: 1
+Rule id: 8 Sequence id: 279
 Accepted: 1 (<t> )
 Rejected: 31498
 Uncertain: 241
-preprocess step1: 0.000201 ms
-preprocess step2: 2.63246 ms
 Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 0
-Stack size: 1
-Accepted: 17 (<uff> <ufe> <uf> <ued> <u> <ube> <ua> <uce> <ub> <uba> <uc> <uca> <ud> <ue> <uda> <udad> <ude> )
+Rule id: 8 Sequence id: 285
+Accepted: 17 (<u> <ua> <ub> <uba> <ube> <uc> <uca> <uce> <ud> <uda> <udad> <ude> <ue> <ued> <uf> <ufe> <uff> )
 Rejected: 31723
 Uncertain: 0 ()
-preprocess step1: 0.000301 ms
-preprocess step2: 2.69292 ms
 Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 1
-Stack size: 1
-Accepted: 171 (<feed> <fe> <fc> <fab> <fa> <efe> <ef> <eed> <eded> <ede> <edad> <eda> <ed> <eca> <ec> <ebb> <eb> <ead> <def> <ded> <dec> <de> <dd> <dc> <dbc> <db> <da> <DEF> <DE> <ea> <DD> <EF> <e> <DC> <fade> <EE> <abad> <cade> <Ca> <AF> <De> <ffff> <7> <bb> <Ad> <cc> <CCE> <eff> <CD> <AD> <Db> <fff> <6> <cb> <ced> <ee> <ABC> <EC> <Bad> <face> <Acc> <BB> <C> <AAAA> <AA> <dade> <A> <aba> <9> <Add> <ccc> <AE> <fd> <ceed> <Fa> <Bbb> <DB> <ED> <ab> <ca> <8> <Deb> <bbe> <cca> <Da> <CE> <ADD> <5> <4> <aff> <DA> <a> <ffe> <3> <aca> <CC> <ACE> <ce> <D> <ff> <2> <ac> <af> <CB> <AC> <CAA> <fac> <E> <Ac> <1> <CF> <0> <CA> <AB> <acc> <bec> <be> <cd> <f> <Ab> <Face> <DBC> <Be> <Aff> <abc> <F> <B> <FA> <BA> <d> <Dec> <fb> <ace> <Def> <bd> <EB> <Ed> <BD> <aded> <FC> <BE> <FD> <FE> <BF> <FF> <FFFF> <ada> <DF> <Fe> <abe> <aa> <b> <ad> <add> <BC> <FB> <ade> <deb> <c> <Feed> <ae> <aaaa> <ba> <abb> <bad> <bc> <bf> <cf> <df> <bed> <ceae> )
+Rule id: 8 Sequence id: 285
+Accepted: 171 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AAAA> <AB> <ABC> <AC> <ACE> <AD> <ADD> <AE> <AF> <Ab> <Ac> <Acc> <Ad> <Add> <Aff> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Bad> <Bbb> <Be> <C> <CA> <CAA> <CB> <CC> <CCE> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DBC> <DC> <DD> <DE> <DEF> <DF> <Da> <Db> <De> <Deb> <Dec> <Def> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <FFFF> <Fa> <Face> <Fe> <Feed> <a> <aa> <aaaa> <ab> <aba> <abad> <abb> <abc> <abe> <ac> <aca> <acc> <ace> <ad> <ada> <add> <ade> <aded> <ae> <af> <aff> <b> <ba> <bad> <bb> <bbe> <bc> <bd> <be> <bec> <bed> <bf> <c> <ca> <cade> <cb> <cc> <cca> <ccc> <cd> <ce> <ceae> <ced> <ceed> <cf> <d> <da> <dade> <db> <dbc> <dc> <dd> <de> <deb> <dec> <ded> <def> <df> <e> <ea> <ead> <eb> <ebb> <ec> <eca> <ed> <eda> <edad> <ede> <eded> <ee> <eed> <ef> <efe> <eff> <f> <fa> <fab> <fac> <face> <fade> <fb> <fc> <fd> <fe> <feed> <ff> <ffe> <fff> <ffff> )
 Rejected: 31544
-Uncertain: 25 (<faces> <facebook> <effect> <babel> <added> <default> <affen> <Accept> <Access> <cedes> <cademy> <AccessorImpl> <DEFAULT> <Default> <access> <cadem> <because> <Accessor> <Effect> <accept> <aceae> <ffect> <Defaults> <addClass> <addEventListener> )
-preprocess step1: 0.00017 ms
-preprocess step2: 3.39782 ms
+Uncertain: 25 (<Accept> <Access> <Accessor> <AccessorImpl> <DEFAULT> <Default> <Defaults> <Effect> <accept> <access> <aceae> <addClass> <addEventListener> <added> <affen> <babel> <because> <cadem> <cademy> <cedes> <default> <effect> <facebook> <faces> <ffect> )
 Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 2
-Stack size: 1
-Accepted: 154 (<fe> <fd> <fc> <fab> <fa> <efe> <ef> <eed> <ede> <eda> <ed> <eca> <ec> <ebb> <eb> <ead> <Deb> <8> <bbe> <cca> <DEF> <DE> <de> <ea> <DD> <EF> <dd> <e> <DC> <EE> <dc> <Ca> <AF> <De> <7> <bb> <Ad> <cc> <CCE> <eff> <CD> <AD> <Db> <fff> <6> <cb> <ced> <C> <ee> <ABC> <df> <bed> <EC> <Bad> <Acc> <AA> <BB> <A> <aba> <9> <Add> <ccc> <AE> <Fa> <Bbb> <DB> <ED> <ab> <ca> <dbc> <Da> <CE> <ADD> <5> <4> <aff> <DA> <a> <ffe> <3> <aca> <CC> <ACE> <ce> <D> <ff> <2> <ac> <af> <CB> <AC> <CAA> <fac> <E> <Ac> <1> <CF> <0> <CA> <AB> <acc> <bec> <be> <cd> <f> <Ab> <DBC> <Be> <Aff> <abc> <dec> <F> <B> <FA> <BA> <d> <Dec> <fb> <ace> <Def> <bd> <EB> <Ed> <BD> <FC> <BE> <FD> <FE> <BF> <FF> <DF> <Fe> <abe> <aa> <b> <ad> <ada> <add> <BC> <FB> <ade> <db> <ae> <ba> <abb> <bad> <bc> <bf> <cf> <da> <c> <deb> <ded> <def> )
+Rule id: 8 Sequence id: 285
+Accepted: 154 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AB> <ABC> <AC> <ACE> <AD> <ADD> <AE> <AF> <Ab> <Ac> <Acc> <Ad> <Add> <Aff> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Bad> <Bbb> <Be> <C> <CA> <CAA> <CB> <CC> <CCE> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DBC> <DC> <DD> <DE> <DEF> <DF> <Da> <Db> <De> <Deb> <Dec> <Def> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <Fa> <Fe> <a> <aa> <ab> <aba> <abb> <abc> <abe> <ac> <aca> <acc> <ace> <ad> <ada> <add> <ade> <ae> <af> <aff> <b> <ba> <bad> <bb> <bbe> <bc> <bd> <be> <bec> <bed> <bf> <c> <ca> <cb> <cc> <cca> <ccc> <cd> <ce> <ced> <cf> <d> <da> <db> <dbc> <dc> <dd> <de> <deb> <dec> <ded> <def> <df> <e> <ea> <ead> <eb> <ebb> <ec> <eca> <ed> <eda> <ede> <ee> <eed> <ef> <efe> <eff> <f> <fa> <fab> <fac> <fb> <fc> <fd> <fe> <ff> <ffe> <fff> )
 Rejected: 31444
-Uncertain: 142 (<ffff> <ffen> <ffect> <feed> <fection> <fect> <features> <feature> <fade> <factory> <addClass> <faces> <Access> <adata> <adapter> <Back> <effect> <adamente> <adal> <Default> <Decimal> <Debug> <bben> <face> <affen> <abet> <Feature> <abestanden> <bach> <deep> <abel> <Face> <decode> <cademy> <Adapter> <aden> <back> <abad> <adem> <adas> <Background> <efficient> <address> <Feed> <abeth> <abama> <backend> <default> <aben> <aded> <DEFAULT> <adesh> <abeled> <decor> <Definition> <AAAA> <beans> <abei> <cadem> <decl> <bably> <Cache> <factor> <Account> <adding> <fact> <AccessorImpl> <added> <DEBUG> <Bean> <Fact> <FFFF> <aders> <BeanFactory> <Factory> <ades> <debug> <fach> <Accessor> <addEventListener> <Effect> <ABASE> <accept> <because> <each> <Before> <adel> <cache> <CCESS> <aceae> <cedure> <ader> <FFER> <Defaults> <bean> <aces> <Each> <facebook> <Accept> <addle> <addr> <addy> <afen> <aban> <background> <defin> <abase> <backgroundColor> <define> <access> <beck> <account> <before> <Address> <ccess> <acci> <ceae> <acco> <beeld> <cean> <eben> <cedes> <acent> <ceed> <dade> <cade> <deck> <aaaa> <defined> <baar> <definition> <babel> <defn> <ecause> <edad> <eded> <eden> <eder> <ederb> <ederb\u00f6rd> <edes> <edeut> )
-preprocess step1: 0.000171 ms
-preprocess step2: 3.86768 ms
+Uncertain: 142 (<AAAA> <ABASE> <Accept> <Access> <Accessor> <AccessorImpl> <Account> <Adapter> <Address> <Back> <Background> <Bean> <BeanFactory> <Before> <CCESS> <Cache> <DEBUG> <DEFAULT> <Debug> <Decimal> <Default> <Defaults> <Definition> <Each> <Effect> <FFER> <FFFF> <Face> <Fact> <Factory> <Feature> <Feed> <aaaa> <abad> <abama> <aban> <abase> <abei> <abel> <abeled> <aben> <abestanden> <abet> <abeth> <accept> <access> <acci> <acco> <account> <aceae> <acent> <aces> <adal> <adamente> <adapter> <adas> <adata> <addClass> <addEventListener> <added> <adding> <addle> <addr> <address> <addy> <aded> <adel> <adem> <aden> <ader> <aders> <ades> <adesh> <afen> <affen> <baar> <babel> <bably> <bach> <back> <backend> <background> <backgroundColor> <bben> <bean> <beans> <because> <beck> <beeld> <before> <cache> <cade> <cadem> <cademy> <ccess> <ceae> <cean> <cedes> <cedure> <ceed> <dade> <debug> <deck> <decl> <decode> <decor> <deep> <default> <defin> <define> <defined> <definition> <defn> <each> <eben> <ecause> <edad> <eded> <eden> <eder> <ederb> <ederb\u00f6rd> <edes> <edeut> <effect> <efficient> <face> <facebook> <faces> <fach> <fact> <factor> <factory> <fade> <feature> <features> <fect> <fection> <feed> <ffect> <ffen> <ffff> )
 Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 3
-Stack size: 1
-Accepted: 104 (<fe> <fd> <fc> <ef> <fb> <ed> <e> <da> <eb> <ce> <db> <c> <cf> <bf> <bd> <ea> <bc> <ba> <b> <ae> <ad> <Fe> <FF> <ff> <BC> <Be> <Ed> <d> <BA> <DF> <C> <B> <AA> <Ab> <cd> <AB> <BF> <0> <CF> <BE> <F> <BD> <be> <A> <1> <Ac> <AC> <af> <ac> <2> <3> <a> <DA> <4> <FB> <f> <5> <ee> <FC> <FD> <AD> <FE> <8> <ca> <ab> <ED> <DB> <ec> <AE> <9> <BB> <CA> <CB> <CC> <fa> <cb> <6> <Db> <df> <AF> <CD> <CE> <FA> <Ca> <dd> <Fa> <EF> <DD> <D> <E> <de> <DE> <Da> <cc> <bb> <7> <De> <aa> <EB> <EC> <dc> <Ad> <DC> <EE> )
+Rule id: 8 Sequence id: 285
+Accepted: 104 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AB> <AC> <AD> <AE> <AF> <Ab> <Ac> <Ad> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Be> <C> <CA> <CB> <CC> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DC> <DD> <DE> <DF> <Da> <Db> <De> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <Fa> <Fe> <a> <aa> <ab> <ac> <ad> <ae> <af> <b> <ba> <bb> <bc> <bd> <be> <bf> <c> <ca> <cb> <cc> <cd> <ce> <cf> <d> <da> <db> <dc> <dd> <de> <df> <e> <ea> <eb> <ec> <ed> <ee> <ef> <f> <fa> <fb> <fc> <fd> <fe> <ff> )
 Rejected: 30912
 Uncertain: 724
-preprocess step1: 0.0003 ms
-preprocess step2: 2.88757 ms
 Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 4
-Stack size: 1
-Accepted: 22 (<f> <d> <e> <b> <F> <E> <D> <0> <1> <c> <2> <3> <a> <4> <5> <6> <7> <8> <9> <B> <C> <A> )
+Rule id: 8 Sequence id: 285
+Accepted: 22 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <B> <C> <D> <E> <F> <a> <b> <c> <d> <e> <f> )
 Rejected: 28132
 Uncertain: 3586
-preprocess step1: 0.00015 ms
-preprocess step2: 2.6548 ms
 Rule: digits Sequence: ([0-9]) Position: 0
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 9 Sequence id: 288
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.56053 ms
 Rule: digits Sequence: ([0-9] digits) Position: 0
-Stack size: 1
-Accepted: 10 (<9> <8> <7> <6> <5> <4> <3> <2> <1> <0> )
+Rule id: 9 Sequence id: 291
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
 Rejected: 31730
 Uncertain: 0 ()
-preprocess step1: 0.00024 ms
-preprocess step2: 2.54204 ms
 Rule: fraction Sequence: ([.] digits) Position: 0
-Stack size: 1
+Rule id: 10 Sequence id: 295
 Accepted: 1 (<.> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00016 ms
-preprocess step2: 2.50942 ms
 Rule: exponent Sequence: ([e] sign digits) Position: 0
-Stack size: 1
+Rule id: 11 Sequence id: 301
 Accepted: 1 (<e> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00025 ms
-preprocess step2: 2.56457 ms
 Rule: exponent Sequence: ([E] sign digits) Position: 0
-Stack size: 1
+Rule id: 11 Sequence id: 305
 Accepted: 1 (<E> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.0002 ms
-preprocess step2: 2.47915 ms
 Rule: sign Sequence: ([+]) Position: 0
-Stack size: 1
+Rule id: 12 Sequence id: 309
 Accepted: 1 (<+> )
 Rejected: 31727
-Uncertain: 12 (<+\\> <+=> <++;> <++,> <++){> <++)> <++> <+)> <+(> <+\'> <+$> <+\"> )
-preprocess step1: 0.00019 ms
-preprocess step2: 2.53073 ms
+Uncertain: 12 (<+\"> <+$> <+\'> <+(> <+)> <++> <++)> <++){> <++,> <++;> <+=> <+\\> )
 Rule: sign Sequence: ([\-]) Position: 0
-Stack size: 1
+Rule id: 12 Sequence id: 311
 Accepted: 1 (<-> )
 Rejected: 31710
-Uncertain: 29 (<-}> <-\\> <->{> <->_> <->> <-.> <-->> <----------------> <------------> <----------> <---------+> <--------> <-------> <------+> <------> <-----> <-$> <-%> <-(> <-)> <-+> <-,> <--> <--\"> <--+> <---> <---+> <----> <----+> )
-preprocess step1: 0.000171 ms
-preprocess step2: 2.61327 ms
+Uncertain: 29 (<-$> <-%> <-(> <-)> <-+> <-,> <--> <--\"> <--+> <---> <---+> <----> <----+> <-----> <------> <------+> <-------> <--------> <---------+> <----------> <------------> <----------------> <-->> <-.> <->> <->_> <->{> <-\\> <-}> )
 Rule: ws Sequence: ([ ] ws) Position: 0
-Stack size: 1
-Accepted: 17 (<                > <               > <              > <             > < > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > )
+Rule id: 13 Sequence id: 316
+Accepted: 17 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > )
 Rejected: 15331
 Uncertain: 16392
-preprocess step1: 0.00019 ms
-preprocess step2: 2.86739 ms
 Rule: ws Sequence: ([\n] ws) Position: 0
-Stack size: 1
+Rule id: 13 Sequence id: 319
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.00018 ms
-preprocess step2: 2.60738 ms
 Rule: ws Sequence: ([\r] ws) Position: 0
-Stack size: 1
+Rule id: 13 Sequence id: 322
 Accepted: 1 (<\r> )
 Rejected: 31739
 Uncertain: 0 ()
-preprocess step1: 0.00019 ms
-preprocess step2: 2.63226 ms
 Rule: ws Sequence: ([\t] ws) Position: 0
-Stack size: 1
+Rule id: 13 Sequence id: 325
 Accepted: 0 ()
 Rejected: 31740
 Uncertain: 0 ()
-preprocess step1: 0.000171 ms
-preprocess step2: 2.46726 ms
+Preprocess time: 1423.96 ms

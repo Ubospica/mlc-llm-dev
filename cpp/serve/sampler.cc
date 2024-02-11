@@ -371,11 +371,11 @@ class CPUSampler : public SamplerObj {
     //             << "\n";
     // }
     auto end1 = std::chrono::high_resolution_clock::now();
-    std::cout << "Mask time: " << std::chrono::duration<double, std::milli>(end - start).count()
-              << " ms" << std::endl;
-    std::cout << "Sampling time: "
-              << std::chrono::duration<double, std::milli>(end1 - start).count() << " ms"
-              << std::endl;
+    // std::cout << "Mask time: " << std::chrono::duration<double, std::milli>(end - start).count()
+    //           << " ms" << std::endl;
+    // std::cout << "Sampling time: "
+    //           << std::chrono::duration<double, std::milli>(end1 - start).count() << " ms"
+    //           << std::endl;
     return output_tokens;
   }
 

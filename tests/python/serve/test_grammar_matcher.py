@@ -233,7 +233,12 @@ def test_get_rejected_token_ids(json_grammar: BNFGrammar):
     # }
     # """
 
-    expected_sizes = [31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]
+    # fmt: off
+    expected_sizes = [
+        31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145,
+        31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714
+    ]
+    # fmt: on
 
     test_input_str = """{"id": 1,"name": "Example"}"""
     real_sizes = []
@@ -241,9 +246,9 @@ def test_get_rejected_token_ids(json_grammar: BNFGrammar):
         rejected_token_ids = grammar_matcher.get_rejected_token_ids_for_tokenizer(
             json_grammar, tokenizer
         )
-        print("Accepting:", c)
         print("Rejected token ids len:", len(rejected_token_ids))
         real_sizes.append(len(rejected_token_ids))
+        print("Accepting:", c)
         grammar_matcher.accept_char(ord(c))
     print(real_sizes)
     assert real_sizes == expected_sizes

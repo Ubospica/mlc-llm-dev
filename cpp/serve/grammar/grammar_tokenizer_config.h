@@ -61,9 +61,9 @@ struct CatagorizedTokensForGrammar {
     auto size_rej = rejected_indices.size();
     auto size_unc = uncertain_indices.size();
     not_saved_index =
-        size_acc < size_rej && size_acc < size_unc
+        (size_acc >= size_rej && size_acc >= size_unc)
             ? NotSavedIndex::kAccepted
-            : (size_rej < size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
+            : (size_rej >= size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
 
     if (not_saved_index != NotSavedIndex::kAccepted) {
       this->accepted_indices = accepted_indices;

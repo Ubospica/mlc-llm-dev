@@ -109,7 +109,7 @@ class GrammarMatcher(Object):
     def __init__(self, grammar: BNFGrammar, max_rollback_steps: int = 0):
         self.__init_handle_by_constructor__(_ffi_api.GrammarMatcher, grammar, max_rollback_steps)  # type: ignore  # pylint: disable=no-member
 
-    def accept_char(self, codepoint: int, drop_old: bool = False) -> bool:
+    def accept_char(self, codepoint: int, drop_old: bool = True) -> bool:
         """ """
         return _ffi_api.GrammarMatcherAcceptChar(  # type: ignore  # pylint: disable=no-member
             self, codepoint, drop_old
