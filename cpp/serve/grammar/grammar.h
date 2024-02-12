@@ -23,7 +23,7 @@ using namespace tvm::runtime;
 /*!
  * \brief This class stores the abstract syntax tree (AST) of the Backus-Naur Form (BNF) grammar.
  * The BNF definition here is standard BNF, and the characters are represented using regex-style
- * character ranges (e.g. [a-z], [^a-z]).
+ * character classes (e.g. [a-z], [^a-z]).
  *
  * \details The BNF grammar consists of a set of rules. Each rule is represented by a name and a
  * definition, and corresponds to a production rule. Each rule has a rule_id for reference.
@@ -36,15 +36,16 @@ using namespace tvm::runtime;
  *
  * Every RuleExpr is represented by a type as well as a variable-length array containing its data.
  * There are several types for RuleExpr:
- * - Character range: a range of characters (each character is a unicode codepoint), e.g. [a-z],
+ * - Character class: a range of characters (each character is a unicode codepoint), e.g. [a-z],
  *   [ac-z].
- *   A char is represented by a character range with the same lower and upper bound. A string is
- *   represented by a sequence of character ranges.
- * - Negative character range: all characters that are not in the range, e.g. [^a-z], [^ac-z]
+ *   A single character is represented by a character class with the same lower and upper bound.
+ *   A string is represented by a sequence of character classes.
+ * - Negative character class: all characters that are not in the range, e.g. [^a-z], [^ac-z]
  * - EmptyStr: an empty string, i.e. ""
  * - Rule reference: a reference to another rule
  * - Sequence: a sequence of rule_exprs, e.g. ("a" "b"). These rule_exprs are concatenated together.
  * - Choices: a choice of rule_exprs, e.g. ("a" "b") | "c". Each rule_expr can be matched.
+ * - Character class star: special support for a repetition of a character class. e.g. [a-z]*
  *
  * For the internal representation of the data, see docs in BNFGrammarNode::RuleExprType. Each
  * RuleExpr corresponds to an rule_expr_id for reference.
@@ -74,10 +75,9 @@ class BNFGrammarNode : public Object {
   /*! \brief The type of the rule expr. */
   enum class RuleExprType : int32_t {
     // data format: [lower0, upper0, lower1, upper1, ...]
-    // to represent a single character, just add the same lower and upper bound.
-    kCharacterRange,
+    kCharacterClass,
     // data format: [lower0, upper0, lower1, upper1, ...]
-    kNegCharacterRange,
+    kNegCharacterClass,
     // data format: []
     kEmptyStr,
     // data format: [rule_id]
@@ -86,6 +86,8 @@ class BNFGrammarNode : public Object {
     kSequence,
     // data format: [rule_expr_id0, rule_expr_id1, ...]
     kChoices,
+    // data format: [lower0, upper0, lower1, upper1, ...]
+    kCharacterClassStar,
   };
 
   /*! \brief The object representing a rule expr. */

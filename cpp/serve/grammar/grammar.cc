@@ -47,58 +47,67 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String jso
 
 const std::string kJSONGrammarString = R"(
 main ::= (
-    "{" members_or_ws "}" ws |
-    "[" elements_or_ws "]" ws
+    "{" ws members_or_embrace ws |
+    "[" ws elements_or_embrace ws
 )
 value ::= (
-    "{" members_or_ws "}" |
-    "[" elements_or_ws "]" |
+    "{" ws members_or_embrace |
+    "[" ws elements_or_embrace |
     "\"" characters "\"" |
     [0-9] fraction exponent |
     [1-9] digits fraction exponent |
     "-" [0-9] fraction exponent |
     "-" [1-9] digits fraction exponent |
-    "true" | "false" | "null"
+    "true" |
+    "false" |
+    "null"
 )
-members_or_ws ::= (
-    "" |
-    "\"" characters "\"" ws ":" ws value ws members_rest |
-    "\u0020" members_or_ws |
-    "\u000A" members_or_ws |
-    "\u000D" members_or_ws |
-    "\u0009" members_or_ws
+members_or_embrace ::= (
+    "\"" characters "\"" ws ":" ws value members_rest ws "}" |
+    "}"
 )
-members_rest ::= "" | "," ws "\"" characters "\"" ws ":" ws value ws members_rest
-elements_or_ws ::= (
+members ::= "\"" characters "\"" ws ":" ws value members_rest
+members_rest ::= (
     "" |
-    "{" members_or_ws "}" ws elements_rest |
-    "[" elements_or_ws "]" ws elements_rest |
-    "\"" characters "\"" ws elements_rest |
-    [0-9] fraction exponent ws elements_rest |
-    [1-9] digits fraction exponent ws elements_rest |
-    "-" [0-9] fraction exponent ws elements_rest |
-    "-" [1-9] digits fraction exponent ws elements_rest |
-    "true" ws elements_rest |
-    "false" ws elements_rest |
-    "null" ws elements_rest |
-    "\u0020" elements_or_ws |
-    "\u000A" elements_or_ws |
-    "\u000D" elements_or_ws |
-    "\u0009" elements_or_ws
+    "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\u0020" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\u000A" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\u000D" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\u0009" ws "," ws "\"" characters "\"" ws ":" ws value members_rest
+)
+elements_or_embrace ::= (
+    "{" ws members_or_embrace elements_rest ws "]" |
+    "[" ws elements_or_embrace elements_rest ws "]" |
+    "\"" characters "\"" elements_rest ws "]" |
+    [0-9] fraction exponent elements_rest ws "]" |
+    [1-9] digits fraction exponent elements_rest ws "]" |
+    "-" [0-9] fraction exponent elements_rest ws "]" |
+    "-" [1-9] digits fraction exponent elements_rest ws "]" |
+    "true" elements_rest ws "]" |
+    "false" elements_rest ws "]" |
+    "null" elements_rest ws "]" |
+    "]"
 )
 elements ::= (
-    "{" members_or_ws "}" ws elements_rest |
-    "[" elements_or_ws "]" ws elements_rest |
-    "\"" characters "\"" ws elements_rest |
-    [0-9] fraction exponent ws elements_rest |
-    [1-9] digits fraction exponent ws elements_rest |
-    "-" [0-9] fraction exponent ws elements_rest |
-    "-" [1-9] digits fraction exponent ws elements_rest |
-    "true" ws elements_rest |
-    "false" ws elements_rest |
-    "null" ws elements_rest
+    "{" ws members_or_embrace elements_rest |
+    "[" ws elements_or_embrace elements_rest |
+    "\"" characters "\"" elements_rest |
+    [0-9] fraction exponent elements_rest |
+    [1-9] digits fraction exponent elements_rest |
+    "-" [0-9] fraction exponent elements_rest |
+    "-" [1-9] digits fraction exponent elements_rest |
+    "true" elements_rest |
+    "false" elements_rest |
+    "null" elements_rest
 )
-elements_rest ::= "" | "," ws elements
+elements_rest ::= (
+    "" |
+    "," ws elements |
+    "\u0020" ws "," ws elements |
+    "\u000A" ws "," ws elements |
+    "\u000D" ws "," ws elements |
+    "\u0009" ws "," ws elements
+)
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
 digits ::= [0-9] | [0-9] digits

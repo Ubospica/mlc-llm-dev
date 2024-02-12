@@ -57,12 +57,12 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
   end = std::chrono::high_resolution_clock::now();
   duration = end - start;
   std::cout << "Total time: " << duration.count() << " ms" << std::endl;
-  std::cout << "Handle past time: " << matcher->handle_past_time.count() << " ms" << std::endl;
-  std::cout << "Rollback time: " << matcher->rollback_total_time.count() << " ms" << std::endl;
-  std::cout << "Accept time: " << matcher->accept_total_time.count() << " ms" << std::endl;
-  std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
-  std::cout << "Codepoint set time: " << matcher->codepoint_set_total_time.count() << " ms"
-            << std::endl;
+  // std::cout << "Handle past time: " << matcher->handle_past_time.count() << " ms" << std::endl;
+  // std::cout << "Rollback time: " << matcher->rollback_total_time.count() << " ms" << std::endl;
+  // std::cout << "Accept time: " << matcher->accept_total_time.count() << " ms" << std::endl;
+  // std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
+  // std::cout << "Codepoint set time: " << matcher->codepoint_set_total_time.count() << " ms"
+  //           << std::endl;
 
   // start = std::chrono::high_resolution_clock::now();
 

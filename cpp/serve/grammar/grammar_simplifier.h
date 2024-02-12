@@ -73,9 +73,9 @@ class BNFGrammarMutator {
         return VisitChoices(rule_expr);
       case RuleExprType::kEmptyStr:
         return VisitEmptyStr(rule_expr);
-      case RuleExprType::kCharacterRange:
-      case RuleExprType::kNegCharacterRange:
-        return VisitCharacterRange(rule_expr);
+      case RuleExprType::kCharacterClass:
+      case RuleExprType::kNegCharacterClass:
+        return VisitCharacterClass(rule_expr);
       case RuleExprType::kRuleRef:
         return VisitRuleRef(rule_expr);
       default:
@@ -127,7 +127,7 @@ class BNFGrammarMutator {
 
   virtual T VisitEmptyStr(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
 
-  virtual T VisitCharacterRange(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
+  virtual T VisitCharacterClass(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
 
   virtual T VisitRuleRef(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
 
@@ -336,8 +336,8 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
         return builder_.AddChoices(VisitChoices(rule_expr));
       case RuleExprType::kEmptyStr:
         return builder_.AddChoices({builder_.AddEmptyStr()});
-      case RuleExprType::kCharacterRange:
-      case RuleExprType::kNegCharacterRange:
+      case RuleExprType::kCharacterClass:
+      case RuleExprType::kNegCharacterClass:
       case RuleExprType::kRuleRef:
         return builder_.AddChoices({builder_.AddSequence({builder_.AddRuleExpr(rule_expr)})});
       default:
@@ -360,8 +360,8 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
         case RuleExprType::kEmptyStr:
           found_empty = true;
           break;
-        case RuleExprType::kCharacterRange:
-        case RuleExprType::kNegCharacterRange:
+        case RuleExprType::kCharacterClass:
+        case RuleExprType::kNegCharacterClass:
         case RuleExprType::kRuleRef:
           VisitAtomInChoices(choice_expr, &new_choice_ids);
           break;
@@ -417,8 +417,8 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
           break;
         case RuleExprType::kEmptyStr:
           break;
-        case RuleExprType::kCharacterRange:
-        case RuleExprType::kNegCharacterRange:
+        case RuleExprType::kCharacterClass:
+        case RuleExprType::kNegCharacterClass:
         case RuleExprType::kRuleRef:
           VisitAtomInSequence(seq_expr, &new_sequence_ids);
           break;

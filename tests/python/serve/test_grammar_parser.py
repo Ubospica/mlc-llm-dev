@@ -153,7 +153,7 @@ def test_error():
         BNFGrammar.from_ebnf_string('::= "a"')
 
     with pytest.raises(
-        TVMError, match="Character range should not contain newline at line 1, column 12"
+        TVMError, match="Character class should not contain newline at line 1, column 12"
     ):
         BNFGrammar.from_ebnf_string("main ::= [a\n]")
 
@@ -165,7 +165,7 @@ def test_error():
 
     with pytest.raises(
         TVMError,
-        match="Invalid character range: lower bound is larger than upper bound at "
+        match="Invalid character class: lower bound is larger than upper bound at "
         "line 1, column 14",
     ):
         BNFGrammar.from_ebnf_string(r"main ::= [Z-A]")
@@ -187,7 +187,7 @@ c ::= [a-z]
 """
     expected = (
         '{"rule_expr_indptr":[0,3,6,10,13,16,20,24,28,32,36,41,44,48,51],"rule_expr_data"'
-        ':[3,1,1,3,1,2,4,2,0,1,3,1,1,3,1,0,4,2,3,4,5,2,2,5,0,2,98,98,0,2,99,99,0,2,100,100,'
+        ":[3,1,1,3,1,2,4,2,0,1,3,1,1,3,1,0,4,2,3,4,5,2,2,5,0,2,98,98,0,2,99,99,0,2,100,100,"
         '4,3,7,8,9,5,1,10,0,2,97,122,4,1,12,5,1,13],"rules":[{"body_expr_id":6,"name":"main"},'
         '{"body_expr_id":11,"name":"b"},{"body_expr_id":14,"name":"c"}]}'
     )

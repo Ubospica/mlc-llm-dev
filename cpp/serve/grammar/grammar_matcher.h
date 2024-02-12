@@ -28,16 +28,16 @@ namespace serve {
 
 using namespace tvm::runtime;
 
-inline bool CharacterRangeContains(const BNFGrammarNode::RuleExpr& rule_expr,
+inline bool CharacterClassContains(const BNFGrammarNode::RuleExpr& rule_expr,
                                    TCodepoint codepoint) {
-  DCHECK(rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterRange ||
-         rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterRange);
+  DCHECK(rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterClass ||
+         rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterClass);
   for (int i = 0; i < rule_expr.size(); i += 2) {
     if (rule_expr.data[i] <= codepoint && codepoint <= rule_expr.data[i + 1]) {
-      return rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterRange;
+      return rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterClass;
     }
   }
-  return rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterRange;
+  return rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterClass;
 }
 
 struct RulePosition {
@@ -351,10 +351,10 @@ class GrammarMatcherNode : public Object {
         // But we are still need to accept a new character, so this stack will become invalid.
         continue;
       }
-      auto current_char_range = grammar_->GetRuleExpr(current_sequence[rule_position.element_id]);
-      ICHECK(current_char_range.type == RuleExprType::kCharacterRange ||
-             current_char_range.type == RuleExprType::kNegCharacterRange);
-      auto ok = CharacterRangeContains(current_char_range, codepoint);
+      auto current_char_class = grammar_->GetRuleExpr(current_sequence[rule_position.element_id]);
+      ICHECK(current_char_class.type == RuleExprType::kCharacterClass ||
+             current_char_class.type == RuleExprType::kNegCharacterClass);
+      auto ok = CharacterClassContains(current_char_class, codepoint);
       // start = std::chrono::high_resolution_clock::now();
       // end = std::chrono::high_resolution_clock::now();
       // overhead_time += end - start;
@@ -556,11 +556,13 @@ class GrammarMatcherNode : public Object {
     target->swap(result);
   }
 
+  // todo: if stack is root stack, do not need to consider uncertain
   void FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config,
                             DynamicBitSet* rejected_ids) {
     const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
     const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
     const auto& latest_stack_tops = stack_tops_with_history_.LatestStackTops();
+    std::cout << "Top size: " << latest_stack_tops.size() << std::endl;
 
     std::vector<int32_t> accepted_indices;
     std::vector<int32_t> rejected_indices{-1};
@@ -836,8 +838,8 @@ class GrammarMatcherNode : public Object {
     while (!tree_.IsEndPosition(cur_rule_position)) {
       auto sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
       auto element = grammar_->GetRuleExpr(sequence[cur_rule_position.element_id]);
-      if (element.type == RuleExprType::kCharacterRange ||
-          element.type == RuleExprType::kNegCharacterRange) {
+      if (element.type == RuleExprType::kCharacterClass ||
+          element.type == RuleExprType::kNegCharacterClass) {
         new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
         break;
       } else {
@@ -856,8 +858,8 @@ class GrammarMatcherNode : public Object {
             continue;
           }
           DCHECK(sequence.type == RuleExprType::kSequence);
-          DCHECK(grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kCharacterRange ||
-                 grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kNegCharacterRange);
+          DCHECK(grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kCharacterClass ||
+                 grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kNegCharacterClass);
           // Note: rule_position is not inserted to the tree yet, so it need to be inserted first
           auto parent_id = tree_.NewNode(cur_rule_position);
           new_stack_tops->push_back(tree_.NewNode(RulePosition{new_rule_id, j, 0, parent_id}));

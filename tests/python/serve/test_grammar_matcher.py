@@ -54,14 +54,14 @@ def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
 
 (json_inputs_refused,) = tvm.testing.parameters(
     (r'{ name: "John" }',),
-    (r'{ "name": "John", "age": 30, }',),
+    (r'{ "name": "John", "age": 30, }',),  # x
     (r'{ "name": "John", "address": { "street": "123 Main St", "city": "New York" }',),
-    (r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling",], }',),
+    (r'{ "name": "John", "age": 30, "hobbies": ["reading", "traveling",], }',),  # x
     (r'{ "name": "John", "age": 30.5.7 }',),
     (r'{ "name": "John, "age": 30, "hobbies": ["reading", "traveling"] }',),
     (
         r'{ "name": "John", "age": 30, "hobbies": ["reading", { "type": "outdoor", "list": '
-        r'["hiking", "swimming",]}] }',
+        r'["hiking", "swimming",]}] }',  #
     ),
     (r'{ "name": "John", "age": 30, "status": "\P\J" }',),
     (
@@ -252,7 +252,6 @@ def test_get_rejected_token_ids(json_grammar: BNFGrammar):
         grammar_matcher.accept_char(ord(c))
     print(real_sizes)
     assert real_sizes == expected_sizes
-
 
 
 test_get_rejected_token_ids(json_grammar())

@@ -58,27 +58,27 @@ class BNFGrammarBuilder {
   }
 
   /*!
-   * \brief One element of a character range, containing a lower and a upper bound. Both bounds are
+   * \brief One element of a character class, containing a lower and a upper bound. Both bounds are
    * inclusive.
    */
-  struct CharacterRangeElement {
+  struct CharacterClassElement {
     int32_t lower;
     int32_t upper;
   };
 
   /*!
-   * \brief Add a RuleExpr for character range.
-   * \param elements A vector of CharacterRangeElement, each containing a lower and a upper bound.
-   * \param is_neg_range Whether the character range is negated.
+   * \brief Add a RuleExpr for character class.
+   * \param elements A vector of CharacterClassElement, each containing a lower and a upper bound.
+   * \param is_neg_range Whether the character class is negated.
    */
-  int32_t AddCharacterRange(const std::vector<CharacterRangeElement>& elements,
+  int32_t AddCharacterClass(const std::vector<CharacterClassElement>& elements,
                             bool is_neg_range = false) {
     std::vector<int32_t> data;
     for (const auto& range : elements) {
       data.push_back(range.lower);
       data.push_back(range.upper);
     }
-    auto type = is_neg_range ? RuleExprType::kNegCharacterRange : RuleExprType::kCharacterRange;
+    auto type = is_neg_range ? RuleExprType::kNegCharacterClass : RuleExprType::kCharacterClass;
     return AddRuleExpr({type, data.data(), static_cast<int32_t>(data.size())});
   }
 

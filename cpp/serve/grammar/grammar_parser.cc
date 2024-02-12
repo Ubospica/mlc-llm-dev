@@ -24,7 +24,7 @@ class EBNFParserImpl {
 
   // Parsing different parts of the grammar
   std::string ParseName(bool accept_empty = false);
-  int32_t ParseCharacterRange();
+  int32_t ParseCharacterClass();
   int32_t ParseString();
   int32_t ParseRuleRef();
   int32_t ParseElement();
@@ -67,8 +67,8 @@ class EBNFParserImpl {
 
   // Throw a ParseError with the given message and the line and column number.
   [[noreturn]] void ThrowParseError(const std::string& msg) {
-    throw ParseError(msg + " at line " + std::to_string(cur_line_) + ", column " +
-                     std::to_string(cur_column_));
+    throw ParseError("EBNF parse error at line " + std::to_string(cur_line_) + ", column " +
+                     std::to_string(cur_column_) + ": " + msg);
   }
 
   // The grammar builder
@@ -123,24 +123,24 @@ std::string EBNFParserImpl::ParseName(bool accept_empty) {
   return std::string(start, cur_);
 }
 
-// Character range:
+// Character class:
 // 1. Examples: [a-z] [ab] [a-zA-Z0-9] [^a-z] [测] [\u0123]
-// 2. "-" appearing in the start or end of the character range means itself. Only if it appears
-// between two characters, it means a range. E.g. [a-] and [-a] means "a" or "-"" [a--] means a to -
-// 3. "-" and "]" can be escaped:
+// 2. The "-" character is treated as a literal character if it is the last or the first (after
+// the "^"", if present) character within the brackets. E.g. [a-] and [-a] means "a" or "-"
+// 3. "-" and "]" should be escaped when used as a literal character:
 // [\-] means -
 // [\]] means ]
-// Character range should not contain newlines.
-int32_t EBNFParserImpl::ParseCharacterRange() {
+// Character class should not contain newlines.
+int32_t EBNFParserImpl::ParseCharacterClass() {
   static constexpr TCodepoint kUnknownUpperBound = -4;
   static const std::unordered_map<std::string, TCodepoint> kCustomEscapeMap = {{"\\-", '-'},
                                                                                {"\\]", ']'}};
 
-  std::vector<BNFGrammarBuilder::CharacterRangeElement> elements;
+  std::vector<BNFGrammarBuilder::CharacterClassElement> elements;
 
-  bool is_not_range = false;
+  bool is_negative = false;
   if (Peek() == '^') {
-    is_not_range = true;
+    is_negative = true;
     Consume();
   }
 
@@ -148,7 +148,7 @@ int32_t EBNFParserImpl::ParseCharacterRange() {
   bool past_is_single_char = false;
   while (Peek() && Peek() != ']') {
     if (Peek() == '\r' || Peek() == '\n') {
-      ThrowParseError("Character range should not contain newline");
+      ThrowParseError("Character class should not contain newline");
     } else if (Peek() == '-' && Peek(1) != ']' && !past_is_hyphen && past_is_single_char) {
       Consume();
       past_is_hyphen = true;
@@ -167,7 +167,7 @@ int32_t EBNFParserImpl::ParseCharacterRange() {
     if (past_is_hyphen) {
       ICHECK(!elements.empty());
       if (elements.back().lower > codepoint) {
-        ThrowParseError("Invalid character range: lower bound is larger than upper bound");
+        ThrowParseError("Invalid character class: lower bound is larger than upper bound");
       }
       elements.back().upper = codepoint;
       past_is_hyphen = false;
@@ -184,12 +184,12 @@ int32_t EBNFParserImpl::ParseCharacterRange() {
     }
   }
 
-  return builder_.AddCharacterRange(elements, is_not_range);
+  return builder_.AddCharacterClass(elements, is_negative);
 }
 
 // parse a c style string with utf8 support
 int32_t EBNFParserImpl::ParseString() {
-  std::vector<int32_t> character_ranges;
+  std::vector<int32_t> character_classes;
   while (Peek() && Peek() != '\"') {
     if (Peek() == '\r' || Peek() == '\n') {
       ThrowParseError("String should not contain newline");
@@ -202,19 +202,19 @@ int32_t EBNFParserImpl::ParseString() {
       ThrowParseError("Invalid escape sequence");
     }
     Consume(len);
-    character_ranges.push_back(builder_.AddCharacterRange({{codepoint, codepoint}}));
+    character_classes.push_back(builder_.AddCharacterClass({{codepoint, codepoint}}));
   }
-  if (character_ranges.empty()) {
+  if (character_classes.empty()) {
     return builder_.AddEmptyStr();
   }
-  return builder_.AddSequence(character_ranges);
+  return builder_.AddSequence(character_classes);
 }
 
 int32_t EBNFParserImpl::ParseRuleRef() {
   std::string name = ParseName();
   auto rule_id = builder_.GetRuleId(name);
   if (rule_id == -1) {
-    ThrowParseError("Rule " + name + " is not defined");
+    ThrowParseError("Rule \"" + name + "\" is not defined");
   }
   return builder_.AddRuleRef(rule_id);
 }
@@ -237,7 +237,7 @@ int32_t EBNFParserImpl::ParseElement() {
     }
     case '[': {
       Consume();
-      auto rule_expr_id = ParseCharacterRange();
+      auto rule_expr_id = ParseCharacterClass();
       if (Peek() != ']') {
         ThrowParseError("Expect ]");
       }

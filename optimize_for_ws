@@ -1,0 +1,345 @@
+Prev result
+
+collected 24 items
+
+tests/python/serve/test_grammar_matcher.py ........................                                                 [100%]
+
+=================================================== 24 passed in 0.03s ====================================================
+
+Preprocess time: 95.0446 ms
+Top size: 2
+Total time: 0.049203 ms
+Rejected token ids len: 31730
+Accepting: {
+Top size: 6
+Total time: 0.68908 ms
+Rejected token ids len: 31648
+Accepting: "
+Top size: 3
+Total time: 0.019897 ms
+Rejected token ids len: 145
+Accepting: i
+Top size: 3
+Total time: 0.018946 ms
+Rejected token ids len: 145
+Accepting: d
+Top size: 3
+Total time: 0.017904 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.59927 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.929013 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.915027 ms
+Rejected token ids len: 31597
+Accepting: 1
+Top size: 11
+Total time: 0.666317 ms
+Rejected token ids len: 31701
+Accepting: ,
+Top size: 5
+Total time: 0.596907 ms
+Rejected token ids len: 31652
+Accepting: "
+Top size: 3
+Total time: 0.017663 ms
+Rejected token ids len: 145
+Accepting: n
+Top size: 3
+Total time: 0.017463 ms
+Rejected token ids len: 145
+Accepting: a
+Top size: 3
+Total time: 0.017093 ms
+Rejected token ids len: 145
+Accepting: m
+Top size: 3
+Total time: 0.017142 ms
+Rejected token ids len: 145
+Accepting: e
+Top size: 3
+Total time: 0.016932 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.592589 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.973567 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.928502 ms
+Rejected token ids len: 31597
+Accepting: "
+Top size: 3
+Total time: 0.025979 ms
+Rejected token ids len: 137
+Accepting: E
+Top size: 3
+Total time: 0.022122 ms
+Rejected token ids len: 137
+Accepting: x
+Top size: 3
+Total time: 0.0215 ms
+Rejected token ids len: 137
+Accepting: a
+Top size: 3
+Total time: 0.021932 ms
+Rejected token ids len: 137
+Accepting: m
+Top size: 3
+Total time: 0.02118 ms
+Rejected token ids len: 137
+Accepting: p
+Top size: 3
+Total time: 0.020769 ms
+Rejected token ids len: 137
+Accepting: l
+Top size: 3
+Total time: 0.020749 ms
+Rejected token ids len: 137
+Accepting: e
+Top size: 3
+Total time: 0.020058 ms
+Rejected token ids len: 137
+Accepting: "
+Top size: 6
+Total time: 0.68872 ms
+Rejected token ids len: 31714
+Accepting: }
+[31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]
+
+Rule optimize
+tests/python/serve/test_grammar_matcher.py ........................                                                 [100%]
+
+=================================================== 24 passed in 0.02s ====================================================
+(base) yxdong@llama:~/code/mlc-llm-lora <02-12-2024 17:36:20>
+Top size: 2
+Total time: 0.050085 ms
+Rejected token ids len: 31730
+Accepting: {
+Top size: 10
+Total time: 1.37489 ms
+Rejected token ids len: 31648
+Accepting: "
+Top size: 3
+Total time: 0.019327 ms
+Rejected token ids len: 145
+Accepting: i
+Top size: 3
+Total time: 0.017453 ms
+Rejected token ids len: 145
+Accepting: d
+Top size: 3
+Total time: 0.017353 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.583922 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.958729 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.968699 ms
+Rejected token ids len: 31597
+Accepting: 1
+Top size: 15
+Total time: 0.619379 ms
+Rejected token ids len: 31701
+Accepting: ,
+Top size: 5
+Total time: 0.628145 ms
+Rejected token ids len: 31652
+Accepting: "
+Top size: 3
+Total time: 0.018295 ms
+Rejected token ids len: 145
+Accepting: n
+Top size: 3
+Total time: 0.018144 ms
+Rejected token ids len: 145
+Accepting: a
+Top size: 3
+Total time: 0.017122 ms
+Rejected token ids len: 145
+Accepting: m
+Top size: 3
+Total time: 0.017443 ms
+Rejected token ids len: 145
+Accepting: e
+Top size: 3
+Total time: 0.016471 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.650087 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.971614 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.98598 ms
+Rejected token ids len: 31597
+Accepting: "
+Top size: 3
+Total time: 0.027742 ms
+Rejected token ids len: 137
+Accepting: E
+Top size: 3
+Total time: 0.025377 ms
+Rejected token ids len: 137
+Accepting: x
+Top size: 3
+Total time: 0.024296 ms
+Rejected token ids len: 137
+Accepting: a
+Top size: 3
+Total time: 0.023704 ms
+Rejected token ids len: 137
+Accepting: m
+Top size: 3
+Total time: 0.023455 ms
+Rejected token ids len: 137
+Accepting: p
+Top size: 3
+Total time: 0.024056 ms
+Rejected token ids len: 137
+Accepting: l
+Top size: 3
+Total time: 0.023896 ms
+Rejected token ids len: 137
+Accepting: e
+Top size: 3
+Total time: 0.024486 ms
+Rejected token ids len: 137
+Accepting: "
+Top size: 10
+Total time: 0.664233 ms
+Rejected token ids len: 31714
+Accepting: }
+[31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]
+
+Optimize again for rule
+Preprocess time: 111.349 ms
+Top size: 2
+Total time: 0.045717 ms
+Rejected token ids len: 31730
+Accepting: {
+Top size: 6
+Total time: 0.64189 ms
+Rejected token ids len: 31648
+Accepting: "
+Top size: 3
+Total time: 0.019096 ms
+Rejected token ids len: 145
+Accepting: i
+Top size: 3
+Total time: 0.017012 ms
+Rejected token ids len: 145
+Accepting: d
+Top size: 3
+Total time: 0.01622 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.586145 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.921919 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.915867 ms
+Rejected token ids len: 31597
+Accepting: 1
+Top size: 15
+Total time: 0.59353 ms
+Rejected token ids len: 31701
+Accepting: ,
+Top size: 5
+Total time: 0.624197 ms
+Rejected token ids len: 31652
+Accepting: "
+Top size: 3
+Total time: 0.018295 ms
+Rejected token ids len: 145
+Accepting: n
+Top size: 3
+Total time: 0.01631 ms
+Rejected token ids len: 145
+Accepting: a
+Top size: 3
+Total time: 0.01593 ms
+Rejected token ids len: 145
+Accepting: m
+Top size: 3
+Total time: 0.01577 ms
+Rejected token ids len: 145
+Accepting: e
+Top size: 3
+Total time: 0.01546 ms
+Rejected token ids len: 145
+Accepting: "
+Top size: 5
+Total time: 0.580044 ms
+Rejected token ids len: 31715
+Accepting: :
+Top size: 14
+Total time: 0.916859 ms
+Rejected token ids len: 31597
+Accepting:
+Top size: 14
+Total time: 0.917751 ms
+Rejected token ids len: 31597
+Accepting: "
+Top size: 3
+Total time: 0.025689 ms
+Rejected token ids len: 137
+Accepting: E
+Top size: 3
+Total time: 0.023254 ms
+Rejected token ids len: 137
+Accepting: x
+Top size: 3
+Total time: 0.022632 ms
+Rejected token ids len: 137
+Accepting: a
+Top size: 3
+Total time: 0.021741 ms
+Rejected token ids len: 137
+Accepting: m
+Top size: 3
+Total time: 0.021851 ms
+Rejected token ids len: 137
+Accepting: p
+Top size: 3
+Total time: 0.022012 ms
+Rejected token ids len: 137
+Accepting: l
+Top size: 3
+Total time: 0.021651 ms
+Rejected token ids len: 137
+Accepting: e
+Top size: 3
+Total time: 0.022062 ms
+Rejected token ids len: 137
+Accepting: "
+Top size: 10
+Total time: 0.590063 ms
+Rejected token ids len: 31714
+Accepting: }
+[31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]

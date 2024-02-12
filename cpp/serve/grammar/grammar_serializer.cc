@@ -28,10 +28,10 @@ std::string BNFGrammarPrinter::PrintRule(int32_t rule_id) {
 std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
   std::string result;
   switch (rule_expr.type) {
-    case RuleExprType::kCharacterRange:
-      return PrintCharacterRange(rule_expr);
-    case RuleExprType::kNegCharacterRange:
-      return PrintCharacterRange(rule_expr);
+    case RuleExprType::kCharacterClass:
+      return PrintCharacterClass(rule_expr);
+    case RuleExprType::kNegCharacterClass:
+      return PrintCharacterClass(rule_expr);
     case RuleExprType::kEmptyStr:
       return PrintEmptyStr(rule_expr);
     case RuleExprType::kRuleRef:
@@ -49,11 +49,11 @@ std::string BNFGrammarPrinter::PrintRuleExpr(int32_t rule_expr_id) {
   return PrintRuleExpr(grammar_->GetRuleExpr(rule_expr_id));
 }
 
-std::string BNFGrammarPrinter::PrintCharacterRange(const RuleExpr& rule_expr) {
+std::string BNFGrammarPrinter::PrintCharacterClass(const RuleExpr& rule_expr) {
   static const std::unordered_map<TCodepoint, std::string> kCustomEscapeMap = {{'-', "\\-"},
                                                                                {']', "\\]"}};
   std::string result = "[";
-  if (rule_expr.type == RuleExprType::kNegCharacterRange) {
+  if (rule_expr.type == RuleExprType::kNegCharacterClass) {
     result += "^";
   }
   for (auto i = 0; i < rule_expr.data_len; i += 2) {

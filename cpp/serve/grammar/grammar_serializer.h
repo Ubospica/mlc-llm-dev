@@ -62,8 +62,8 @@ class BNFGrammarPrinter : public BNFGrammarSerializer {
   std::string PrintRuleExpr(int32_t rule_expr_id);
 
  private:
-  /*! \brief Print a RuleExpr for character range. */
-  std::string PrintCharacterRange(const RuleExpr& rule_expr);
+  /*! \brief Print a RuleExpr for character class. */
+  std::string PrintCharacterClass(const RuleExpr& rule_expr);
   /*! \brief Print a RuleExpr for empty string. */
   std::string PrintEmptyStr(const RuleExpr& rule_expr);
   /*! \brief Print a RuleExpr for rule reference. */
