@@ -546,7 +546,7 @@ class CPUSampler : public SamplerObj {
                    "start finding rejected tokens for grammar");
       // std::cout << tokenizer_config->sorted_token_and_ids.size();
       DynamicBitSet rejected_token_ids;
-      matcher->FindRejectedTokenIds(tokenizer_config, &rejected_token_ids);
+      matcher->FindRejectedTokens(tokenizer_config, &rejected_token_ids);
       for (auto id : tokenizer_config->special_token_ids) {
         rejected_token_ids.SetConst(id);
       }

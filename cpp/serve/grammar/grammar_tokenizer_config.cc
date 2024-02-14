@@ -44,6 +44,8 @@ std::string ReplaceUnderscoreWithSpace(const std::string& str,
 
 GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
                                                const BNFGrammar& grammar) {
+  using RuleExprType = BNFGrammarNode::RuleExprType;
+
   ObjectPtr<GrammarTokenizerConfigNode> n = make_object<GrammarTokenizerConfigNode>();
   n->vocab_size = tokenizer->GetVocabSize();
   for (int i = 0; i < tokenizer->GetVocabSize(); ++i) {
@@ -72,18 +74,28 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
   for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
     auto rule = grammar->GetRule(i);
     auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
+    if (rule_expr.type == RuleExprType::kStarQuantifier) {
+      continue;
+    }
+    ICHECK(rule_expr.type == RuleExprType::kChoices);
     for (auto sequence_id : rule_expr) {
       auto sequence_expr = grammar->GetRuleExpr(sequence_id);
-      if (sequence_expr.type == BNFGrammarNode::RuleExprType::kEmptyStr) {
+      if (sequence_expr.type == RuleExprType::kEmptyStr) {
         continue;
       }
-      ICHECK(sequence_expr.type == BNFGrammarNode::RuleExprType::kSequence);
+      ICHECK(sequence_expr.type == RuleExprType::kSequence) << static_cast<int>(sequence_expr.type);
       for (int element_id = 0; element_id < sequence_expr.size(); ++element_id) {
         auto element_expr = grammar->GetRuleExpr(sequence_expr[element_id]);
-        if (element_expr.type == BNFGrammarNode::RuleExprType::kRuleRef) {
-          continue;
+        auto cur_rule_position = RulePosition(i, sequence_id, element_id);
+        if (element_expr.type == RuleExprType::kRuleRef) {
+          auto ref_rule = grammar->GetRule(element_expr[0]);
+          auto ref_rule_expr = grammar->GetRuleExpr(ref_rule.body_expr_id);
+          if (ref_rule_expr.type == RuleExprType::kChoices) {
+            continue;
+          } else {
+            cur_rule_position.char_class_id = ref_rule_expr[0];
+          }
         }
-        auto cur_rule_position = RulePosition{i, sequence_id, element_id};
 
         // std::cout << "Rule: " << rule.name
         //           << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
@@ -108,6 +120,11 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
     }
   }
   auto end = std::chrono::high_resolution_clock::now();
+  std::cout << "catagorized keys:\n ";
+  for (auto& it : n->catagorized_tokens_for_grammar) {
+    std::cout << it.first.sequence_id << " " << it.first.element_id << "\n";
+  }
+  std::cout << "end\n";
   duration = end - start;
   std::cout << "Preprocess time: " << duration.count() << " ms" << std::endl;
   data_ = std::move(n);

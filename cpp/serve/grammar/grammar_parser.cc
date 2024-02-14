@@ -263,14 +263,11 @@ int32_t EBNFParserImpl::ParseElement() {
 }
 
 int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {
-  // a*  -->  rule ::= a rule | empty
+  // rule ::= a*
+  // We have special support for star quantifier in BNFGrammar AST
   auto new_rule_name = builder_.GetNewRuleName(cur_rule_name_);
-  auto new_rule_id = builder_.AddEmptyRule(new_rule_name);
-  auto new_rule_ref = builder_.AddRuleRef(new_rule_id);
-  auto new_rule_expr_id = builder_.AddChoices(
-      {builder_.AddSequence({rule_expr_id, new_rule_ref}), builder_.AddEmptyStr()});
-  builder_.UpdateRuleBody(new_rule_id, new_rule_expr_id);
-  return new_rule_id;
+  auto new_rule_expr_id = builder_.AddStarQuantifier(rule_expr_id);
+  return builder_.AddRule({new_rule_name, new_rule_expr_id});
 }
 
 int32_t EBNFParserImpl::HandlePlusQuantifier(int32_t rule_expr_id) {
@@ -310,7 +307,8 @@ int32_t EBNFParserImpl::ParseQuantifier() {
   // We will transform a*, a+, a? into a rule, and return the reference to this rule
   switch (Peek(-1)) {
     case '*':
-      return builder_.AddRuleRef(HandleStarQuantifier(rule_expr_id));
+      // We assume that the star quantifier should be the body of some rule now
+      return builder_.AddStarQuantifier(rule_expr_id);
     case '+':
       return builder_.AddRuleRef(HandlePlusQuantifier(rule_expr_id));
     case '?':
@@ -368,7 +366,7 @@ void EBNFParserImpl::BuildRuleNameToId() {
       }
       Consume(3);
       if (builder_.GetRuleId(name) != -1) {
-        ThrowParseError("Rule " + name + " is defined multiple times");
+        ThrowParseError("Rule \"" + name + "\" is defined multiple times");
       }
       builder_.AddEmptyRule(name);
     }
@@ -401,7 +399,7 @@ BNFGrammar EBNFParserImpl::DoParse(String ebnf_string) {
   }
 
   if (builder_.GetRuleId("main") == -1) {
-    ThrowParseError("There must be a rule named main");
+    ThrowParseError("There must be a rule named \"main\"");
   }
 
   return builder_.Get();

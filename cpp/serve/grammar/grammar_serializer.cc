@@ -40,6 +40,8 @@ std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
       return PrintSequence(rule_expr);
     case RuleExprType::kChoices:
       return PrintChoices(rule_expr);
+    case RuleExprType::kStarQuantifier:
+      return PrintStarQuantifier(rule_expr);
     default:
       LOG(FATAL) << "Unexpected RuleExpr type: " << static_cast<int>(rule_expr.type);
   }
@@ -99,6 +101,10 @@ std::string BNFGrammarPrinter::PrintChoices(const RuleExpr& rule_expr) {
   }
   result += ")";
   return result;
+}
+
+std::string BNFGrammarPrinter::PrintStarQuantifier(const RuleExpr& rule_expr) {
+  return PrintRuleExpr(rule_expr[0]) + "*";
 }
 
 String BNFGrammarPrinter::ToString() {

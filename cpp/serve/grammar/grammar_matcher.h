@@ -42,17 +42,27 @@ inline bool CharacterClassContains(const BNFGrammarNode::RuleExpr& rule_expr,
 
 struct RulePosition {
   /*! \brief The rule's id. */
-  int32_t rule_id;
+  int32_t rule_id = -1;
   /*! \brief Which choice in this rule is selected. */
-  int sequence_id;
+  int32_t sequence_id = -1;
   /*! \brief Which element of the choice sequence is being visited. */
-  int element_id;
+  int32_t element_id = -1;
 
   int32_t parent_id = -1;
+  int32_t char_class_id = -1;
   int reference_count = 0;
 
   static constexpr int32_t kNoParent = -1;
 
+  constexpr RulePosition() = default;
+
+  constexpr RulePosition(int32_t rule_id, int32_t sequence_id, int32_t element_id,
+                         int32_t parent_id = kNoParent, int32_t char_class_id = -1)
+      : rule_id(rule_id),
+        sequence_id(sequence_id),
+        element_id(element_id),
+        parent_id(parent_id),
+        char_class_id(char_class_id) {}
   bool operator==(const RulePosition& other) const {
     return rule_id == other.rule_id && sequence_id == other.sequence_id &&
            element_id == other.element_id && parent_id == other.parent_id;
@@ -60,7 +70,7 @@ struct RulePosition {
   bool operator!=(const RulePosition& other) const { return !(*this == other); }
 };
 
-inline constexpr RulePosition kInvalidRulePosition = {-1, -1, -1, -1, 0};
+inline constexpr RulePosition kInvalidRulePosition(-1, -1, -1, -1);
 
 class RulePositionBuffer {
  public:
@@ -183,9 +193,12 @@ class RulePositionTree {
   std::string PrintNode(int32_t id) const {
     std::stringstream ss;
     const auto& rule_position = node_buffer_[id];
-    ss << "id: " << id << ", rule: " << grammar_->GetRule(rule_position.rule_id).name
-       << ", sequence: " << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id)
-       << ", element id: " << rule_position.element_id << ", parent id: " << rule_position.parent_id
+    ss << "id: " << id;
+    ss << ", rule " << rule_position.rule_id << ": "
+       << grammar_->GetRule(rule_position.rule_id).name;
+    ss << ", sequence " << rule_position.sequence_id << ": "
+       << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id);
+    ss << ", element id: " << rule_position.element_id << ", parent id: " << rule_position.parent_id
        << ", ref count: " << rule_position.reference_count;
     return ss.str();
   }
@@ -352,7 +365,11 @@ class GrammarMatcherNode : public Object {
         continue;
       }
       auto current_char_class = grammar_->GetRuleExpr(current_sequence[rule_position.element_id]);
-      ICHECK(current_char_class.type == RuleExprType::kCharacterClass ||
+      if (current_char_class.type == RuleExprType::kRuleRef) {
+        DCHECK(rule_position.char_class_id != -1);
+        current_char_class = grammar_->GetRuleExpr(rule_position.char_class_id);
+      }
+      DCHECK(current_char_class.type == RuleExprType::kCharacterClass ||
              current_char_class.type == RuleExprType::kNegCharacterClass);
       auto ok = CharacterClassContains(current_char_class, codepoint);
       // start = std::chrono::high_resolution_clock::now();
@@ -404,8 +421,8 @@ class GrammarMatcherNode : public Object {
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
 
-  // void FindRejectedTokenIds0(const GrammarTokenizerConfig& tokenizer_config,
-  //                            DynamicBitSet* rejected_ids) {
+  // void FindRejectedTokens0(const GrammarTokenizerConfig& tokenizer_config,
+  //                          DynamicBitSet* rejected_ids) {
   //   const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
   //   const auto& catagorized_tokens_for_grammar =
   //   tokenizer_config->catagorized_tokens_for_grammar;
@@ -557,8 +574,9 @@ class GrammarMatcherNode : public Object {
   }
 
   // todo: if stack is root stack, do not need to consider uncertain
-  void FindRejectedTokenIds(const GrammarTokenizerConfig& tokenizer_config,
-                            DynamicBitSet* rejected_ids) {
+  void FindRejectedTokens(const GrammarTokenizerConfig& tokenizer_config,
+                          DynamicBitSet* rejected_ids) {
+    // auto start = std::chrono::high_resolution_clock::now();
     const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
     const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
     const auto& latest_stack_tops = stack_tops_with_history_.LatestStackTops();
@@ -569,8 +587,19 @@ class GrammarMatcherNode : public Object {
     std::vector<int32_t> accepted_indices_delta;
     std::vector<int32_t> rejected_indices_delta;
 
+    // auto end = std::chrono::high_resolution_clock::now();
+    // process_time = end - start;
+    int new_char_cnt = 0;
     for (auto top : latest_stack_tops) {
+      // auto start = std::chrono::high_resolution_clock::now();
       auto cur_rule_position = tree_[top];
+      auto current_sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
+      if (cur_rule_position.parent_id == RulePosition::kNoParent &&
+          cur_rule_position.element_id == current_sequence.size()) {
+        // auto end = std::chrono::high_resolution_clock::now();
+        // process_1_time += end - start;
+        continue;
+      }
       const auto& catagorized_tokens = catagorized_tokens_for_grammar.at(
           {cur_rule_position.sequence_id, cur_rule_position.element_id});
 
@@ -600,7 +629,21 @@ class GrammarMatcherNode : public Object {
       rejected_indices_delta.clear();
 
       int prev_matched_size = 0;
+
+      // auto end = std::chrono::high_resolution_clock::now();
+      // process_1_time += end - start;
+      // std::cout << "uncertain count: "
+      //           << (is_uncertain_saved
+      //                   ? catagorized_tokens.uncertain_indices.size()
+      //                   : sorted_token_and_ids.size() -
+      //                   catagorized_tokens.accepted_indices.size() -
+      //                         catagorized_tokens.rejected_indices.size())
+      //           << std::endl;
       while (true) {
+        auto start = std::chrono::high_resolution_clock::now();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto overhead = end - start;
+        // start = std::chrono::high_resolution_clock::now();
         if (is_uncertain_saved) {
           ++idx_unc;
           if (idx_unc >= static_cast<int>(catagorized_tokens.uncertain_indices.size())) {
@@ -653,6 +696,12 @@ class GrammarMatcherNode : public Object {
 
         bool accepted = true;
         prev_matched_size = prev_useful_size;
+
+        // end = std::chrono::high_resolution_clock::now();
+        // process_2_time += end - start - overhead;
+        start = std::chrono::high_resolution_clock::now();
+        new_char_cnt += cur_token->size() - prev_useful_size;
+
         for (int j = prev_useful_size; j < cur_token->size(); ++j) {
           if (!AcceptChar((*cur_token)[j], false, false)) {
             accepted = false;
@@ -660,7 +709,10 @@ class GrammarMatcherNode : public Object {
           }
           prev_matched_size = j + 1;
         }
+        end = std::chrono::high_resolution_clock::now();
+        process_3_time += end - start - overhead;
 
+        // start = std::chrono::high_resolution_clock::now();
         // Step 4. If the current token is accepted, push its id to the result.
         if (accepted && is_find_accept_mode) {
           accepted_indices_delta.push_back(idx);
@@ -668,9 +720,12 @@ class GrammarMatcherNode : public Object {
           rejected_indices_delta.push_back(idx);
         }
 
+        // end = std::chrono::high_resolution_clock::now();
+        // process_2_time += end - start;
         prev_token = cur_token;
       }
 
+      // start = std::chrono::high_resolution_clock::now();
       Rollback(prev_matched_size + 1);
 
       if (is_find_accept_mode) {
@@ -680,8 +735,11 @@ class GrammarMatcherNode : public Object {
         UnionizeWith(&rejected_indices_delta, catagorized_tokens.rejected_indices);
         IntersectWith(&rejected_indices, rejected_indices_delta);
       }
+      // end = std::chrono::high_resolution_clock::now();
+      // process_4_time += end - start;
     }
 
+    // start = std::chrono::high_resolution_clock::now();
     rejected_ids->Reset(tokenizer_config->vocab_size);
     // Find all indices that is not in accepted_indices, but in rejected_indices
     int idx_acc = 0;
@@ -706,11 +764,17 @@ class GrammarMatcherNode : public Object {
         rejected_ids->SetConst(sorted_token_and_ids[idx].id);
       }
     }
+
+    // end = std::chrono::high_resolution_clock::now();
+    // process_time += end - start;
+    std::cout << "New char count: " << new_char_cnt << std::endl;
   }
 
-  std::chrono::duration<double, std::milli> handle_past_time;
-  std::chrono::duration<double, std::milli> rollback_total_time;
-  std::chrono::duration<double, std::milli> accept_total_time;
+  std::chrono::duration<double, std::milli> process_time;
+  std::chrono::duration<double, std::milli> process_1_time;
+  std::chrono::duration<double, std::milli> process_2_time;
+  std::chrono::duration<double, std::milli> process_3_time;
+  std::chrono::duration<double, std::milli> process_4_time;
 
   CatagorizedTokensForGrammar GetCatagorizedTokens(
       const std::vector<TokenAndId>& sorted_token_and_ids, bool is_root_rule) {
@@ -823,7 +887,7 @@ class GrammarMatcherNode : public Object {
       for (auto i : main_rule_expr) {
         DCHECK(grammar_->GetRuleExpr(i).type == RuleExprType::kSequence ||
                grammar_->GetRuleExpr(i).type == RuleExprType::kEmptyStr);
-        new_stack_tops.push_back(tree_.NewNode(RulePosition{0, i, 0, RulePosition::kNoParent}));
+        new_stack_tops.push_back(tree_.NewNode(RulePosition(0, i, 0, RulePosition::kNoParent)));
       }
       stack_tops_with_history_.PushStackTops(new_stack_tops);
     } else {
@@ -833,9 +897,15 @@ class GrammarMatcherNode : public Object {
   }
 
   void UpdateNewStackTops(int32_t old_rule_position_id, std::vector<int32_t>* new_stack_tops) {
+    auto old_rule_position = tree_[old_rule_position_id];
+    if (old_rule_position.char_class_id != -1) {
+      new_stack_tops->push_back(tree_.NewNode(old_rule_position));
+    }
+
     auto cur_rule_position = tree_.GetNextPosition(tree_[old_rule_position_id]);
 
-    while (!tree_.IsEndPosition(cur_rule_position)) {
+    for (; !tree_.IsEndPosition(cur_rule_position);
+         cur_rule_position = tree_.GetNextPosition(cur_rule_position)) {
       auto sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
       auto element = grammar_->GetRuleExpr(sequence[cur_rule_position.element_id]);
       if (element.type == RuleExprType::kCharacterClass ||
@@ -847,29 +917,33 @@ class GrammarMatcherNode : public Object {
         auto new_rule_id = element[0];
         auto new_rule = grammar_->GetRule(new_rule_id);
         auto new_rule_expr = grammar_->GetRuleExpr(new_rule.body_expr_id);
-        DCHECK(new_rule_expr.type == RuleExprType::kChoices);
+        if (new_rule_expr.type == RuleExprType::kStarQuantifier) {
+          cur_rule_position.char_class_id = new_rule_expr[0];
+          new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
+        } else {
+          DCHECK(new_rule_expr.type == RuleExprType::kChoices);
 
-        bool contain_empty = false;
+          bool contain_empty = false;
 
-        for (auto j : new_rule_expr) {
-          auto sequence = grammar_->GetRuleExpr(j);
-          if (sequence.type == RuleExprType::kEmptyStr) {
-            contain_empty = true;
-            continue;
+          for (auto j : new_rule_expr) {
+            auto sequence = grammar_->GetRuleExpr(j);
+            if (sequence.type == RuleExprType::kEmptyStr) {
+              contain_empty = true;
+              continue;
+            }
+            DCHECK(sequence.type == RuleExprType::kSequence);
+            DCHECK(grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kCharacterClass ||
+                   grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kNegCharacterClass);
+            // Note: rule_position is not inserted to the tree yet, so it need to be inserted first
+            auto parent_id = tree_.NewNode(cur_rule_position);
+            new_stack_tops->push_back(tree_.NewNode(RulePosition(new_rule_id, j, 0, parent_id)));
           }
-          DCHECK(sequence.type == RuleExprType::kSequence);
-          DCHECK(grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kCharacterClass ||
-                 grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kNegCharacterClass);
-          // Note: rule_position is not inserted to the tree yet, so it need to be inserted first
-          auto parent_id = tree_.NewNode(cur_rule_position);
-          new_stack_tops->push_back(tree_.NewNode(RulePosition{new_rule_id, j, 0, parent_id}));
-        }
 
-        if (!contain_empty) {
-          break;
+          if (!contain_empty) {
+            break;
+          }
         }
       }
-      cur_rule_position = tree_.GetNextPosition(cur_rule_position);
     }
 
     if (tree_.IsEndPosition(cur_rule_position)) {

@@ -46,23 +46,24 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
   std::chrono::duration<double, std::milli> duration = end - start;
   // std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
   // std::cout << "Stack: " << matcher->PrintStackState() << std::endl;
-  matcher->handle_past_time = std::chrono::milliseconds(0);
-  matcher->rollback_total_time = std::chrono::milliseconds(0);
-  matcher->accept_total_time = std::chrono::milliseconds(0);
-  matcher->codepoint_set_total_time = std::chrono::milliseconds(0);
+  matcher->process_time = std::chrono::milliseconds(0);
+  matcher->process_1_time = std::chrono::milliseconds(0);
+  matcher->process_2_time = std::chrono::milliseconds(0);
+  matcher->process_3_time = std::chrono::milliseconds(0);
+  matcher->process_4_time = std::chrono::milliseconds(0);
   matcher->overhead_time = std::chrono::milliseconds(0);
   DynamicBitSet bitset;
   start = std::chrono::high_resolution_clock::now();
-  matcher->FindRejectedTokenIds(tokenizer_config, &bitset);
+  matcher->FindRejectedTokens(tokenizer_config, &bitset);
   end = std::chrono::high_resolution_clock::now();
   duration = end - start;
   std::cout << "Total time: " << duration.count() << " ms" << std::endl;
-  // std::cout << "Handle past time: " << matcher->handle_past_time.count() << " ms" << std::endl;
-  // std::cout << "Rollback time: " << matcher->rollback_total_time.count() << " ms" << std::endl;
-  // std::cout << "Accept time: " << matcher->accept_total_time.count() << " ms" << std::endl;
-  // std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
-  // std::cout << "Codepoint set time: " << matcher->codepoint_set_total_time.count() << " ms"
-  //           << std::endl;
+  std::cout << "process_time: " << matcher->process_time.count() << " ms" << std::endl;
+  std::cout << "process_1_time: " << matcher->process_1_time.count() << " ms" << std::endl;
+  std::cout << "process_2_time: " << matcher->process_2_time.count() << " ms" << std::endl;
+  std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
+  std::cout << "process_3_time: " << matcher->process_3_time.count() << " ms" << std::endl;
+  std::cout << "process_4_time: " << matcher->process_4_time.count() << " ms" << std::endl;
 
   // start = std::chrono::high_resolution_clock::now();
 
@@ -72,6 +73,7 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
       res_vector.push_back(i);
     }
   }
+
   auto ret = IntTuple(res_vector);
   // end = std::chrono::high_resolution_clock::now();
   // duration = end - start;

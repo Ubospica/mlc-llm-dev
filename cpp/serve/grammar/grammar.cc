@@ -114,7 +114,7 @@ digits ::= [0-9] | [0-9] digits
 fraction ::= "" | "." digits
 exponent ::= "" |  "e" sign digits | "E" sign digits
 sign ::= "" | "+" | "-"
-ws ::= "" | "\u0020" ws | "\u000A" ws | "\u000D" ws | "\u0009" ws
+ws ::= [ \n\r\t]*
 )";
 
 BNFGrammar BNFGrammar::GetJSONGrammar() {

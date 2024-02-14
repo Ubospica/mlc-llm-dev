@@ -72,6 +72,8 @@ class BNFGrammarPrinter : public BNFGrammarSerializer {
   std::string PrintSequence(const RuleExpr& rule_expr);
   /*! \brief Print a RuleExpr for rule_expr choices. */
   std::string PrintChoices(const RuleExpr& rule_expr);
+  /*! \brief Print a RuleExpr for star quantifier. */
+  std::string PrintStarQuantifier(const RuleExpr& rule_expr);
 };
 
 /*!

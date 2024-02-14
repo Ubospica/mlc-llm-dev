@@ -78,6 +78,8 @@ class BNFGrammarMutator {
         return VisitCharacterClass(rule_expr);
       case RuleExprType::kRuleRef:
         return VisitRuleRef(rule_expr);
+      case RuleExprType::kStarQuantifier:
+        return VisitStarQuantifier(rule_expr);
       default:
         LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
@@ -130,6 +132,16 @@ class BNFGrammarMutator {
   virtual T VisitCharacterClass(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
 
   virtual T VisitRuleRef(const RuleExpr& rule_expr) { return VisitElement(rule_expr); }
+
+  virtual T VisitStarQuantifier(const RuleExpr& rule_expr) {
+    if constexpr (std::is_same<T, void>::value) {
+      VisitExpr(grammar_->GetRuleExpr(rule_expr[0]));
+    } else if constexpr (std::is_same<T, int32_t>::value) {
+      return builder_.AddStarQuantifier(VisitExpr(grammar_->GetRuleExpr(rule_expr[0])));
+    } else {
+      return T();
+    }
+  }
 
   BNFGrammar grammar_;
   BNFGrammarBuilder builder_;
@@ -308,7 +320,7 @@ class UnreachableEliminator : public BNFGrammarMutator<int32_t, BNFGrammar> {
   std::unordered_map<int32_t, int32_t> rule_id_map_;
 };
 
-class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGrammar> {
+class NestedRuleUnwrapper : public BNFGrammarMutator<int32_t, BNFGrammar> {
  public:
   using BNFGrammarMutator::BNFGrammarMutator;
 
@@ -331,21 +343,23 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
   int32_t VisitRuleBody(const RuleExpr& rule_expr) {
     switch (rule_expr.type) {
       case RuleExprType::kSequence:
-        return builder_.AddChoices({builder_.AddSequence(VisitSequence(rule_expr))});
+        return builder_.AddChoices({builder_.AddSequence(VisitSequence_(rule_expr))});
       case RuleExprType::kChoices:
-        return builder_.AddChoices(VisitChoices(rule_expr));
+        return builder_.AddChoices(VisitChoices_(rule_expr));
       case RuleExprType::kEmptyStr:
         return builder_.AddChoices({builder_.AddEmptyStr()});
       case RuleExprType::kCharacterClass:
       case RuleExprType::kNegCharacterClass:
       case RuleExprType::kRuleRef:
         return builder_.AddChoices({builder_.AddSequence({builder_.AddRuleExpr(rule_expr)})});
+      case RuleExprType::kStarQuantifier:
+        return builder_.AddStarQuantifier(VisitExpr(grammar_->GetRuleExpr(rule_expr[0])));
       default:
         LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
   }
 
-  std::vector<int32_t> VisitChoices(const RuleExpr& rule_expr) {
+  std::vector<int32_t> VisitChoices_(const RuleExpr& rule_expr) {
     std::vector<int32_t> new_choice_ids;
     bool found_empty = false;
     for (auto i : rule_expr) {
@@ -378,7 +392,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
 
   void VisitSequenceInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
                               bool* found_empty) {
-    auto sub_sequence_ids = VisitSequence(rule_expr);
+    auto sub_sequence_ids = VisitSequence_(rule_expr);
     if (sub_sequence_ids.size() == 0) {
       *found_empty = true;
     } else {
@@ -388,7 +402,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
 
   void VisitChoicesInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
                              bool* found_empty) {
-    auto sub_choice_ids = VisitChoices(rule_expr);
+    auto sub_choice_ids = VisitChoices_(rule_expr);
     bool contains_empty = builder_.GetRuleExpr(sub_choice_ids[0]).type == RuleExprType::kEmptyStr;
     if (contains_empty) {
       *found_empty = true;
@@ -404,7 +418,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
     new_choice_ids->push_back(builder_.AddSequence({sub_expr_id}));
   }
 
-  std::vector<int32_t> VisitSequence(const RuleExpr& rule_expr) {
+  std::vector<int32_t> VisitSequence_(const RuleExpr& rule_expr) {
     std::vector<int32_t> new_sequence_ids;
     for (auto i : rule_expr) {
       auto seq_expr = grammar_->GetRuleExpr(i);
@@ -430,13 +444,13 @@ class NestedRuleUnwrapper : public BNFGrammarMutator<std::vector<int32_t>, BNFGr
   }
 
   void VisitSequenceInSequence(const RuleExpr& rule_expr, std::vector<int32_t>* new_sequence_ids) {
-    auto sub_sequence_ids = VisitSequence(rule_expr);
+    auto sub_sequence_ids = VisitSequence_(rule_expr);
     new_sequence_ids->insert(new_sequence_ids->end(), sub_sequence_ids.begin(),
                              sub_sequence_ids.end());
   }
 
   void VisitChoiceInSequence(const RuleExpr& rule_expr, std::vector<int32_t>* new_sequence_ids) {
-    auto sub_choice_ids = VisitChoices(rule_expr);
+    auto sub_choice_ids = VisitChoices_(rule_expr);
     if (sub_choice_ids.size() == 1) {
       auto choice_element_expr = builder_.GetRuleExpr(sub_choice_ids[0]);
       if (choice_element_expr.type != RuleExprType::kEmptyStr) {

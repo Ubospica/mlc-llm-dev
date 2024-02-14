@@ -86,8 +86,8 @@ class BNFGrammarNode : public Object {
     kSequence,
     // data format: [rule_expr_id0, rule_expr_id1, ...]
     kChoices,
-    // data format: [lower0, upper0, lower1, upper1, ...]
-    kCharacterClassStar,
+    // data format: [rule_expr_id]
+    kStarQuantifier,
   };
 
   /*! \brief The object representing a rule expr. */

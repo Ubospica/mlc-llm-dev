@@ -24,15 +24,14 @@ c ::= (([c]))
 
 def test_ebnf():
     before = """main ::= b c | b main
-b ::= "b"* d
+b ::= "b"*
 c ::= [acep-z]+
 d ::= "d"?
 """
     expected = """main ::= ((b c) | (b main))
-b ::= ((b_1 d))
+b ::= [b]*
 c ::= ((c_2))
 d ::= ((d_1))
-b_1 ::= ("" | ([b] b_1))
 c_1 ::= (([acep-z]))
 c_2 ::= ((c_1 c_2) | (c_1))
 d_1 ::= ("" | ([d]))
@@ -140,43 +139,63 @@ d_1 ::= [d] | ""
 
 
 def test_error():
-    with pytest.raises(TVMError, match="Rule a is not defined at line 1, column 11"):
+    with pytest.raises(
+        TVMError, match='TVMError: EBNF parse error at line 1, column 11: Rule "a" is not defined'
+    ):
         BNFGrammar.from_ebnf_string("main ::= a b")
 
-    with pytest.raises(TVMError, match="Expect element at line 1, column 15"):
+    with pytest.raises(
+        TVMError, match="TVMError: EBNF parse error at line 1, column 15: Expect element"
+    ):
         BNFGrammar.from_ebnf_string('main ::= "a" |')
 
-    with pytest.raises(TVMError, match='Expect " at line 1, column 15'):
+    with pytest.raises(TVMError, match='TVMError: EBNF parse error at line 1, column 15: Expect "'):
         BNFGrammar.from_ebnf_string('main ::= "a" "')
 
-    with pytest.raises(TVMError, match="Expect rule name at line 1, column 1"):
+    with pytest.raises(
+        TVMError, match="TVMError: EBNF parse error at line 1, column 1: Expect rule name"
+    ):
         BNFGrammar.from_ebnf_string('::= "a"')
 
     with pytest.raises(
-        TVMError, match="Character class should not contain newline at line 1, column 12"
+        TVMError,
+        match="TVMError: EBNF parse error at line 1, column 12: Character class should not contain newline",
     ):
         BNFGrammar.from_ebnf_string("main ::= [a\n]")
 
-    with pytest.raises(TVMError, match="Invalid escape sequence at line 1, column 11"):
+    with pytest.raises(
+        TVMError, match="TVMError: EBNF parse error at line 1, column 11: Invalid escape sequence"
+    ):
         BNFGrammar.from_ebnf_string(r'main ::= "\@"')
 
-    with pytest.raises(TVMError, match="Invalid escape sequence at line 1, column 11"):
+    with pytest.raises(
+        TVMError, match="TVMError: EBNF parse error at line 1, column 11: Invalid escape sequence"
+    ):
         BNFGrammar.from_ebnf_string(r'main ::= "\uFF"')
 
     with pytest.raises(
         TVMError,
-        match="Invalid character class: lower bound is larger than upper bound at "
-        "line 1, column 14",
+        match="TVMError: EBNF parse error at line 1, column 14: Invalid character class: "
+        "lower bound is larger than upper bound",
     ):
         BNFGrammar.from_ebnf_string(r"main ::= [Z-A]")
 
-    with pytest.raises(TVMError, match="Expect ::= at line 1, column 6"):
+    with pytest.raises(
+        TVMError, match="TVMError: EBNF parse error at line 1, column 6: Expect ::="
+    ):
         BNFGrammar.from_ebnf_string(r'main := "a"')
 
-    with pytest.raises(TVMError, match="Rule main is defined multiple times at line 2, column 9"):
+    with pytest.raises(
+        TVMError,
+        match='TVMError: EBNF parse error at line 2, column 9: Rule "main" is defined multiple '
+        "times",
+    ):
         BNFGrammar.from_ebnf_string('main ::= "a"\nmain ::= "b"')
 
-    with pytest.raises(TVMError, match="There must be a rule named main at line 1, column 10"):
+    with pytest.raises(
+        TVMError,
+        match='TVMError: EBNF parse error at line 1, column 10: There must be a rule named "main"',
+    ):
         BNFGrammar.from_ebnf_string('a ::= "a"')
 
 
