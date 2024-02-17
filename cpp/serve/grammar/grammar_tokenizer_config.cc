@@ -120,11 +120,11 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
     }
   }
   auto end = std::chrono::high_resolution_clock::now();
-  std::cout << "catagorized keys:\n ";
-  for (auto& it : n->catagorized_tokens_for_grammar) {
-    std::cout << it.first.sequence_id << " " << it.first.element_id << "\n";
-  }
-  std::cout << "end\n";
+  // std::cout << "catagorized keys:\n ";
+  // for (auto& it : n->catagorized_tokens_for_grammar) {
+  //   std::cout << it.first.sequence_id << " " << it.first.element_id << "\n";
+  // }
+  // std::cout << "end\n";
   duration = end - start;
   std::cout << "Preprocess time: " << duration.count() << " ms" << std::endl;
   data_ = std::move(n);

@@ -54,9 +54,9 @@ struct CatagorizedTokensForGrammar {
 
   CatagorizedTokensForGrammar() = default;
 
-  CatagorizedTokensForGrammar(const std::vector<int32_t>& accepted_indices,
-                              const std::vector<int32_t>& rejected_indices,
-                              const std::vector<int32_t>& uncertain_indices) {
+  CatagorizedTokensForGrammar(std::vector<int32_t>&& accepted_indices,
+                              std::vector<int32_t>&& rejected_indices,
+                              std::vector<int32_t>&& uncertain_indices) {
     auto size_acc = accepted_indices.size();
     auto size_rej = rejected_indices.size();
     auto size_unc = uncertain_indices.size();
@@ -66,13 +66,13 @@ struct CatagorizedTokensForGrammar {
             : (size_rej >= size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
 
     if (not_saved_index != NotSavedIndex::kAccepted) {
-      this->accepted_indices = accepted_indices;
+      this->accepted_indices = std::move(accepted_indices);
     }
     if (not_saved_index != NotSavedIndex::kRejected) {
-      this->rejected_indices = rejected_indices;
+      this->rejected_indices = std::move(rejected_indices);
     }
     if (not_saved_index != NotSavedIndex::kUncertain) {
-      this->uncertain_indices = uncertain_indices;
+      this->uncertain_indices = std::move(uncertain_indices);
     }
   }
 };

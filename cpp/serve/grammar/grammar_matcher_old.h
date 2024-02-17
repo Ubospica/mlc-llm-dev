@@ -1,11 +1,19 @@
 /*!
  *  Copyright (c) 2023 by Contributors
- * \file serve/grammar/grammar.cc
+ * \file serve/grammar/grammar.h
+ * \brief The header for the support of grammar-guided generation.
  */
 
-#include "grammar_matcher.h"
+#ifndef MLC_LLM_SERVE_GRAMMAR_GRAMMAR_MATCHER_H_
+#define MLC_LLM_SERVE_GRAMMAR_GRAMMAR_MATCHER_H_
 
-#include <chrono>
+#include <tvm/runtime/object.h>
+#include <tvm/runtime/registry.h>
+
+#include <cstdint>
+#include <queue>
+#include <string>
+#include <vector>
 
 #include "../../support/dynamic_bitset.h"
 #include "../config.h"
@@ -18,44 +26,8 @@ namespace mlc {
 namespace llm {
 namespace serve {
 
-/*
- * Note on the matching algorithm
- *
- * Given a context-free grammar, we match the characters in a string one by one.
- *
- * We adopt a non-deterministic pushdown automata (NPDA) in matching. To be specific, we maintain
- * several stacks, each of which represents a possible path in the NPDA.
- *
- * ## Stack Structure
- * The element of every stack is a RulePosition object, referring a position in the grammar. If a
- * RulePosition refers to another rule, the next element of the stack will be a position in this
- * rule. If a stack element refers to a character class, it should be the last in the stack, meaning
- * *the next* character to match.
- *
- * ## Matching Process
- * When accepting a new character and it is accepted by a stack, the last element of the stack will
- * be advanced to the next position in the grammar. If it gets to the end of the rule, several
- * elements at the end may be popped out, and the last element of the stack will be advanced.
- *
- * The stack may split since there may be multiple possible next positions. In this case, similar
- * stacks with different top elements will be added. When the stack cannot accept the new character,
- * it will be removed from the stacks.
- *
- * ## Storage of Stacks
- * Note these stacks form a tree structure as when splitting, the new stacks share the same prefix.
- * We store all RulePositions as a tree, where every path from tree root to a node represents a
- * stack. To represent stack tops, we attach additional pointers pointing the stack top nodes.
- * Also, We maintain a history of the stack top pointers, so we can rollback to the previous state.
- *
- * All tree nodes are maintained by a buffer, and utilize reference counting to recycle. If a node
- * is neither pointed by a stack top pointer, not pointed by some child nodes, it will be freed.
- */
-
 using namespace tvm::runtime;
 
-TVM_REGISTER_OBJECT_TYPE(GrammarMatcherNode);
-
-/*! \brief Check the codepoint is contained in the character class. */
 inline bool CharacterClassContains(const BNFGrammarNode::RuleExpr& rule_expr,
                                    TCodepoint codepoint) {
   DCHECK(rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterClass ||
@@ -68,48 +40,43 @@ inline bool CharacterClassContains(const BNFGrammarNode::RuleExpr& rule_expr,
   return rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterClass;
 }
 
-/*!
- * \brief A RulePosition object with additional structural information.
- *
- * The parent_id field is used to refer the parent node in RulePositionTree.
- *
- */
-struct RulePositionNode : public RulePosition {
-  /*! \brief The id of the parent RulePositionNode. Maintained by RulePositionTree. */
+struct RulePosition {
+  /*! \brief The rule's id. */
+  int32_t rule_id = -1;
+  /*! \brief Which choice in this rule is selected. */
+  int32_t sequence_id = -1;
+  /*! \brief Which element of the choice sequence is being visited. */
+  int32_t element_id = -1;
+
   int32_t parent_id = -1;
-  /*! \brief The reference count of this RulePositionNode. If it is zero, it will be removed from
-   * the RulePositionBuffer. */
+  int32_t char_class_id = -1;
   int reference_count = 0;
 
-  /*! \brief A parent_id value of kNoParent means this RulePositionNode is the root of the tree. */
   static constexpr int32_t kNoParent = -1;
 
-  /*! \brief Default constructor. */
-  constexpr RulePositionNode() = default;
-  /*! \brief Construct a RulePositionNode with the given values. */
-  constexpr RulePositionNode(int32_t rule_id, int32_t sequence_id, int32_t element_id,
-                             int32_t parent_id = kNoParent, int32_t char_class_id = -1)
-      : RulePosition{rule_id, sequence_id, element_id, char_class_id}, parent_id(parent_id) {}
+  constexpr RulePosition() = default;
 
-  bool operator==(const RulePositionNode& other) const {
+  constexpr RulePosition(int32_t rule_id, int32_t sequence_id, int32_t element_id,
+                         int32_t parent_id = kNoParent, int32_t char_class_id = -1)
+      : rule_id(rule_id),
+        sequence_id(sequence_id),
+        element_id(element_id),
+        parent_id(parent_id),
+        char_class_id(char_class_id) {}
+
+  bool operator==(const RulePosition& other) const {
     return rule_id == other.rule_id && sequence_id == other.sequence_id &&
            element_id == other.element_id && parent_id == other.parent_id;
   }
 
-  bool operator!=(const RulePositionNode& other) const { return !(*this == other); }
+  bool operator!=(const RulePosition& other) const { return !(*this == other); }
 };
 
-/*! \brief A special value for invalid RulePositionNode. */
-inline constexpr RulePositionNode kInvalidRulePosition(-1, -1, -1, -1, -1);
+inline constexpr RulePosition kInvalidRulePosition(-1, -1, -1, -1);
 
-/*! \brief A buffer to manage all RulePositionNodes. */
 class RulePositionBuffer {
  public:
-  /*!
-   * \brief Allocate a new RulePositionNode. with given initial value.
-   * \returns The id of the allocated node.
-   */
-  int32_t Allocate(RulePositionNode rule_position) {
+  int32_t Allocate(RulePosition rule_position) {
     int32_t id;
     if (free_nodes_.empty()) {
       buffer_.emplace_back();
@@ -124,55 +91,37 @@ class RulePositionBuffer {
     return id;
   }
 
-  /*! \brief Free the RulePositionNode with the given id. */
   void Free(int32_t id) {
     DCHECK(buffer_[id] != kInvalidRulePosition);
     buffer_[id] = kInvalidRulePosition;
     free_nodes_.push_back(id);
   }
 
-  /*! \brief Get the capacity of the buffer. */
   size_t Capacity() const { return buffer_.size(); }
 
-  /*! \brief Get the number of allocated nodes. */
   size_t Size() const {
     DCHECK(buffer_.size() >= free_nodes_.size());
     return buffer_.size() - free_nodes_.size();
   }
 
-  /*! \brief Get the RulePositionNode with the given id. */
-  RulePositionNode& operator[](int32_t id) { return buffer_[id]; }
-  const RulePositionNode& operator[](int32_t id) const { return buffer_[id]; }
+  RulePosition& operator[](int32_t id) { return buffer_[id]; }
+  const RulePosition& operator[](int32_t id) const { return buffer_[id]; }
 
   friend class RulePositionTree;
 
  private:
-  /*! \brief The buffer to store all RulePositionNodes. */
-  std::vector<RulePositionNode> buffer_;
-  /*! \brief A stack to store all free node ids. */
+  std::vector<RulePosition> buffer_;
   std::vector<int32_t> free_nodes_;
 };
 
-/*!
- * \brief A tree structure to store all stacks. Every stack contains several RulePositionNodes, and
- * is represented as a path from the root to a leaf node.
- */
 class RulePositionTree {
  public:
-  /*! \brief Construct a RulePositionTree associated with the given grammar. */
   RulePositionTree(const BNFGrammar& grammar) : grammar_(grammar) {}
 
-  /*!
-   * \brief Create a new node with the given RulePositionNode. The reference count of the new node
-   * is zero.
-   *
-   * \note Later, this node should either be pointed by some child rule, or become a stack top
-   * node (so it will be pointed to by an attached pointer) to be maintained in the
-   * reference-counting based memory management.
-   */
-  int32_t NewNode(const RulePositionNode& rule_position) {
+  int32_t NewNode(const RulePosition& rule_position) {
     auto id = node_buffer_.Allocate(rule_position);
-    if (rule_position.parent_id != RulePositionNode::kNoParent) {
+    // std::cout << "parent: " << rule_position.parent_id << std::endl;
+    if (rule_position.parent_id != RulePosition::kNoParent) {
       DCHECK(rule_position.parent_id < static_cast<int32_t>(node_buffer_.Capacity()) &&
              node_buffer_[rule_position.parent_id] != kInvalidRulePosition);
       node_buffer_[rule_position.parent_id].reference_count++;
@@ -180,46 +129,39 @@ class RulePositionTree {
     return id;
   }
 
-  /*! \brief See GetNextPosition. */
-  bool IsEndPosition(const RulePositionNode& rule_position) const {
-    return rule_position.parent_id == RulePositionNode::kNoParent &&
+  bool IsEndPosition(const RulePosition& rule_position) const {
+    return rule_position.parent_id == RulePosition::kNoParent &&
            grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id;
   }
 
-  /*!
-   * \brief Update a node in the stack to the next position. Next position means either the next
-   * element in the current rule, or if the current element is the last element in the rule, the
-   * next element in the parent rule. If the current node is the last element in the root rule, it
-   * is at the end position.
-   */
-  RulePositionNode GetNextPosition(RulePositionNode rule_position) const {
+  RulePosition GetNextPosition(const RulePosition& rule_position) const {
     if (IsEndPosition(rule_position)) {
       return kInvalidRulePosition;
     }
-    rule_position = RulePositionNode(rule_position.rule_id, rule_position.sequence_id,
-                                     rule_position.element_id + 1, rule_position.parent_id);
-    while (rule_position.parent_id != RulePositionNode::kNoParent &&
-           grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id) {
-      auto parent_rule_position = node_buffer_[rule_position.parent_id];
-      rule_position =
-          RulePositionNode(parent_rule_position.rule_id, parent_rule_position.sequence_id,
-                           parent_rule_position.element_id + 1, parent_rule_position.parent_id);
+    auto rule_id = rule_position.rule_id;
+    auto sequence_id = rule_position.sequence_id;
+    auto element_id = rule_position.element_id + 1;
+    auto parent_id = rule_position.parent_id;
+    while (parent_id != RulePosition::kNoParent &&
+           grammar_->GetRuleExpr(sequence_id).size() == element_id) {
+      auto parent_rule_position = node_buffer_[parent_id];
+      rule_id = parent_rule_position.rule_id;
+      sequence_id = parent_rule_position.sequence_id;
+      element_id = parent_rule_position.element_id + 1;
+      parent_id = parent_rule_position.parent_id;
     }
-    return rule_position;
+    return {rule_id, sequence_id, element_id, parent_id};
   }
 
-  /*! \brief Attach an additional reference to the node with the given id. */
   void AttachRefTo(int32_t id) {
-    DCHECK(id != RulePositionNode::kNoParent);
+    DCHECK(id != RulePosition::kNoParent);
     node_buffer_[id].reference_count++;
   }
 
-  /*! \brief Remove a reference to the node with the given id. If the reference count becomes zero,
-   * free the node and recursively all its ancestors with zero reference count. */
   void RemoveRefTo(int32_t id) {
-    DCHECK(id != RulePositionNode::kNoParent);
+    DCHECK(id != RulePosition::kNoParent);
     auto cur_node = id;
-    while (cur_node != RulePositionNode::kNoParent) {
+    while (cur_node != RulePosition::kNoParent) {
       node_buffer_[cur_node].reference_count--;
       if (node_buffer_[cur_node].reference_count != 0) {
         break;
@@ -230,17 +172,15 @@ class RulePositionTree {
     }
   }
 
-  /*! \brief Get the RulePositionNode with the given id. */
-  const RulePositionNode& operator[](int32_t id) const {
-    DCHECK(id != RulePositionNode::kNoParent);
+  const RulePosition& operator[](int32_t id) const {
+    DCHECK(id != RulePosition::kNoParent);
     return node_buffer_[id];
   }
 
-  /*! \brief Print the stack with the given top id to a string. */
   std::string PrintStackByTopId(int32_t top_id) const {
     std::stringstream ss;
     std::vector<int32_t> stack;
-    for (auto cur_id = top_id; cur_id != RulePositionNode::kNoParent;
+    for (auto cur_id = top_id; cur_id != RulePosition::kNoParent;
          cur_id = node_buffer_[cur_id].parent_id) {
       stack.push_back(cur_id);
     }
@@ -252,7 +192,6 @@ class RulePositionTree {
     return ss.str();
   }
 
-  /*! \brief Print the node with the given id to a string. */
   std::string PrintNode(int32_t id) const {
     std::stringstream ss;
     const auto& rule_position = node_buffer_[id];
@@ -266,14 +205,9 @@ class RulePositionTree {
     return ss.str();
   }
 
-  /*!
-   * \brief Check the well-formedness of the tree and the associated buffer.
-   * \details This function checks the following properties:
-   * 1. Every node is pointed directly or indirectly by a outside pointer.
-   * 2. Every node's reference count is consistent with the actual reference count.
-   * 3. All ids and positions are valid.
-   * 4. If a node in the buffer is free, it should be equal to kInvalidRulePosition.
-   */
+  size_t NodeCount() const { return node_buffer_.Size(); }
+  size_t BufferCapacity() const { return node_buffer_.Capacity(); }
+
   void CheckWellFormed(const std::vector<int32_t>& outside_pointers) const {
     const auto& buffer = node_buffer_.buffer_;
     std::unordered_set<int32_t> free_nodes_set(node_buffer_.free_nodes_.begin(),
@@ -295,7 +229,7 @@ class RulePositionTree {
       auto cur_id = visit_queue.front();
       visit_queue.pop();
       const auto& rule_position = buffer[cur_id];
-      if (rule_position.parent_id != RulePositionNode::kNoParent) {
+      if (rule_position.parent_id != RulePosition::kNoParent) {
         CHECK(rule_position.parent_id >= 0 && rule_position.parent_id < buffer_size);
         CHECK(buffer[rule_position.parent_id] != kInvalidRulePosition);
         new_reference_counter[rule_position.parent_id]++;
@@ -308,8 +242,8 @@ class RulePositionTree {
 
     for (int i = 0; i < static_cast<int32_t>(buffer.size()); ++i) {
       if (free_nodes_set.count(i)) {
-        CHECK(buffer[i] == kInvalidRulePosition);
         CHECK(visited[i] == false);
+        CHECK(buffer[i] == kInvalidRulePosition);
       } else {
         CHECK(visited[i] == true);
         CHECK(buffer[i] != kInvalidRulePosition);
@@ -321,37 +255,21 @@ class RulePositionTree {
   }
 
  private:
-  /*! \brief The grammar associated with this RulePositionTree. */
   BNFGrammar grammar_;
-  /*! \brief The buffer to store all RulePositionNodes. */
   RulePositionBuffer node_buffer_;
 };
 
 /*!
- * \brief A class to maintain the stack tops and its history to support rollback.
- * \details This class helps to maintain nodes by automatically maintaining the attached references.
- * If a node is not existing in any stack in the history record, it will be freed.
- *
- * It can store up to the previous max_rollback_steps + 1 steps of history, and thus supports
- * rolling back up to max_rollback_steps steps.
+ * \brief Store the state in the past `max_rollback_steps` steps. The state is a list of stacks,
+ * representing all possible paths on the pushdown automata.
+ * Every stack is a list of RulePosition. They organize in a tree structure.
+ * \details This history is managed as a circular buffer.
  */
 class StackTopsWithHistory {
  public:
-  /*!
-   * \param tree The RulePositionTree to be associated with. Possibly modify the tree by attaching
-   * and removing references to the stack top nodes.
-   * \param max_rollback_steps The maximum number of rollback steps to be supported.
-   */
   StackTopsWithHistory(RulePositionTree* tree, int max_rollback_steps)
       : tree_(tree), max_rollback_steps_(max_rollback_steps) {}
 
-  /*!
-   * \brief Push a new history record consisting a list of stack tops. These nodes will be recorded
-   * as existing in a stack (by attaching a reference to them).
-   * \param stack_tops The stack tops to be pushed.
-   * \param drop_old Whether to drop the oldest history record if the history size exceeds the
-   * limit. If the history is dropped, node that do not exist in any stack any more will be freed.
-   */
   void PushHistory(const std::vector<int32_t>& stack_tops, bool drop_old = true) {
     stack_tops_history_.push_back(stack_tops);
     for (auto id : stack_tops) {
@@ -364,11 +282,6 @@ class StackTopsWithHistory {
     }
   }
 
-  /*!
-   * \brief Roll back to several previous steps. Possibly frees node that do not exist in any stack
-   * any more.
-   * \param rollback_steps The number of steps to be rolled back.
-   */
   void Rollback(int rollback_steps) {
     DCHECK(rollback_steps < stack_tops_history_.size())
         << "The number of requested rollback steps is greater than or equal to the current "
@@ -379,18 +292,9 @@ class StackTopsWithHistory {
     }
   }
 
-  /*!
-   * \brief Get the latest stack tops.
-   * \returns The latest stack tops.
-   */
-  const std::vector<int32_t>& LatestHistory() const { return stack_tops_history_.back(); }
+  const std::vector<int32_t>& LatestStackTops() const { return stack_tops_history_.back(); }
 
-  /*!
-   * \brief Print one history record.
-   * \param steps_behind_latest The number of steps behind the latest record. 0 means the latest
-   * record.
-   */
-  std::string PrintHistory(int steps_behind_latest = 0) const {
+  std::string PrintStackTops(int steps_behind_latest = 0) const {
     const auto& latest_tops =
         stack_tops_history_[stack_tops_history_.size() - 1 - steps_behind_latest];
     std::stringstream ss;
@@ -403,10 +307,8 @@ class StackTopsWithHistory {
     return ss.str();
   }
 
-  /*! \brief Get the number of history records. */
   int Size() const { return stack_tops_history_.size(); }
 
-  /*! \brief Check the well-formedness of the tree and the associated buffer. */
   void CheckWellFormed() const {
     std::vector<int32_t> outside_pointers;
     for (const auto& stack_tops : stack_tops_history_) {
@@ -416,8 +318,6 @@ class StackTopsWithHistory {
   }
 
  private:
-  /*! \brief Pop the oldest history record. Possibly frees node that do not exist in any stack any
-   * more. */
   void PopFront() {
     const auto& old_stack_tops = stack_tops_history_.front();
     for (auto id : old_stack_tops) {
@@ -426,8 +326,6 @@ class StackTopsWithHistory {
     stack_tops_history_.pop_front();
   }
 
-  /*! \brief Pop the latest history record. Possibly frees node that do not exist in any stack any
-   * more. */
   void PopBack() {
     const auto& new_stack_tops = stack_tops_history_.back();
     for (auto id : new_stack_tops) {
@@ -436,38 +334,35 @@ class StackTopsWithHistory {
     stack_tops_history_.pop_back();
   }
 
-  /*! \brief Modifiable pointer to the RulePositionTree. */
   RulePositionTree* tree_;
-  /*! \brief The maximum number of rollback steps to be supported. */
   int max_rollback_steps_;
-  /*! \brief The history of stack tops. */
   std::deque<std::vector<int32_t>> stack_tops_history_;
 };
 
-class GrammarMatcherNodeImpl : public GrammarMatcherNode {
+class GrammarMatcherNode : public Object {
  private:
   using RuleExpr = BNFGrammarNode::RuleExpr;
   using RuleExprType = BNFGrammarNode::RuleExprType;
 
  public:
-  GrammarMatcherNodeImpl(const BNFGrammar& grammar, int max_rollback_steps = 0,
-                         RulePosition init_rule_position = kInvalidRulePosition)
+  GrammarMatcherNode(const BNFGrammar& grammar, int max_rollback_steps = 0,
+                     RulePosition init_rule_position = kInvalidRulePosition)
       : grammar_(grammar), tree_(grammar), stack_tops_with_history_(&tree_, max_rollback_steps) {
     InitStackState(init_rule_position);
   }
 
   bool AcceptChar(TCodepoint codepoint, bool drop_old = true, bool verbose = false) {
     if (verbose) {
-      std::cout << "before stack: " << PrintHistory() << std::endl;
+      std::cout << "before stack: " << PrintStackTops() << std::endl;
     }
-    auto prev_stack_tops = stack_tops_with_history_.LatestHistory();
+    auto prev_stack_tops = stack_tops_with_history_.LatestStackTops();
     accept_char_stack_tops_buffer_.clear();
     for (auto old_top : prev_stack_tops) {
       const auto& rule_position = tree_[old_top];
       auto current_sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
-      if (rule_position.parent_id == RulePositionNode::kNoParent &&
+      if (rule_position.parent_id == RulePosition::kNoParent &&
           rule_position.element_id == current_sequence.size()) {
-        // This RulePositionNode means previous elements has matched the complete rule.
+        // This RulePosition means previous elements has matched the complete rule.
         // But we are still need to accept a new character, so this stack will become invalid.
         continue;
       }
@@ -497,9 +392,9 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
     stack_tops_with_history_.PushHistory(accept_char_stack_tops_buffer_, drop_old);
     if (verbose) {
       std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
-                << "\" Stack size : " << stack_tops_with_history_.LatestHistory().size()
+                << "\" Stack size : " << stack_tops_with_history_.LatestStackTops().size()
                 << std::endl;
-      std::cout << "after stack: " << PrintHistory() << std::endl;
+      std::cout << "after stack: " << PrintStackTops() << std::endl;
     }
     return true;
   }
@@ -523,7 +418,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
   }
 
   bool CanReachEnd() const {
-    auto last_stack_tops = stack_tops_with_history_.LatestHistory();
+    auto last_stack_tops = stack_tops_with_history_.LatestStackTops();
     return std::any_of(last_stack_tops.begin(), last_stack_tops.end(),
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
@@ -535,7 +430,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
   //   tokenizer_config->catagorized_tokens_for_grammar;
   //   rejected_ids->Reset(tokenizer_config->vocab_size);
   //   int prev_matched_size = 0;
-  //   std::cout << "Stack size: " << stack_tops_with_history_.LatestHistory().size() <<
+  //   std::cout << "Stack size: " << stack_tops_with_history_.LatestStackTops().size() <<
   //   std::endl; std::vector<int32_t> accepted_indices; for (int i = 0; i <
   //   static_cast<int>(sorted_token_and_ids.size()); ++i) {
   //     const auto& token = sorted_token_and_ids[i].token;
@@ -686,7 +581,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
     // auto start = std::chrono::high_resolution_clock::now();
     const auto& sorted_token_and_ids = tokenizer_config->sorted_token_and_ids;
     const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
-    const auto& latest_stack_tops = stack_tops_with_history_.LatestHistory();
+    const auto& latest_stack_tops = stack_tops_with_history_.LatestStackTops();
     std::cout << "Top size: " << latest_stack_tops.size() << std::endl;
 
     std::vector<int32_t> accepted_indices;
@@ -701,7 +596,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       // auto start = std::chrono::high_resolution_clock::now();
       auto cur_rule_position = tree_[top];
       auto current_sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
-      if (cur_rule_position.parent_id == RulePositionNode::kNoParent &&
+      if (cur_rule_position.parent_id == RulePosition::kNoParent &&
           cur_rule_position.element_id == current_sequence.size()) {
         // auto end = std::chrono::high_resolution_clock::now();
         // process_1_time += end - start;
@@ -979,17 +874,18 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
 
   void Rollback(int rollback_steps) { stack_tops_with_history_.Rollback(rollback_steps); }
 
-  std::string PrintHistory(int steps_behind_latest = 0) const {
-    return stack_tops_with_history_.PrintHistory(steps_behind_latest);
+  std::string PrintStackTops(int steps_behind_latest = 0) const {
+    return stack_tops_with_history_.PrintStackTops(steps_behind_latest);
   }
 
- private:
-  void InitStackState(RulePosition init_rule_position) {
-    auto rule_position_node = RulePositionNode(
-        init_rule_position.rule_id, init_rule_position.sequence_id, init_rule_position.element_id,
-        RulePositionNode::kNoParent, init_rule_position.char_class_id);
+  static constexpr const char* _type_key = "mlc.serve.GrammarMatcher";
+  static constexpr const bool _type_has_method_sequal_reduce = false;
+  static constexpr const bool _type_has_method_shash_reduce = false;
+  TVM_DECLARE_BASE_OBJECT_INFO(GrammarMatcherNode, Object);
 
-    if (rule_position_node == kInvalidRulePosition) {
+ public:
+  void InitStackState(RulePosition init_rule_position) {
+    if (init_rule_position == kInvalidRulePosition) {
       // Initialize the stack with the main rule.
       auto main_rule = grammar_->GetRule(0);
       auto main_rule_expr = grammar_->GetRuleExpr(main_rule.body_expr_id);
@@ -997,12 +893,12 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       for (auto i : main_rule_expr) {
         DCHECK(grammar_->GetRuleExpr(i).type == RuleExprType::kSequence ||
                grammar_->GetRuleExpr(i).type == RuleExprType::kEmptyStr);
-        new_stack_tops.push_back(
-            tree_.NewNode(RulePositionNode(0, i, 0, RulePositionNode::kNoParent)));
+        new_stack_tops.push_back(tree_.NewNode(RulePosition(0, i, 0, RulePosition::kNoParent)));
       }
       stack_tops_with_history_.PushHistory(new_stack_tops);
     } else {
-      stack_tops_with_history_.PushHistory({tree_.NewNode(rule_position_node)});
+      init_rule_position.parent_id = RulePosition::kNoParent;
+      stack_tops_with_history_.PushHistory({tree_.NewNode(init_rule_position)});
     }
   }
 
@@ -1046,8 +942,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
                    grammar_->GetRuleExpr(sequence[0]).type == RuleExprType::kNegCharacterClass);
             // Note: rule_position is not inserted to the tree yet, so it need to be inserted first
             auto parent_id = tree_.NewNode(cur_rule_position);
-            new_stack_tops->push_back(
-                tree_.NewNode(RulePositionNode(new_rule_id, j, 0, parent_id)));
+            new_stack_tops->push_back(tree_.NewNode(RulePosition(new_rule_id, j, 0, parent_id)));
           }
 
           if (!contain_empty) {
@@ -1069,77 +964,18 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
   std::vector<int32_t> accept_char_stack_tops_buffer_;
 };
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcher")
-    .set_body_typed([](BNFGrammar grammar, int max_rollback_steps) {
-      return GrammarMatcher(grammar, max_rollback_steps);
-    });
+class GrammarMatcher : public ObjectRef {
+ public:
+  GrammarMatcher(const BNFGrammar& grammar, int max_rollback_steps = 0,
+                 RulePosition init_rule_position = kInvalidRulePosition)
+      : ObjectRef(
+            make_object<GrammarMatcherNode>(grammar, max_rollback_steps, init_rule_position)) {}
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherAcceptChar")
-    .set_body_typed([](GrammarMatcher matcher, int32_t codepoint, bool drop_old) {
-      return matcher->AcceptChar(codepoint, drop_old);
-    });
-
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanReachEnd")
-    .set_body_typed([](GrammarMatcher matcher) { return matcher->CanReachEnd(); });
-
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
-    .set_body_typed([](GrammarMatcher matcher, String str) {
-      return matcher->MatchCompleteString(str);
-    });
-
-IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar grammar,
-                                         Tokenizer tokenizer) {
-  auto start = std::chrono::high_resolution_clock::now();
-  static BNFGrammar cached_grammar = grammar;
-  static Tokenizer cached_tokenizer = tokenizer;
-  static GrammarTokenizerConfig tokenizer_config = GrammarTokenizerConfig(tokenizer, grammar);
-  if (cached_tokenizer != tokenizer || cached_grammar != grammar) {
-    tokenizer_config = GrammarTokenizerConfig(tokenizer, cached_grammar);
-    cached_tokenizer = tokenizer;
-    cached_grammar = grammar;
-  }
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> duration = end - start;
-  // std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
-  // std::cout << "Stack: " << matcher->PrintStackState() << std::endl;
-  // matcher->process_time = std::chrono::milliseconds(0);
-  // matcher->process_1_time = std::chrono::milliseconds(0);
-  // matcher->process_2_time = std::chrono::milliseconds(0);
-  // matcher->process_3_time = std::chrono::milliseconds(0);
-  // matcher->process_4_time = std::chrono::milliseconds(0);
-  // matcher->overhead_time = std::chrono::milliseconds(0);
-  DynamicBitSet bitset;
-  start = std::chrono::high_resolution_clock::now();
-  matcher->FindRejectedTokens(tokenizer_config, &bitset);
-  end = std::chrono::high_resolution_clock::now();
-  duration = end - start;
-  // std::cout << "Total time: " << duration.count() << " ms" << std::endl;
-  // std::cout << "process_time: " << matcher->process_time.count() << " ms" << std::endl;
-  // std::cout << "process_1_time: " << matcher->process_1_time.count() << " ms" << std::endl;
-  // std::cout << "process_2_time: " << matcher->process_2_time.count() << " ms" << std::endl;
-  // std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
-  // std::cout << "process_3_time: " << matcher->process_3_time.count() << " ms" << std::endl;
-  // std::cout << "process_4_time: " << matcher->process_4_time.count() << " ms" << std::endl;
-
-  // start = std::chrono::high_resolution_clock::now();
-
-  std::vector<long> res_vector;
-  for (int i = 0; i < bitset.Size(); i++) {
-    if (bitset[i]) {
-      res_vector.push_back(i);
-    }
-  }
-
-  auto ret = IntTuple(res_vector);
-  // end = std::chrono::high_resolution_clock::now();
-  // duration = end - start;
-  // std::cout << "Step 3: " << duration.count() << " ms" << std::endl;
-  return ret;
-}
-
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherGetRejectedTokenIdsForTokenizer")
-    .set_body_typed(GetRejectedTokenIdsForTokenizer);
+  TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(GrammarMatcher, ObjectRef, GrammarMatcherNode);
+};
 
 }  // namespace serve
 }  // namespace llm
 }  // namespace mlc
+
+#endif  // MLC_LLM_SERVE_GRAMMAR_GRAMMAR_MATCHER_H_

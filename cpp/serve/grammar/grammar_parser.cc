@@ -138,9 +138,9 @@ int32_t EBNFParserImpl::ParseCharacterClass() {
 
   std::vector<BNFGrammarBuilder::CharacterClassElement> elements;
 
-  bool is_negative = false;
+  bool is_negated = false;
   if (Peek() == '^') {
-    is_negative = true;
+    is_negated = true;
     Consume();
   }
 
@@ -184,7 +184,7 @@ int32_t EBNFParserImpl::ParseCharacterClass() {
     }
   }
 
-  return builder_.AddCharacterClass(elements, is_negative);
+  return builder_.AddCharacterClass(elements, is_negated);
 }
 
 // parse a c style string with utf8 support

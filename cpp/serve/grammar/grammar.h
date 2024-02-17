@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "../../support/csr_storage.h"
+
 namespace mlc {
 namespace llm {
 namespace serve {
@@ -40,7 +42,7 @@ using namespace tvm::runtime;
  *   [ac-z].
  *   A single character is represented by a character class with the same lower and upper bound.
  *   A string is represented by a sequence of character classes.
- * - Negative character class: all characters that are not in the range, e.g. [^a-z], [^ac-z]
+ * - Negated character class: all characters that are not in the range, e.g. [^a-z], [^ac-z]
  * - EmptyStr: an empty string, i.e. ""
  * - Rule reference: a reference to another rule
  * - Sequence: a sequence of rule_exprs, e.g. ("a" "b"). These rule_exprs are concatenated together.
