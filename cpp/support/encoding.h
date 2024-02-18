@@ -12,7 +12,6 @@
 
 namespace mlc {
 namespace llm {
-namespace serve {
 
 /*! \brief Represents a unicode codepoint. */
 using TCodepoint = int32_t;
@@ -72,7 +71,6 @@ std::vector<TCodepoint> Utf8StringToCodepoints(const char* utf8);
 std::pair<TCodepoint, int> Utf8OrEscapeToCodepoint(
     const char* utf8, const std::unordered_map<std::string, TCodepoint>& custom_escape_map = {});
 
-}  // namespace serve
 }  // namespace llm
 }  // namespace mlc
 

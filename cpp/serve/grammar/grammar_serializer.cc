@@ -9,7 +9,7 @@
 #include <tvm/runtime/memory.h>
 #include <tvm/runtime/registry.h>
 
-#include "../encoding.h"
+#include "../../support/encoding.h"
 
 namespace mlc {
 namespace llm {

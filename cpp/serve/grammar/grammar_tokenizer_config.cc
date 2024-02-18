@@ -55,11 +55,13 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
     } else if (token == "</s>") {
       n->stop_token_ids.push_back(i);
     } else if (token[0] == '<' && token[token.size() - 1] == '>') {
+      // Currently we consider all <...> tokens as special tokens.
       n->special_token_ids.push_back(i);
     } else {
+      // First replace the special underscore with space.
       auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, n->kSpecialUnderscore);
       auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
-      ICHECK(!codepoints.empty() &&
+      DCHECK(!codepoints.empty() &&
              codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
           << "Invalid token: " << token;
       n->sorted_token_and_ids.push_back({codepoints, i});
@@ -68,22 +70,23 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
   }
   std::sort(n->sorted_token_and_ids.begin(), n->sorted_token_and_ids.end());
 
-  std::chrono::duration<double, std::milli> duration;
-
-  auto start = std::chrono::high_resolution_clock::now();
+  // Find the corresponding catagorized tokens for:
+  // 1. All character elements in the grammar
+  // 2. All RuleRef elements that refers to a rule of a StarQuantifier of a character class
   for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
     auto rule = grammar->GetRule(i);
     auto rule_expr = grammar->GetRuleExpr(rule.body_expr_id);
+    // Skip StarQuantifier since we just handle it at the reference element during matching.
     if (rule_expr.type == RuleExprType::kStarQuantifier) {
       continue;
     }
-    ICHECK(rule_expr.type == RuleExprType::kChoices);
+    DCHECK(rule_expr.type == RuleExprType::kChoices);
     for (auto sequence_id : rule_expr) {
       auto sequence_expr = grammar->GetRuleExpr(sequence_id);
       if (sequence_expr.type == RuleExprType::kEmptyStr) {
         continue;
       }
-      ICHECK(sequence_expr.type == RuleExprType::kSequence) << static_cast<int>(sequence_expr.type);
+      DCHECK(sequence_expr.type == RuleExprType::kSequence);
       for (int element_id = 0; element_id < sequence_expr.size(); ++element_id) {
         auto element_expr = grammar->GetRuleExpr(sequence_expr[element_id]);
         auto cur_rule_position = RulePosition{i, sequence_id, element_id};
@@ -93,40 +96,19 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
           if (ref_rule_expr.type == RuleExprType::kChoices) {
             continue;
           } else {
+            // Reference to a StarQuantifier of a character class.
             cur_rule_position.char_class_id = ref_rule_expr[0];
           }
         }
 
-        // std::cout << "Rule: " << rule.name
-        //           << " Sequence: " << BNFGrammarPrinter(grammar).PrintRuleExpr(sequence_expr)
-        //           << " Position: " << element_id << std::endl;
-        // std::cout << "Rule id: " << i << " Sequence id: " << sequence_id << std::endl;
-
-        // auto start = std::chrono::high_resolution_clock::now();
         auto grammar_matcher = GrammarMatcher(grammar, 0, cur_rule_position);
-        // auto end = std::chrono::high_resolution_clock::now();
         auto cur_catagorized_tokens_for_grammar =
             grammar_matcher->GetCatagorizedTokens(n->sorted_token_and_ids, i == 0);
-        // auto end1 = std::chrono::high_resolution_clock::now();
-        // std::cout << "preprocess step1: "
-        //           << std::chrono::duration<double, std::milli>(end - start).count() << " ms"
-        //           << std::endl;
-        // std::cout << "preprocess step2: "
-        //           << std::chrono::duration<double, std::milli>(end1 - end).count() << " ms"
-        //           << std::endl;
         n->catagorized_tokens_for_grammar[{sequence_id, element_id}] =
             cur_catagorized_tokens_for_grammar;
       }
     }
   }
-  auto end = std::chrono::high_resolution_clock::now();
-  // std::cout << "catagorized keys:\n ";
-  // for (auto& it : n->catagorized_tokens_for_grammar) {
-  //   std::cout << it.first.sequence_id << " " << it.first.element_id << "\n";
-  // }
-  // std::cout << "end\n";
-  duration = end - start;
-  std::cout << "Preprocess time: " << duration.count() << " ms" << std::endl;
   data_ = std::move(n);
 }
 

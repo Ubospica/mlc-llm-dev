@@ -49,6 +49,8 @@ void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& sour
 /*!
  * \brief Intersect the target set with the source set, and store the result in the target
  * set in O(n) time complexity. Suppose that both sets are sorted.
+ * \note When the target is {-1}, it represents the universal set. The result will be the source
+ * set.
  */
 void IntersectWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
   static std::vector<int32_t> result;

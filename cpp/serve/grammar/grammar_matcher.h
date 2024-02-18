@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "../../support/dynamic_bitset.h"
-#include "../encoding.h"
+#include "../../support/encoding.h"
 #include "grammar.h"
 #include "grammar_tokenizer_config.h"
 
@@ -71,12 +71,6 @@ class GrammarMatcherNode : public Object {
   virtual bool AcceptChar(TCodepoint codepoint, bool drop_old = true, bool verbose = false) = 0;
 
   /*!
-   * \brief Returns true if the matcher can accept the complete string and reach the end of the
-   * grammar (specifically, the end of the main rule).
-   */
-  virtual bool MatchCompleteString(String str) = 0;
-
-  /*!
    * \brief Returns true if the matcher already reached the end of the grammar.
    * \note Since the matcher maintains a non-deterministic state internally, even though the matcher
    * reaches the end, it may still have other paths that can continue to accept new characters.
@@ -99,13 +93,13 @@ class GrammarMatcherNode : public Object {
    * part of the preprocessing for GrammarTokenizerConfig.
    * \param sorted_token_and_ids The token set to be preprocessed. It should be sorted by the token
    * codepoints.
-   * \param is_root_rule Whether the specified position is the root rule of the grammar.
+   * \param is_main_rule Whether the specified position is the main rule of the grammar.
    * \return A CatagorizedTokens object. It splits the given token set into three parts: accepted
    * by the current position, rejected by the current position, and uncertain.
    * \sa mlc::llm::serve::GrammarTokenizerConfig.
    */
   virtual CatagorizedTokens GetCatagorizedTokens(
-      const std::vector<TokenAndId>& sorted_token_and_ids, bool is_root_rule) = 0;
+      const std::vector<TokenAndId>& sorted_token_and_ids, bool is_main_rule) = 0;
 
   /*!
    * \brief Rollback the matcher to a previous state.

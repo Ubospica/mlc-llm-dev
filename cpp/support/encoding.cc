@@ -10,7 +10,6 @@
 
 namespace mlc {
 namespace llm {
-namespace serve {
 
 std::string CodepointToUtf8(TCodepoint codepoint) {
   ICHECK(codepoint <= 0x10FFFF) << "Invalid codepoint: " << codepoint;
@@ -181,6 +180,5 @@ std::pair<TCodepoint, int> Utf8OrEscapeToCodepoint(
   }
 }
 
-}  // namespace serve
 }  // namespace llm
 }  // namespace mlc

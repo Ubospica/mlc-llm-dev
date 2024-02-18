@@ -9,9 +9,6 @@
 #include <tvm/runtime/container/string.h>
 #include <tvm/runtime/object.h>
 
-#include "../tokenizers.h"
-#include "encoding.h"
-
 namespace mlc {
 namespace llm {
 namespace serve {

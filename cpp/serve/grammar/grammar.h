@@ -14,8 +14,6 @@
 #include <string>
 #include <vector>
 
-#include "../../support/csr_storage.h"
-
 namespace mlc {
 namespace llm {
 namespace serve {

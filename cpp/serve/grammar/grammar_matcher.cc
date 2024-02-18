@@ -7,10 +7,8 @@
 
 #include <chrono>
 
-#include "../../support/dynamic_bitset.h"
 #include "../../support/set_operation.h"
 #include "../config.h"
-#include "../encoding.h"
 #include "grammar.h"
 #include "grammar_serializer.h"
 #include "grammar_tokenizer_config.h"
@@ -227,7 +225,7 @@ class RulePositionTree {
   /*!
    * \brief Update a node in the stack to the next position. Next position means either the next
    * element in the current rule, or if the current element is the last element in the rule, the
-   * next element in the parent rule. If the current node is the last element in the root rule, it
+   * next element in the parent rule. If the current node is the last element in the main rule, it
    * is at the end position.
    */
   RulePositionNode GetNextPosition(RulePositionNode rule_position) const {
@@ -542,21 +540,6 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
     return true;
   }
 
-  bool MatchCompleteString(String str) {
-    auto codepoints = Utf8StringToCodepoints(str.c_str());
-    int accepted_cnt = 0;
-    for (auto codepoint : codepoints) {
-      if (!AcceptChar(codepoint, false, false)) {
-        Rollback(accepted_cnt);
-        return false;
-      }
-      ++accepted_cnt;
-    }
-    auto accepted = CanReachEnd();
-    Rollback(accepted_cnt);
-    return accepted;
-  }
-
   bool CanReachEnd() const {
     auto last_stack_tops = stack_tops_with_history_.LatestHistory();
     return std::any_of(last_stack_tops.begin(), last_stack_tops.end(),
@@ -569,19 +552,21 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
     const auto& catagorized_tokens_for_grammar = tokenizer_config->catagorized_tokens_for_grammar;
     const auto& latest_stack_tops = stack_tops_with_history_.LatestHistory();
 
-    static std::vector<int32_t> accepted_indices;
-    static std::vector<int32_t> rejected_indices;
-    static std::vector<int32_t> accepted_indices_delta;
-    static std::vector<int32_t> rejected_indices_delta;
+    // For every stack, we will either find all tokens it accepts, or all tokens it rejects.
+    // The final rejected tokens should be not accepted by any stack, and also rejected by every
+    // stack.
 
-    accepted_indices.clear();
-    rejected_indices.clear();
-    accepted_indices_delta.clear();
-    rejected_indices_delta.clear();
-    rejected_indices.push_back(-1);
+    // Per stack temporary data.
+    // Note here indices store the indices in sorted_token_and_ids, instead of the token ids.
+    std::vector<int32_t> accepted_indices;
+    // {-1} means the universal set, i.e. all tokens
+    std::vector<int32_t> rejected_indices{-1};
+    std::vector<int32_t> accepted_indices_delta;
+    std::vector<int32_t> rejected_indices_delta;
+    DynamicBitSet unc_tokens;
 
-    int new_char_cnt = 0;
     for (auto top : latest_stack_tops) {
+      // Step 1. Find the current catagorized_tokens
       auto cur_rule_position = tree_[top];
       auto current_sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
       if (cur_rule_position.parent_id == RulePositionNode::kNoParent &&
@@ -591,68 +576,61 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       const auto& catagorized_tokens = catagorized_tokens_for_grammar.at(
           {cur_rule_position.sequence_id, cur_rule_position.element_id});
 
-      stack_tops_with_history_.PushHistory({tree_.NewNode(cur_rule_position)}, false);
-
+      // For each stack, we will check every uncertain token and put them into the accepted or
+      // rejected list.
+      // For effeciency, we will only find the accepted tokens or the rejected tokens.
+      // If the accepted tokens are saved, it means it is likely to be smaller than the rejected
+      // tokens, so we will just find the accepted tokens, and vice versa.
       bool is_find_accept_mode =
           catagorized_tokens.not_saved_index != CatagorizedTokens::NotSavedIndex::kAccepted;
+
+      // If uncertain tokens are saved, we will iterate over the uncertain tokens.
+      // Otherwise, we will iterate over all_tokens - accepted_tokens - rejected_tokens.
       bool is_uncertain_saved =
           catagorized_tokens.not_saved_index != CatagorizedTokens::NotSavedIndex::kUncertain;
 
-      int idx = -1;
-      int idx_unc = -1;
-      int idx_acc = 0;
-      int idx_rej = 0;
-      const std::vector<TCodepoint>* cur_token;
+      // Step 2. Update the accepted tokens in accepted_indices_delta, or the rejected tokens in
+      // rejected_indices_delta.
+
+      // Examine only the current one stack
+      stack_tops_with_history_.PushHistory({tree_.NewNode(cur_rule_position)}, false);
+
       const std::vector<TCodepoint>* prev_token = nullptr;
+      int prev_matched_size = 0;
 
       accepted_indices_delta.clear();
       rejected_indices_delta.clear();
 
-      int prev_matched_size = 0;
-      while (true) {
-        if (is_uncertain_saved) {
-          ++idx_unc;
-          if (idx_unc >= static_cast<int>(catagorized_tokens.uncertain_indices.size())) {
-            break;
-          }
-          idx = catagorized_tokens.uncertain_indices[idx_unc];
-        } else {
-          ++idx;
-          while (idx < static_cast<int>(sorted_token_and_ids.size())) {
-            while (idx_acc < static_cast<int>(catagorized_tokens.accepted_indices.size()) &&
-                   catagorized_tokens.accepted_indices[idx_acc] < idx) {
-              ++idx_acc;
-            }
-            if (idx_acc < static_cast<int>(catagorized_tokens.accepted_indices.size()) &&
-                catagorized_tokens.accepted_indices[idx_acc] == idx) {
-              ++idx_acc;
-              ++idx;
-              continue;
-            }
-            while (idx_rej < static_cast<int>(catagorized_tokens.rejected_indices.size()) &&
-                   catagorized_tokens.rejected_indices[idx_rej] < idx) {
-              ++idx_rej;
-            }
-            if (idx_rej < static_cast<int>(catagorized_tokens.rejected_indices.size()) &&
-                catagorized_tokens.rejected_indices[idx_rej] == idx) {
-              ++idx_rej;
-              ++idx;
-              continue;
-            }
-            break;
-          }
-          if (idx >= static_cast<int>(sorted_token_and_ids.size())) {
-            break;
-          }
+      int idx = -1;
+      auto it_unc = catagorized_tokens.uncertain_indices.begin() - 1;
+
+      if (!is_uncertain_saved) {
+        // unc_tokens = all_tokens - accepted_tokens - rejected_tokens
+        unc_tokens.Reset<true>(sorted_token_and_ids.size());
+        for (auto idx : catagorized_tokens.accepted_indices) {
+          unc_tokens.SetConst<false>(idx);
         }
+        for (auto idx : catagorized_tokens.rejected_indices) {
+          unc_tokens.SetConst<false>(idx);
+        }
+      }
 
-        cur_token = &sorted_token_and_ids[idx].token;
+      while (true) {
+        // Step 2.1. Find the current token.
+        idx = GetNextUncertainToken(is_uncertain_saved, &it_unc,
+                                    catagorized_tokens.uncertain_indices, idx, unc_tokens);
+        if (idx == -1) {
+          break;
+        }
+        const auto& cur_token = sorted_token_and_ids[idx].token;
 
+        // Step 2.2. Find the longest common prefix with the accepted part of the previous token.
+        // We can reuse the previous matched size to avoid unnecessary matching.
         int prev_useful_size = 0;
         if (prev_token) {
-          prev_useful_size = std::min(prev_matched_size, static_cast<int>(cur_token->size()));
+          prev_useful_size = std::min(prev_matched_size, static_cast<int>(cur_token.size()));
           for (int j = 0; j < prev_useful_size; ++j) {
-            if ((*cur_token)[j] != (*prev_token)[j]) {
+            if (cur_token[j] != (*prev_token)[j]) {
               prev_useful_size = j;
               break;
             }
@@ -660,58 +638,53 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
           Rollback(prev_matched_size - prev_useful_size);
         }
 
+        // Step 2.3. Find if the current token is accepted or rejected.
         bool accepted = true;
         prev_matched_size = prev_useful_size;
 
-        for (int j = prev_useful_size; j < cur_token->size(); ++j) {
-          if (!AcceptChar((*cur_token)[j], false, false)) {
+        for (int j = prev_useful_size; j < cur_token.size(); ++j) {
+          if (!AcceptChar(cur_token[j], false, false)) {
             accepted = false;
             break;
           }
           prev_matched_size = j + 1;
         }
 
-        // Step 4. If the current token is accepted, push its id to the result.
+        // Step 2.4. Push the result to the delta list.
         if (accepted && is_find_accept_mode) {
           accepted_indices_delta.push_back(idx);
         } else if (!accepted && !is_find_accept_mode) {
           rejected_indices_delta.push_back(idx);
         }
 
-        prev_token = cur_token;
+        prev_token = &cur_token;
       }
 
       Rollback(prev_matched_size + 1);
 
+      // Step 3. Update the accepted_indices and rejected_indices
       if (is_find_accept_mode) {
+        // accepted_indices += catagorized_tokens.accepted_indices + accepted_indices_delta
         UnionizeWith(&accepted_indices_delta, catagorized_tokens.accepted_indices);
         UnionizeWith(&accepted_indices, accepted_indices_delta);
       } else {
+        // rejected_indices = Intersect(
+        //     rejected_indices,
+        //     catagorized_tokens.rejected_indices + rejected_indices_delta)
         UnionizeWith(&rejected_indices_delta, catagorized_tokens.rejected_indices);
         IntersectWith(&rejected_indices, rejected_indices_delta);
       }
     }
 
-    // start = std::chrono::high_resolution_clock::now();
+    // Finally update the rejected_ids bitset
+    // rejected_ids = Intersect(all_tokens - accepted_indices, rejected_indices)
     rejected_ids->Reset(tokenizer_config->vocab_size);
-    // Find all indices that is not in accepted_indices, but in rejected_indices
     int idx_acc = 0;
-    int idx_rej = 0;
     if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
-      int cnt = 0;
-      for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
-        while (idx_acc < static_cast<int>(accepted_indices.size()) &&
-               accepted_indices[idx_acc] < i) {
-          ++idx_acc;
-        }
-        if (idx_acc < static_cast<int>(accepted_indices.size()) && accepted_indices[idx_acc] == i) {
-          ++idx_acc;
-          continue;
-        }
-        ++cnt;
-        rejected_ids->SetConst(sorted_token_and_ids[i].id);
-      }
+      // When rejected_indices = all_tokens, we can just set rejected_ids = all_tokens - accepted
+      SetRejectIdsWithComplement(rejected_ids, accepted_indices, sorted_token_and_ids);
     } else {
+      // Otherwise, rejected_ids = rejected_indices - accepted_indices
       DifferenceWith(&rejected_indices, accepted_indices);
       for (int idx : rejected_indices) {
         rejected_ids->SetConst(sorted_token_and_ids[idx].id);
@@ -720,10 +693,22 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
   }
 
   CatagorizedTokens GetCatagorizedTokens(const std::vector<TokenAndId>& sorted_token_and_ids,
-                                         bool is_root_rule) {
+                                         bool is_main_rule) {
+    // Support the current stack contains only one stack with one RulePosition.
+    // Iterate over all tokens. Split them into three categories:
+    // - accepted_indices: If a token is accepted by current rule
+    // - rejected_indices: If a token is rejected by current rule
+    // - uncertain_indices: If a prefix of a token is accepted by current rule and comes to the end
+    // of the rule. In real matching process, it still can be accepted or rejected by a parent rule.
+    // So it is uncertain.
+
+    // Note many tokens may contain the same prefix, so we will avoid unnecessary matching
     static std::vector<int32_t> accepted_indices;
     static std::vector<int32_t> rejected_indices;
     static std::vector<int32_t> uncertain_indices;
+
+    // For every character in the current token, stores whether it is possible to reach the end of
+    // the rule when matching until this character. Useful for rollback.
     static std::vector<bool> can_see_end_stack;
 
     accepted_indices.clear();
@@ -737,6 +722,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       const auto& token = sorted_token_and_ids[i].token;
       const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
 
+      // Find the longest common prefix with the accepted part of the previous token.
       auto prev_useful_size = 0;
       if (prev_token) {
         prev_useful_size = std::min(prev_matched_size, static_cast<int>(token.size()));
@@ -751,6 +737,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
                                 can_see_end_stack.end());
       }
 
+      // Find if the current token is accepted or rejected or uncertain.
       bool accepted = true;
       bool can_see_end = can_see_end_stack.back();
       prev_matched_size = prev_useful_size;
@@ -767,7 +754,9 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       }
       if (accepted) {
         accepted_indices.push_back(i);
-      } else if (can_see_end && !is_root_rule) {
+      } else if (can_see_end && !is_main_rule) {
+        // If the current rule is the main rule, there will be no uncertain indices since we will
+        // never consider its parent rule. Unaccepted tokens are just rejected.
         uncertain_indices.push_back(i);
       } else {
         rejected_indices.push_back(i);
@@ -785,6 +774,8 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
   }
 
  private:
+  // Init the stack state according to the given rule position.
+  // If init_rule_position is {-1, -1, -1, -1}, init the stack with the main rule.
   void InitStackState(RulePosition init_rule_position) {
     auto rule_position_node = RulePositionNode(
         init_rule_position.rule_id, init_rule_position.sequence_id, init_rule_position.element_id,
@@ -807,23 +798,32 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
     }
   }
 
-  void UpdateNewStackTops(int32_t old_rule_position_id, std::vector<int32_t>* new_stack_tops) {
-    auto old_rule_position = tree_[old_rule_position_id];
+  // Update the old stack top to the next position, and push the new stack tops to new_stack_tops.
+  void UpdateNewStackTops(int32_t old_node_id, std::vector<int32_t>* new_stack_tops) {
+    auto old_rule_position = tree_[old_node_id];
+    // For char_class*, the old rule position itself is also the next position
     if (old_rule_position.char_class_id != -1) {
       new_stack_tops->push_back(tree_.NewNode(old_rule_position));
     }
 
-    auto cur_rule_position = tree_.GetNextPosition(tree_[old_rule_position_id]);
+    auto cur_rule_position = tree_.GetNextPosition(tree_[old_node_id]);
 
+    // Continuously iterate to the next position (if reachs the end of the current rule, go to the
+    // next position of the parent rule). Push it into new_stack_tops. If this position can not
+    // be empty, exit the loop.
+    // Positions that can be empty: reference to a rule that can be empty, or a star quantifier
+    // rule.
     for (; !tree_.IsEndPosition(cur_rule_position);
          cur_rule_position = tree_.GetNextPosition(cur_rule_position)) {
       auto sequence = grammar_->GetRuleExpr(cur_rule_position.sequence_id);
       auto element = grammar_->GetRuleExpr(sequence[cur_rule_position.element_id]);
       if (element.type == RuleExprType::kCharacterClass ||
           element.type == RuleExprType::kNegCharacterClass) {
+        // Character class: cannot be empty. Break the loop.
         new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
         break;
       } else {
+        // RuleRef
         DCHECK(element.type == RuleExprType::kRuleRef);
         auto new_rule_id = element[0];
         auto new_rule = grammar_->GetRule(new_rule_id);
@@ -836,6 +836,7 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
 
           bool contain_empty = false;
 
+          // For rule containing choices, expand the rule and push all positions into new_stack_tops
           for (auto j : new_rule_expr) {
             auto sequence = grammar_->GetRuleExpr(j);
             if (sequence.type == RuleExprType::kEmptyStr) {
@@ -858,8 +859,50 @@ class GrammarMatcherNodeImpl : public GrammarMatcherNode {
       }
     }
 
+    // Reaches the end of the main rule. Insert a special node to indicate the end.
     if (tree_.IsEndPosition(cur_rule_position)) {
       new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
+    }
+  }
+
+  // Set the tokens in sorted_token_and_ids that not in accepted_indices to rejected_ids.
+  void SetRejectIdsWithComplement(DynamicBitSet* rejected_ids,
+                                  const std::vector<int32_t>& accepted_indices,
+                                  const std::vector<TokenAndId>& sorted_token_and_ids) {
+    auto it_acc = accepted_indices.begin();
+    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+      while (it_acc != accepted_indices.end() && *it_acc < i) {
+        ++it_acc;
+      }
+      if (it_acc != accepted_indices.end() && *it_acc == i) {
+        ++it_acc;
+        continue;
+      }
+      rejected_ids->SetConst(sorted_token_and_ids[i].id);
+    }
+  }
+
+  // If is_uncertain_saved is true, find the next token in uncertain_indices with iterator it_unc.
+  // Otherwise, find the next token in unc_tokens with iterative index idx.
+  // Return the index of the next token, or -1 if no more token.
+  int GetNextUncertainToken(bool is_uncertain_saved, std::vector<int>::const_iterator* it_unc,
+                            const std::vector<int>& uncertain_indices, int idx,
+                            const DynamicBitSet& unc_tokens) {
+    if (is_uncertain_saved) {
+      ++*it_unc;
+      if (*it_unc == uncertain_indices.end()) {
+        return -1;
+      }
+      return **it_unc;
+    } else {
+      ++idx;
+      while (idx < unc_tokens.Size() && !unc_tokens[idx]) {
+        ++idx;
+      }
+      if (idx == unc_tokens.Size()) {
+        return -1;
+      }
+      return idx;
     }
   }
 
@@ -884,46 +927,34 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherAcceptChar")
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherCanReachEnd")
     .set_body_typed([](GrammarMatcher matcher) { return matcher->CanReachEnd(); });
 
+bool MatchCompleteString(GrammarMatcher matcher, String str) {
+  auto codepoints = Utf8StringToCodepoints(str.c_str());
+  int accepted_cnt = 0;
+  for (auto codepoint : codepoints) {
+    if (!matcher->AcceptChar(codepoint, false, false)) {
+      matcher->Rollback(accepted_cnt);
+      return false;
+    }
+    ++accepted_cnt;
+  }
+  return matcher->CanReachEnd();
+}
+
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarMatcherMatchCompleteString")
     .set_body_typed([](GrammarMatcher matcher, String str) {
-      return matcher->MatchCompleteString(str);
+      return MatchCompleteString(matcher, str);
     });
 
 IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar grammar,
                                          Tokenizer tokenizer) {
-  auto start = std::chrono::high_resolution_clock::now();
-  static BNFGrammar cached_grammar = grammar;
-  static Tokenizer cached_tokenizer = tokenizer;
-  static GrammarTokenizerConfig tokenizer_config = GrammarTokenizerConfig(tokenizer, grammar);
-  if (cached_tokenizer != tokenizer || cached_grammar != grammar) {
-    tokenizer_config = GrammarTokenizerConfig(tokenizer, cached_grammar);
-    cached_tokenizer = tokenizer;
-    cached_grammar = grammar;
-  }
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::micro> duration = end - start;
-  // std::cout << "Step 1: " << duration.count() << " ms" << std::endl;
-  // std::cout << "Stack: " << matcher->PrintStackState() << std::endl;
-  // matcher->process_time = std::chrono::milliseconds(0);
-  // matcher->process_1_time = std::chrono::milliseconds(0);
-  // matcher->process_2_time = std::chrono::milliseconds(0);
-  // matcher->process_3_time = std::chrono::milliseconds(0);
-  // matcher->process_4_time = std::chrono::milliseconds(0);
-  // matcher->overhead_time = std::chrono::milliseconds(0);
+  GrammarTokenizerConfig tokenizer_config = GrammarTokenizerConfig(tokenizer, grammar);
+  std::chrono::duration<double, std::micro> duration;
   DynamicBitSet bitset;
-  start = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::high_resolution_clock::now();
   matcher->FindRejectedTokens(tokenizer_config, &bitset);
-  end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::high_resolution_clock::now();
   duration = end - start;
   std::cout << "Total time: " << duration.count() << " us" << std::endl;
-  // std::cout << "process_time: " << matcher->process_time.count() << " ms" << std::endl;
-  // std::cout << "process_1_time: " << matcher->process_1_time.count() << " ms" << std::endl;
-  // std::cout << "process_2_time: " << matcher->process_2_time.count() << " ms" << std::endl;
-  // std::cout << "Overhead time: " << matcher->overhead_time.count() << " ms" << std::endl;
-  // std::cout << "process_3_time: " << matcher->process_3_time.count() << " ms" << std::endl;
-  // std::cout << "process_4_time: " << matcher->process_4_time.count() << " ms" << std::endl;
-
-  // start = std::chrono::high_resolution_clock::now();
 
   std::vector<long> res_vector;
   for (int i = 0; i < bitset.Size(); i++) {
@@ -933,9 +964,6 @@ IntTuple GetRejectedTokenIdsForTokenizer(GrammarMatcher matcher, BNFGrammar gram
   }
 
   auto ret = IntTuple(res_vector);
-  // end = std::chrono::high_resolution_clock::now();
-  // duration = end - start;
-  // std::cout << "Step 3: " << duration.count() << " ms" << std::endl;
   return ret;
 }
 
