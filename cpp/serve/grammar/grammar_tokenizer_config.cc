@@ -86,7 +86,7 @@ GrammarTokenizerConfig::GrammarTokenizerConfig(const Tokenizer& tokenizer,
       ICHECK(sequence_expr.type == RuleExprType::kSequence) << static_cast<int>(sequence_expr.type);
       for (int element_id = 0; element_id < sequence_expr.size(); ++element_id) {
         auto element_expr = grammar->GetRuleExpr(sequence_expr[element_id]);
-        auto cur_rule_position = RulePosition(i, sequence_id, element_id);
+        auto cur_rule_position = RulePosition{i, sequence_id, element_id};
         if (element_expr.type == RuleExprType::kRuleRef) {
           auto ref_rule = grammar->GetRule(element_expr[0]);
           auto ref_rule_expr = grammar->GetRuleExpr(ref_rule.body_expr_id);

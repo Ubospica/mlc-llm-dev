@@ -45,18 +45,18 @@ struct SequenceIdAndPositionHash {
   }
 };
 
-struct CatagorizedTokensForGrammar {
+struct CatagorizedTokens {
   std::vector<int32_t> accepted_indices;
   std::vector<int32_t> rejected_indices;
   std::vector<int32_t> uncertain_indices;
   enum class NotSavedIndex { kAccepted = 0, kRejected = 1, kUncertain = 2 };
   NotSavedIndex not_saved_index;
 
-  CatagorizedTokensForGrammar() = default;
+  CatagorizedTokens() = default;
 
-  CatagorizedTokensForGrammar(std::vector<int32_t>&& accepted_indices,
-                              std::vector<int32_t>&& rejected_indices,
-                              std::vector<int32_t>&& uncertain_indices) {
+  CatagorizedTokens(std::vector<int32_t>&& accepted_indices,
+                    std::vector<int32_t>&& rejected_indices,
+                    std::vector<int32_t>&& uncertain_indices) {
     auto size_acc = accepted_indices.size();
     auto size_rej = rejected_indices.size();
     auto size_unc = uncertain_indices.size();
@@ -84,11 +84,10 @@ class GrammarTokenizerConfigNode : public Object {
   std::vector<int32_t> stop_token_ids;
   std::vector<int32_t> special_token_ids;
   std::unordered_map<int32_t, TokenAndId> token_lookup_map;
-  std::unordered_map<SequenceIdAndPosition, CatagorizedTokensForGrammar, SequenceIdAndPositionHash>
+  std::unordered_map<SequenceIdAndPosition, CatagorizedTokens, SequenceIdAndPositionHash>
       catagorized_tokens_for_grammar;
 
-  const CatagorizedTokensForGrammar& GetCatagorizedTokensForGrammar(int32_t sequence_id,
-                                                                    int32_t element_id) {
+  const CatagorizedTokens& GetCatagorizedTokens(int32_t sequence_id, int32_t element_id) {
     return catagorized_tokens_for_grammar.at({sequence_id, element_id});
   }
 

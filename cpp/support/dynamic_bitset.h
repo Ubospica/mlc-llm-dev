@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2023 by Contributors
- * \file progress_bar.h
- * \brief A simple progress bar in C++.
+ * \file dynamic_bitset.h
+ * \brief The header for the dynamic bitset container.
  */
 #ifndef MLC_LLM_SUPPORT_DYNAMIC_BITSET_H_
 #define MLC_LLM_SUPPORT_DYNAMIC_BITSET_H_
@@ -14,8 +14,10 @@ namespace llm {
 
 class DynamicBitSet {
  public:
-  explicit DynamicBitSet(int size = 0)
-      : size_(size), internal_size_((size + 31) / 32), data_(internal_size_, 0) {}
+  explicit DynamicBitSet(int size = 0, bool value = false)
+      : size_(size),
+        internal_size_((size + 31) / 32),
+        data_(internal_size_, value ? 0xFFFFFFFF : 0) {}
 
   bool operator[](int index) const { return (data_[index / 32] >> (index % 32)) & 1; }
 
@@ -54,30 +56,6 @@ class DynamicBitSet {
   int Size() const { return size_; }
 
   int InternalSize() const { return internal_size_; }
-
-  //   class Iterator {
-  //    public:
-  //     Iterator(const DynamicBitSet* bitset, int index) : bitset_(bitset), index_(index) {}
-
-  //     bool operator!=(const Iterator& other) const {
-  //       return bitset_ != other.bitset_ || index_ != other.index_;
-  //     }
-
-  //     Iterator& operator++() {
-  //       DCHECK(index_ + 1 < bitset_->Size());
-  //       index_++;
-  //       return *this;
-  //     }
-
-  //     int operator*() const { return (*bitset_)[index_]; }
-
-  //    private:
-  //     const DynamicBitSet* bitset_;
-  //     int index_;
-  //   };
-
-  //   Iterator begin() const { return Iterator(this, 0); }
-  //   Iterator end() const { return Iterator(this, size_); }
 
  private:
   int size_;

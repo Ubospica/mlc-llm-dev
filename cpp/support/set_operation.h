@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2023 by Contributors
- * \file progress_bar.h
- * \brief A simple progress bar in C++.
+ * \file set_operation.h
+ * \brief The header for the support of set operations.
  */
 #ifndef MLC_LLM_SUPPORT_SET_OPERATION_H_
 #define MLC_LLM_SUPPORT_SET_OPERATION_H_
@@ -12,8 +12,11 @@
 namespace mlc {
 namespace llm {
 
+/*!
+ * \brief Unionize the target set with the source set, and store the result in the target
+ * set in O(n) time complexity. Suppose that both sets are sorted.
+ */
 void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
-  // target and source are sorted, and avoid memory allocation in this function
   static std::vector<int32_t> result;
   result.clear();
   result.reserve(target->size() + source.size());
@@ -43,8 +46,11 @@ void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& sour
   target->swap(result);
 }
 
+/*!
+ * \brief Intersect the target set with the source set, and store the result in the target
+ * set in O(n) time complexity. Suppose that both sets are sorted.
+ */
 void IntersectWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
-  // target and source are sorted, and avoid memory allocation in this function
   static std::vector<int32_t> result;
 
   if (!target->empty() && target->at(0) == -1) {
@@ -70,8 +76,11 @@ void IntersectWith(std::vector<int32_t>* target, const std::vector<int32_t>& sou
   target->swap(result);
 }
 
+/*!
+ * \brief Find the set difference target\source, and store the result in the target set in O(n)
+ * time complexity. Suppose that both sets are sorted.
+ */
 void DifferenceWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
-  // target and source are sorted, and avoid memory allocation in this function
   static std::vector<int32_t> result;
   result.clear();
   result.reserve(target->size());

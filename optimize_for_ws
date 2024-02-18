@@ -343,3 +343,89 @@ Total time: 0.590063 ms
 Rejected token ids len: 31714
 Accepting: }
 [31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]
+
+
+Preprocess time: 99.6232 ms
+Total time: 47.53 us
+Rejected token ids len: 31730
+Accepting: {
+Total time: 43.051 us
+Rejected token ids len: 31648
+Accepting: "
+Total time: 15.729 us
+Rejected token ids len: 145
+Accepting: i
+Total time: 12.033 us
+Rejected token ids len: 145
+Accepting: d
+Total time: 11.321 us
+Rejected token ids len: 145
+Accepting: "
+Total time: 33.053 us
+Rejected token ids len: 31715
+Accepting: :
+Total time: 41.609 us
+Rejected token ids len: 31597
+Accepting:
+Total time: 40.907 us
+Rejected token ids len: 31597
+Accepting: 1
+Total time: 46.799 us
+Rejected token ids len: 31701
+Accepting: ,
+Total time: 34.225 us
+Rejected token ids len: 31652
+Accepting: "
+Total time: 12.794 us
+Rejected token ids len: 145
+Accepting: n
+Total time: 11.832 us
+Rejected token ids len: 145
+Accepting: a
+Total time: 10.971 us
+Rejected token ids len: 145
+Accepting: m
+Total time: 10.801 us
+Rejected token ids len: 145
+Accepting: e
+Total time: 10.961 us
+Rejected token ids len: 145
+Accepting: "
+Total time: 33.012 us
+Rejected token ids len: 31715
+Accepting: :
+Total time: 45.306 us
+Rejected token ids len: 31597
+Accepting:
+Total time: 42.54 us
+Rejected token ids len: 31597
+Accepting: "
+Total time: 20.048 us
+Rejected token ids len: 137
+Accepting: E
+Total time: 17.263 us
+Rejected token ids len: 137
+Accepting: x
+Total time: 16.201 us
+Rejected token ids len: 137
+Accepting: a
+Total time: 16.091 us
+Rejected token ids len: 137
+Accepting: m
+Total time: 16.13 us
+Rejected token ids len: 137
+Accepting: p
+Total time: 16.251 us
+Rejected token ids len: 137
+Accepting: l
+Total time: 16.16 us
+Rejected token ids len: 137
+Accepting: e
+Total time: 17.303 us
+Rejected token ids len: 137
+Accepting: "
+Total time: 41.058 us
+Rejected token ids len: 31714
+Accepting: }
+[31730, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 145, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137, 137, 137, 137, 137, 137, 31714]
+
