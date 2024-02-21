@@ -19,10 +19,12 @@ namespace serve {
 class NewRequestPrefillActionObj : public EngineActionObj {
  public:
   explicit NewRequestPrefillActionObj(Array<Model> models, Sampler sampler,
+                                      GrammarTokenizerConfig tokenizer_config,
                                       KVCacheConfig kv_cache_config,
                                       Optional<EventTraceRecorder> trace_recorder)
       : models_(std::move(models)),
         sampler_(std::move(sampler)),
+        tokenizer_config_(std::move(tokenizer_config)),
         kv_cache_config_(std::move(kv_cache_config)),
         trace_recorder_(std::move(trace_recorder)) {}
 
@@ -102,7 +104,8 @@ class NewRequestPrefillActionObj : public EngineActionObj {
     RECORD_EVENT(trace_recorder_, request_ids, "start sampling");
     std::vector<int32_t> next_tokens = sampler_->BatchSampleTokens(
         logits_for_sample, models_[0], mstates_for_sample,
-        requests.Map([](Request request) { return request->generation_cfg; }), rngs);
+        requests.Map([](Request request) { return request->generation_cfg; }), rngs,
+        tokenizer_config_);
     RECORD_EVENT(trace_recorder_, request_ids, "finish sampling");
     ICHECK_EQ(next_tokens.size(), num_requests);
 
@@ -201,6 +204,8 @@ class NewRequestPrefillActionObj : public EngineActionObj {
   Array<Model> models_;
   /*! \brief The sampler to sample new tokens. */
   Sampler sampler_;
+  /*! \brief The tokenizer config. */
+  GrammarTokenizerConfig tokenizer_config_;
   /*! \brief The KV cache config to help decide prefill is doable. */
   KVCacheConfig kv_cache_config_;
   /*! \brief Event trace recorder. */
@@ -208,11 +213,12 @@ class NewRequestPrefillActionObj : public EngineActionObj {
 };
 
 EngineAction EngineAction::NewRequestPrefill(Array<Model> models, Sampler sampler,
+                                             GrammarTokenizerConfig tokenizer_config,
                                              KVCacheConfig kv_cache_config,
                                              Optional<EventTraceRecorder> trace_recorder) {
-  return EngineAction(make_object<NewRequestPrefillActionObj>(std::move(models), std::move(sampler),
-                                                              std::move(kv_cache_config),
-                                                              std::move(trace_recorder)));
+  return EngineAction(make_object<NewRequestPrefillActionObj>(
+      std::move(models), std::move(sampler), std::move(tokenizer_config),
+      std::move(kv_cache_config), std::move(trace_recorder)));
 }
 
 }  // namespace serve

@@ -279,33 +279,54 @@ std::pair<float, int64_t> SampleTopPFromProb(NDArray prob, int unit_offset, doub
 }
 
 /*!
- * \brief Copy logits or prob distributions from device to CPU.
- * The input array is in layout (b, n, v).
- * This function flattens the first dimension, returns an NDArray
- * in shape (b * n, v).
+ * \brief Copy the given array to target device.
+ * \details target_buffer contains a shared buffer for all calling with the same device.
+ * The size of target_buffer will be set to
+ * max(original size, the size of the given array aligned upwards to the nearest power of 2)
+ * \param array_to_copy The array to copy.
+ * \param target_buffer The buffer on target device. If nullptr, a new buffer will
+ * be allocated.
+ * \param target_device The target device to copy to. For copying to CPU, use kDLCPU.
  */
-NDArray CopyLogitsOrProbsToCPU(NDArray arr_on_device, NDArray* arr_on_cpu) {
-  // arr_on_device: (b, n, v)
-  ICHECK_EQ(arr_on_device->ndim, 3);
-  ICHECK(!arr_on_cpu->defined() || (*arr_on_cpu)->ndim == 2);
-  ICHECK(arr_on_device->device.device_type != kDLCPU);
-  if (arr_on_cpu->defined()) {
-    ICHECK_EQ((*arr_on_cpu)->shape[1], arr_on_device->shape[2]);
+NDArray CopyArrayToDevice(NDArray array_to_copy, NDArray* target_buffer, DLDevice target_device) {
+  ICHECK(array_to_copy->device.device_type != target_device.device_type);
+
+  if (target_buffer->defined() && (*target_buffer)->ndim != 1) {
+    // If target_buffer is not a 1D array, first flatten it.
+    int64_t size = 1;
+    for (auto i : target_buffer->Shape()) {
+      size *= i;
+    }
+    *target_buffer = target_buffer->CreateView({size}, (*target_buffer)->dtype);
   }
 
-  int64_t init_size = arr_on_cpu->defined() ? (*arr_on_cpu)->shape[0] : 32;
-  int64_t num_tokens = arr_on_device->shape[0] * arr_on_device->shape[1];
-  int64_t vocab_size = arr_on_device->shape[2];
-  while (init_size < num_tokens) {
-    init_size *= 2;
+  int64_t buffer_size = target_buffer->defined() ? (*target_buffer)->shape[0] : 32;
+  int64_t arr_size = 1;
+  for (int i = 0; i < array_to_copy->ndim; ++i) {
+    arr_size *= array_to_copy->shape[i];
   }
-  if (!arr_on_cpu->defined() || init_size != (*arr_on_cpu)->shape[0]) {
-    (*arr_on_cpu) =
-        NDArray::Empty({init_size, vocab_size}, arr_on_device->dtype, DLDevice{kDLCPU, 0});
+  while (buffer_size < arr_size) {
+    buffer_size *= 2;
   }
-  ICHECK_LE(num_tokens, (*arr_on_cpu)->shape[0]);
-  NDArray view = arr_on_cpu->CreateView({num_tokens, vocab_size}, arr_on_device->dtype);
-  view.CopyFrom(arr_on_device);
+  if (!target_buffer->defined() || buffer_size != (*target_buffer)->shape[0]) {
+    (*target_buffer) = NDArray::Empty({buffer_size}, array_to_copy->dtype, target_device);
+  }
+  ICHECK_LE(arr_size, (*target_buffer)->shape[0]);
+  NDArray view = target_buffer->CreateView(array_to_copy.Shape(), array_to_copy->dtype);
+  view.CopyFrom(array_to_copy);
+  return view;
+}
+
+/*!
+ * \brief Flattens the first dimension of logits_or_probs with shape (b, n, v),
+ * returns an NDArray in shape (b * n, v).
+ */
+NDArray FlattenFirstTwoDimensions(NDArray logits_or_probs) {
+  ICHECK_EQ(logits_or_probs->ndim, 3);
+
+  int64_t num_tokens = logits_or_probs->shape[0] * logits_or_probs->shape[1];
+  int64_t vocab_size = logits_or_probs->shape[2];
+  NDArray view = logits_or_probs.CreateView({num_tokens, vocab_size}, logits_or_probs->dtype);
   return view;
 }
 
@@ -327,8 +348,11 @@ class CPUSampler : public SamplerObj {
                                          Array<RequestModelState> request_mstates,
                                          Array<GenerationConfig> generation_cfg,
                                          const std::vector<RandomGenerator*>& rngs,
+                                         GrammarTokenizerConfig tokenizer_config,
                                          std::vector<NDArray>* output_prob_dist,
                                          std::vector<float>* output_token_probs) final {
+    logits_on_device = ApplyGrammarMatcherForLogits(
+        logits_on_device, /*cum_sequence_length=*/nullptr, request_mstates, tokenizer_config);
     NDArray probs_on_cpu = BatchComputeProb(logits_on_device, /*cum_sequence_length=*/nullptr,
                                             model, request_mstates, generation_cfg);
     // - Sample tokens from probabilities.
@@ -356,8 +380,10 @@ class CPUSampler : public SamplerObj {
                                                 request_mstates, generation_cfg);
     } else {
       RECORD_EVENT(trace_recorder_, request_ids, "start copy logits to CPU");
-      logits_or_probs_on_cpu = CopyLogitsOrProbsToCPU(logits_on_device, &logits_or_probs_on_cpu_);
+      logits_or_probs_on_cpu =
+          CopyArrayToDevice(logits_on_device, &cpu_copy_buffer_, DLDevice{kDLCPU, 0});
       RECORD_EVENT(trace_recorder_, request_ids, "finish copy logits to CPU");
+      logits_or_probs_on_cpu = FlattenFirstTwoDimensions(logits_or_probs_on_cpu);
     }
     ICHECK(logits_or_probs_on_cpu->device.device_type == kDLCPU);
     ICHECK_EQ(logits_or_probs_on_cpu->ndim, 2);
@@ -472,6 +498,74 @@ class CPUSampler : public SamplerObj {
     return true;
   }
 
+  NDArray ApplyGrammarMatcherForLogits(NDArray logits_on_device,
+                                       const std::vector<int>* cum_sequence_length,
+                                       Array<RequestModelState> request_mstates,
+                                       GrammarTokenizerConfig tokenizer_config) {
+    bool is_grammar_applied = std::any_of(
+        request_mstates.begin(), request_mstates.end(),
+        [](const RequestModelState& mstate) { return mstate->grammar_matcher.defined(); });
+    if (!is_grammar_applied) {
+      return logits_on_device;
+    }
+    if (cum_sequence_length != nullptr) {
+      LOG(WARNING) << "Grammar match is not supported for spectulative decoding yet.";
+      return logits_on_device;
+    }
+    auto n = request_mstates.size();
+    ICHECK(n == logits_on_device->shape[0]);
+    ICHECK(logits_on_device->shape[1] == 1);
+    auto vocab_size = logits_on_device->shape[2];
+    ICHECK(vocab_size == tokenizer_config->vocab_size);
+
+    auto logits_on_cpu = CopyArrayToDevice(logits_on_device, &cpu_copy_buffer_, {kDLCPU, 0});
+
+    // tvm::runtime::parallel_for_with_threading_backend(
+    //     [&](int i) {
+    for (auto i = 0; i < n; ++i) {
+      if (!request_mstates[i]->grammar_matcher.defined()) {
+        continue;
+      }
+      auto matcher = request_mstates[i]->grammar_matcher.value();
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start finding rejected tokens for grammar");
+      // std::cout << tokenizer_config->sorted_token_and_ids.size();
+      DynamicBitSet rejected_token_ids;
+      matcher->FindRejectedTokens(tokenizer_config, &rejected_token_ids);
+      for (auto id : tokenizer_config->special_token_ids) {
+        rejected_token_ids.SetConst(id);
+      }
+      if (!matcher->CanReachEnd()) {
+        for (auto id : tokenizer_config->stop_token_ids) {
+          rejected_token_ids.SetConst(id);
+        }
+      }
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "finish finding rejected tokens for grammar");
+
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start masking tokens for grammar");
+      float* __restrict logits_raw_data =
+          static_cast<float*>(__builtin_assume_aligned(logits_on_cpu->data, 4)) + (i * vocab_size);
+      float neg_inf = -std::numeric_limits<float>::infinity();
+
+      for (int id = 0; id < vocab_size; ++id) {
+        if (rejected_token_ids[id]) {
+          logits_raw_data[id] = neg_inf;
+        }
+      }
+
+      RECORD_EVENT(this->trace_recorder_, request_mstates[i]->request->id,
+                   "start masking tokens for grammar");
+    }
+    // },
+    // 0, n);
+
+    logits_on_device =
+        CopyArrayToDevice(logits_on_cpu, &logits_on_device, logits_on_device->device);
+    return logits_on_device;
+  }
+
   /*!
    * \brief Compute the probability distribution of the input logits.
    * \param logits_on_device The logits to compute probability distribution for.
@@ -481,7 +575,7 @@ class CPUSampler : public SamplerObj {
    * the batch with regard to the given model.
    * \param generation_cfg The generation config of each request
    * in the input batch.
-   * \return The probability distribution of the input logits.
+   * \return The probability distribution of the input logits. Must on CPU.
    */
   NDArray BatchComputeProb(NDArray logits_on_device, const std::vector<int>* cum_sequence_length,
                            Model model, const Array<RequestModelState>& request_mstates,
@@ -530,20 +624,26 @@ class CPUSampler : public SamplerObj {
           model->SoftmaxWithTemperature(logits_on_device, generation_cfg_for_softmax);
       RECORD_EVENT(trace_recorder_, request_ids, "finish GPU softmax");
       RECORD_EVENT(trace_recorder_, request_ids, "start copy probs to CPU");
-      logits_or_probs_on_cpu = CopyLogitsOrProbsToCPU(probs_on_device, &logits_or_probs_on_cpu_);
+      auto probs_on_cpu =
+          CopyArrayToDevice(probs_on_device, &cpu_copy_buffer_, DLDevice{kDLCPU, 0});
       RECORD_EVENT(trace_recorder_, request_ids, "finish copy probs to CPU");
+
+      return FlattenFirstTwoDimensions(probs_on_cpu);
     } else {
       RECORD_EVENT(trace_recorder_, request_ids, "start copy logits to CPU");
-      logits_or_probs_on_cpu = CopyLogitsOrProbsToCPU(logits_on_device, &logits_or_probs_on_cpu_);
+      NDArray logits_on_cpu =
+          CopyArrayToDevice(logits_on_device, &cpu_copy_buffer_, DLDevice{kDLCPU, 0});
       RECORD_EVENT(trace_recorder_, request_ids, "finish copy logits to CPU");
+
+      logits_on_cpu = FlattenFirstTwoDimensions(logits_on_cpu);
+
       // The "BatchComputeProbsFromLogitsInplace" function updates
       // `logits_or_probs_on_cpu` in place.
-      BatchComputeProbsFromLogitsInplace(logits_or_probs_on_cpu, cum_sequence_length,
+      BatchComputeProbsFromLogitsInplace(logits_on_cpu, cum_sequence_length,
                                          std::move(request_mstates), generation_cfg);
+
+      return logits_on_cpu;
     }
-    // `CopyLogitsOrProbsToCPU` flattens the first two dimensions.
-    ICHECK_EQ(logits_or_probs_on_cpu->ndim, 2);
-    return logits_or_probs_on_cpu;
   }
 
   /*!
@@ -660,8 +760,14 @@ class CPUSampler : public SamplerObj {
   Optional<EventTraceRecorder> trace_recorder_;
   /*! \brief Customized function which computes prob distribution from logits */
   PackedFunc flogits_to_probs_inplace_;
-  /*! \brief Shared array for logits and probability distributions on cpu. */
-  NDArray logits_or_probs_on_cpu_{nullptr};
+  /*!
+   * \brief Shared array for copying arrays to cpu. Especially used for copying logits and probs.
+   */
+  NDArray cpu_copy_buffer_{nullptr};
+  /*!
+   * \brief Shared array for copying arrays to gpu. Especially used for copying logits.
+   */
+  NDArray gpu_copy_buffer_{nullptr};
   const float eps_ = 1e-9;
 };
 

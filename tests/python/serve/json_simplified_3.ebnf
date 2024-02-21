@@ -1,0 +1,403 @@
+main ::= (
+    ([0-9]) |
+    ([\"] [\"]) |
+    ([\"] characters [\"]) |
+    ([[] [\]]) |
+    ([[] ws [\]]) |
+    ([[] elements [\]]) |
+    ([{] [}]) |
+    ([{] ws [}]) |
+    ([{] members [}]) |
+    ([1-9] digits) |
+    ([\-] [0-9]) |
+    ([\-] [1-9] digits) |
+    ([t] [r] [u] [e]) |
+    ([f] [a] [l] [s] [e]) |
+    ([n] [u] [l] [l]) |
+    ([t] [r] [u] [e] ws) |
+    ([f] [a] [l] [s] [e] ws) |
+    ([n] [u] [l] [l] ws) |
+    ([0-9] ws) |
+    ([1-9] digits exponent ws) |
+    ([\-] [0-9] exponent ws) |
+    ([\-] [1-9] digits exponent ws) |
+    ([0-9] exponent ws) |
+    ([1-9] digits [.] digits ws) |
+    ([\-] [0-9] [.] digits ws) |
+    ([\-] [1-9] digits [.] digits ws) |
+    ([0-9] [.] digits ws) |
+    ([1-9] digits [.] digits exponent ws) |
+    ([\-] [0-9] [.] digits exponent ws) |
+    ([\-] [1-9] digits [.] digits exponent ws) |
+    ([0-9] [.] digits exponent ws) |
+    ([\"] [\"] ws) |
+    ([\"] characters [\"] ws) |
+    ([[] [\]] ws) |
+    ([[] ws [\]] ws) |
+    ([[] elements [\]] ws) |
+    ([{] [}] ws) |
+    ([{] ws [}] ws) |
+    ([{] members [}] ws) |
+    ([1-9] digits ws) |
+    ([\-] [0-9] ws) |
+    ([\-] [1-9] digits ws) |
+    ([ ] value) |
+    ([ ] ws value) |
+    ([\n] value) |
+    ([\n] ws value) |
+    ([\r] value) |
+    ([\r] ws value) |
+    ([\t] value) |
+    ([\t] ws value) |
+    ([ ] value ws) |
+    ([ ] ws value ws) |
+    ([\n] value ws) |
+    ([\n] ws value ws) |
+    ([\r] value ws) |
+    ([\r] ws value ws) |
+    ([\t] value ws) |
+    ([\t] ws value ws) |
+    ([1-9] digits exponent) |
+    ([\-] [0-9] exponent) |
+    ([\-] [1-9] digits exponent) |
+    ([0-9] exponent) |
+    ([1-9] digits [.] digits) |
+    ([\-] [0-9] [.] digits) |
+    ([\-] [1-9] digits [.] digits) |
+    ([0-9] [.] digits) |
+    ([1-9] digits [.] digits exponent) |
+    ([\-] [0-9] [.] digits exponent) |
+    ([\-] [1-9] digits [.] digits exponent) |
+    ([0-9] [.] digits exponent)
+)
+value ::= (
+    ([t] [r] [u] [e]) |
+    ([f] [a] [l] [s] [e]) |
+    ([n] [u] [l] [l]) |
+    ([0-9]) |
+    ([1-9] digits exponent) |
+    ([\-] [0-9] exponent) |
+    ([\-] [1-9] digits exponent) |
+    ([0-9] exponent) |
+    ([1-9] digits [.] digits) |
+    ([\-] [0-9] [.] digits) |
+    ([\-] [1-9] digits [.] digits) |
+    ([0-9] [.] digits) |
+    ([1-9] digits [.] digits exponent) |
+    ([\-] [0-9] [.] digits exponent) |
+    ([\-] [1-9] digits [.] digits exponent) |
+    ([0-9] [.] digits exponent) |
+    ([\"] [\"]) |
+    ([\"] characters [\"]) |
+    ([[] [\]]) |
+    ([[] ws [\]]) |
+    ([[] elements [\]]) |
+    ([{] [}]) |
+    ([{] ws [}]) |
+    ([{] members [}]) |
+    ([1-9] digits) |
+    ([\-] [0-9]) |
+    ([\-] [1-9] digits)
+)
+members ::= (
+    ([\"] [\"] [:] element [,] members) |
+    ([\"] characters [\"] [:] element [,] members) |
+    ([\"] [\"] ws [:] element [,] members) |
+    ([\"] characters [\"] ws [:] element [,] members) |
+    ([ ] string [:] element [,] members) |
+    ([ ] ws string [:] element [,] members) |
+    ([\n] string [:] element [,] members) |
+    ([\n] ws string [:] element [,] members) |
+    ([\r] string [:] element [,] members) |
+    ([\r] ws string [:] element [,] members) |
+    ([\t] string [:] element [,] members) |
+    ([\t] ws string [:] element [,] members) |
+    ([ ] string ws [:] element [,] members) |
+    ([ ] ws string ws [:] element [,] members) |
+    ([\n] string ws [:] element [,] members) |
+    ([\n] ws string ws [:] element [,] members) |
+    ([\r] string ws [:] element [,] members) |
+    ([\r] ws string ws [:] element [,] members) |
+    ([\t] string ws [:] element [,] members) |
+    ([\t] ws string ws [:] element [,] members) |
+    ([\"] [\"] [:] element) |
+    ([\"] characters [\"] [:] element) |
+    ([\"] [\"] ws [:] element) |
+    ([\"] characters [\"] ws [:] element) |
+    ([ ] string [:] element) |
+    ([ ] ws string [:] element) |
+    ([\n] string [:] element) |
+    ([\n] ws string [:] element) |
+    ([\r] string [:] element) |
+    ([\r] ws string [:] element) |
+    ([\t] string [:] element) |
+    ([\t] ws string [:] element) |
+    ([ ] string ws [:] element) |
+    ([ ] ws string ws [:] element) |
+    ([\n] string ws [:] element) |
+    ([\n] ws string ws [:] element) |
+    ([\r] string ws [:] element) |
+    ([\r] ws string ws [:] element) |
+    ([\t] string ws [:] element) |
+    ([\t] ws string ws [:] element)
+)
+elements ::= (
+    ([t] [r] [u] [e] ws [,] elements) |
+    ([f] [a] [l] [s] [e] ws [,] elements) |
+    ([n] [u] [l] [l] ws [,] elements) |
+    ([0-9] ws [,] elements) |
+    ([1-9] digits exponent ws [,] elements) |
+    ([\-] [0-9] exponent ws [,] elements) |
+    ([\-] [1-9] digits exponent ws [,] elements) |
+    ([0-9] exponent ws [,] elements) |
+    ([1-9] digits [.] digits ws [,] elements) |
+    ([\-] [0-9] [.] digits ws [,] elements) |
+    ([\-] [1-9] digits [.] digits ws [,] elements) |
+    ([0-9] [.] digits ws [,] elements) |
+    ([1-9] digits [.] digits exponent ws [,] elements) |
+    ([\-] [0-9] [.] digits exponent ws [,] elements) |
+    ([\-] [1-9] digits [.] digits exponent ws [,] elements) |
+    ([0-9] [.] digits exponent ws [,] elements) |
+    ([\"] [\"] ws [,] elements) |
+    ([\"] characters [\"] ws [,] elements) |
+    ([[] [\]] ws [,] elements) |
+    ([[] ws [\]] ws [,] elements) |
+    ([[] elements [\]] ws [,] elements) |
+    ([{] [}] ws [,] elements) |
+    ([{] ws [}] ws [,] elements) |
+    ([{] members [}] ws [,] elements) |
+    ([1-9] digits ws [,] elements) |
+    ([\-] [0-9] ws [,] elements) |
+    ([\-] [1-9] digits ws [,] elements) |
+    ([ ] value [,] elements) |
+    ([ ] ws value [,] elements) |
+    ([\n] value [,] elements) |
+    ([\n] ws value [,] elements) |
+    ([\r] value [,] elements) |
+    ([\r] ws value [,] elements) |
+    ([\t] value [,] elements) |
+    ([\t] ws value [,] elements) |
+    ([ ] value ws [,] elements) |
+    ([ ] ws value ws [,] elements) |
+    ([\n] value ws [,] elements) |
+    ([\n] ws value ws [,] elements) |
+    ([\r] value ws [,] elements) |
+    ([\r] ws value ws [,] elements) |
+    ([\t] value ws [,] elements) |
+    ([\t] ws value ws [,] elements) |
+    ([0-9] [,] elements) |
+    ([1-9] digits exponent [,] elements) |
+    ([\-] [0-9] exponent [,] elements) |
+    ([\-] [1-9] digits exponent [,] elements) |
+    ([0-9] exponent [,] elements) |
+    ([1-9] digits [.] digits [,] elements) |
+    ([\-] [0-9] [.] digits [,] elements) |
+    ([\-] [1-9] digits [.] digits [,] elements) |
+    ([0-9] [.] digits [,] elements) |
+    ([1-9] digits [.] digits exponent [,] elements) |
+    ([\-] [0-9] [.] digits exponent [,] elements) |
+    ([\-] [1-9] digits [.] digits exponent [,] elements) |
+    ([0-9] [.] digits exponent [,] elements) |
+    ([\"] [\"] [,] elements) |
+    ([\"] characters [\"] [,] elements) |
+    ([[] [\]] [,] elements) |
+    ([[] ws [\]] [,] elements) |
+    ([[] elements [\]] [,] elements) |
+    ([{] [}] [,] elements) |
+    ([{] ws [}] [,] elements) |
+    ([{] members [}] [,] elements) |
+    ([1-9] digits [,] elements) |
+    ([\-] [0-9] [,] elements) |
+    ([\-] [1-9] digits [,] elements) |
+    ([t] [r] [u] [e] [,] elements) |
+    ([f] [a] [l] [s] [e] [,] elements) |
+    ([n] [u] [l] [l] [,] elements) |
+    ([0-9]) |
+    ([1-9] digits exponent) |
+    ([\-] [0-9] exponent) |
+    ([\-] [1-9] digits exponent) |
+    ([0-9] exponent) |
+    ([1-9] digits [.] digits) |
+    ([\-] [0-9] [.] digits) |
+    ([\-] [1-9] digits [.] digits) |
+    ([0-9] [.] digits) |
+    ([1-9] digits [.] digits exponent) |
+    ([\-] [0-9] [.] digits exponent) |
+    ([\-] [1-9] digits [.] digits exponent) |
+    ([0-9] [.] digits exponent) |
+    ([\"] [\"]) |
+    ([\"] characters [\"]) |
+    ([[] [\]]) |
+    ([[] ws [\]]) |
+    ([[] elements [\]]) |
+    ([{] [}]) |
+    ([{] ws [}]) |
+    ([{] members [}]) |
+    ([1-9] digits) |
+    ([\-] [0-9]) |
+    ([\-] [1-9] digits) |
+    ([t] [r] [u] [e]) |
+    ([f] [a] [l] [s] [e]) |
+    ([n] [u] [l] [l]) |
+    ([t] [r] [u] [e] ws) |
+    ([f] [a] [l] [s] [e] ws) |
+    ([n] [u] [l] [l] ws) |
+    ([0-9] ws) |
+    ([1-9] digits exponent ws) |
+    ([\-] [0-9] exponent ws) |
+    ([\-] [1-9] digits exponent ws) |
+    ([0-9] exponent ws) |
+    ([1-9] digits [.] digits ws) |
+    ([\-] [0-9] [.] digits ws) |
+    ([\-] [1-9] digits [.] digits ws) |
+    ([0-9] [.] digits ws) |
+    ([1-9] digits [.] digits exponent ws) |
+    ([\-] [0-9] [.] digits exponent ws) |
+    ([\-] [1-9] digits [.] digits exponent ws) |
+    ([0-9] [.] digits exponent ws) |
+    ([\"] [\"] ws) |
+    ([\"] characters [\"] ws) |
+    ([[] [\]] ws) |
+    ([[] ws [\]] ws) |
+    ([[] elements [\]] ws) |
+    ([{] [}] ws) |
+    ([{] ws [}] ws) |
+    ([{] members [}] ws) |
+    ([1-9] digits ws) |
+    ([\-] [0-9] ws) |
+    ([\-] [1-9] digits ws) |
+    ([ ] value) |
+    ([ ] ws value) |
+    ([\n] value) |
+    ([\n] ws value) |
+    ([\r] value) |
+    ([\r] ws value) |
+    ([\t] value) |
+    ([\t] ws value) |
+    ([ ] value ws) |
+    ([ ] ws value ws) |
+    ([\n] value ws) |
+    ([\n] ws value ws) |
+    ([\r] value ws) |
+    ([\r] ws value ws) |
+    ([\t] value ws) |
+    ([\t] ws value ws)
+)
+element ::= (
+    ([t] [r] [u] [e] ws) |
+    ([f] [a] [l] [s] [e] ws) |
+    ([n] [u] [l] [l] ws) |
+    ([0-9] ws) |
+    ([1-9] digits exponent ws) |
+    ([\-] [0-9] exponent ws) |
+    ([\-] [1-9] digits exponent ws) |
+    ([0-9] exponent ws) |
+    ([1-9] digits [.] digits ws) |
+    ([\-] [0-9] [.] digits ws) |
+    ([\-] [1-9] digits [.] digits ws) |
+    ([0-9] [.] digits ws) |
+    ([1-9] digits [.] digits exponent ws) |
+    ([\-] [0-9] [.] digits exponent ws) |
+    ([\-] [1-9] digits [.] digits exponent ws) |
+    ([0-9] [.] digits exponent ws) |
+    ([\"] [\"] ws) |
+    ([\"] characters [\"] ws) |
+    ([[] [\]] ws) |
+    ([[] ws [\]] ws) |
+    ([[] elements [\]] ws) |
+    ([{] [}] ws) |
+    ([{] ws [}] ws) |
+    ([{] members [}] ws) |
+    ([1-9] digits ws) |
+    ([\-] [0-9] ws) |
+    ([\-] [1-9] digits ws) |
+    ([ ] value) |
+    ([ ] ws value) |
+    ([\n] value) |
+    ([\n] ws value) |
+    ([\r] value) |
+    ([\r] ws value) |
+    ([\t] value) |
+    ([\t] ws value) |
+    ([ ] value ws) |
+    ([ ] ws value ws) |
+    ([\n] value ws) |
+    ([\n] ws value ws) |
+    ([\r] value ws) |
+    ([\r] ws value ws) |
+    ([\t] value ws) |
+    ([\t] ws value ws) |
+    ([0-9]) |
+    ([1-9] digits exponent) |
+    ([\-] [0-9] exponent) |
+    ([\-] [1-9] digits exponent) |
+    ([0-9] exponent) |
+    ([1-9] digits [.] digits) |
+    ([\-] [0-9] [.] digits) |
+    ([\-] [1-9] digits [.] digits) |
+    ([0-9] [.] digits) |
+    ([1-9] digits [.] digits exponent) |
+    ([\-] [0-9] [.] digits exponent) |
+    ([\-] [1-9] digits [.] digits exponent) |
+    ([0-9] [.] digits exponent) |
+    ([\"] [\"]) |
+    ([\"] characters [\"]) |
+    ([[] [\]]) |
+    ([[] ws [\]]) |
+    ([[] elements [\]]) |
+    ([{] [}]) |
+    ([{] ws [}]) |
+    ([{] members [}]) |
+    ([1-9] digits) |
+    ([\-] [0-9]) |
+    ([\-] [1-9] digits) |
+    ([t] [r] [u] [e]) |
+    ([f] [a] [l] [s] [e]) |
+    ([n] [u] [l] [l])
+)
+string ::= (
+    ([\"] [\"]) |
+    ([\"] characters [\"])
+)
+characters ::= (
+    ([^\"\\] characters) |
+    ([\\] escape characters) |
+    ([^\"\\]) |
+    ([\\] escape)
+)
+escape ::= (
+    ([\"]) |
+    ([\\]) |
+    ([/]) |
+    ([b]) |
+    ([f]) |
+    ([n]) |
+    ([r]) |
+    ([t]) |
+    ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9])
+)
+digits ::= (
+    ([0-9] digits) |
+    ([0-9])
+)
+exponent ::= (
+    ([e] digits) |
+    ([E] digits) |
+    ([e] exponent_choice_1 digits) |
+    ([E] exponent_choice_1 digits)
+)
+ws ::= (
+    "" |
+    ([ ]) |
+    ([ ] ws) |
+    ([\n]) |
+    ([\n] ws) |
+    ([\r]) |
+    ([\r] ws) |
+    ([\t]) |
+    ([\t] ws)
+)
+exponent_choice_1 ::= (
+    ([+]) |
+    ([\-])
+)

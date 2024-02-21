@@ -10,6 +10,7 @@
 #include "../config.h"
 #include "../engine_state.h"
 #include "../event_trace_recorder.h"
+#include "../grammar/grammar_tokenizer_config.h"
 #include "../model.h"
 #include "../sampler.h"
 
@@ -59,6 +60,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction NewRequestPrefill(Array<Model> models, Sampler sampler,
+                                        GrammarTokenizerConfig tokenizer_config,
                                         KVCacheConfig kv_cache_config,
                                         Optional<EventTraceRecorder> trace_recorder);
   /*!
@@ -75,6 +77,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction BatchDecode(Array<Model> models, Sampler sampler,
+                                  GrammarTokenizerConfig tokenizer_config,
                                   Optional<EventTraceRecorder> trace_recorder);
 
   /*!
@@ -89,6 +92,7 @@ class EngineAction : public ObjectRef {
    * \return The created action object.
    */
   static EngineAction BatchDraft(Array<Model> models, Sampler sampler,
+                                 GrammarTokenizerConfig tokenizer_config,
                                  Optional<EventTraceRecorder> trace_recorder, int draft_length = 4);
 
   /*!

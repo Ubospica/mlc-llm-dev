@@ -25,9 +25,11 @@ namespace serve {
 class BatchDecodeActionObj : public EngineActionObj {
  public:
   explicit BatchDecodeActionObj(Array<Model> models, Sampler sampler,
+                                GrammarTokenizerConfig tokenizer_config,
                                 Optional<EventTraceRecorder> trace_recorder)
       : models_(std::move(models)),
         sampler_(std::move(sampler)),
+        tokenizer_config_(std::move(tokenizer_config)),
         trace_recorder_(std::move(trace_recorder)) {}
 
   Array<Request> Step(EngineState estate) final {
@@ -37,7 +39,6 @@ class BatchDecodeActionObj : public EngineActionObj {
     }
 
     // Preempt requests when decode cannot apply.
-    int num_available_pages = models_[0]->GetNumAvailablePages();
     while (!CanDecode(estate->running_queue.size())) {
       PreemptLastRunningRequest(estate, models_, trace_recorder_);
     }
@@ -94,8 +95,8 @@ class BatchDecodeActionObj : public EngineActionObj {
 
     // - Sample tokens.
     RECORD_EVENT(trace_recorder_, request_ids, "start sampling");
-    std::vector<int32_t> next_tokens =
-        sampler_->BatchSampleTokens(logits, models_[0], mstates, generation_cfg, rngs);
+    std::vector<int32_t> next_tokens = sampler_->BatchSampleTokens(
+        logits, models_[0], mstates, generation_cfg, rngs, tokenizer_config_);
     RECORD_EVENT(trace_recorder_, request_ids, "finish sampling");
     ICHECK_EQ(next_tokens.size(), num_requests);
 
@@ -124,13 +125,17 @@ class BatchDecodeActionObj : public EngineActionObj {
   Array<Model> models_;
   /*! \brief The sampler to sample new tokens. */
   Sampler sampler_;
+  /*! \brief The tokenizer config. */
+  GrammarTokenizerConfig tokenizer_config_;
   /*! \brief Event trace recorder. */
   Optional<EventTraceRecorder> trace_recorder_;
 };
 
 EngineAction EngineAction::BatchDecode(Array<Model> models, Sampler sampler,
+                                       GrammarTokenizerConfig tokenizer_config,
                                        Optional<EventTraceRecorder> trace_recorder) {
   return EngineAction(make_object<BatchDecodeActionObj>(std::move(models), std::move(sampler),
+                                                        std::move(tokenizer_config),
                                                         std::move(trace_recorder)));
 }
 

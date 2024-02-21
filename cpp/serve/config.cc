@@ -102,6 +102,24 @@ GenerationConfig::GenerationConfig(String config_json_str) {
     CHECK(config["ignore_eos"].is<bool>());
     n->ignore_eos = config["ignore_eos"].get<bool>();
   }
+
+  if (config.count("json_mode")) {
+    CHECK(config["json_mode"].is<bool>());
+    n->json_mode = config["json_mode"].get<bool>();
+  }
+
+  if (config.count("output_grammar")) {
+    if (config["output_grammar"].is<picojson::null>()) {
+      n->output_grammar = tvm::NullOpt;
+    } else {
+      CHECK(config["output_grammar"].is<std::string>());
+      n->output_grammar = config["output_grammar"].get<std::string>();
+    }
+  }
+
+  CHECK(!n->json_mode || !n->output_grammar.defined())
+      << "json_mode and output_grammar cannot be specified at the same time";
+
   data_ = std::move(n);
 }
 
@@ -129,6 +147,13 @@ String GenerationConfigNode::AsJSONString() const {
 
   // Params for benchmarking. Not the part of openai spec.
   config["ignore_eos"] = picojson::value(this->ignore_eos);
+
+  config["json_mode"] = picojson::value(this->json_mode);
+  if (this->output_grammar.defined()) {
+    config["output_grammar"] = picojson::value(this->output_grammar.value());
+  } else {
+    config["output_grammar"] = picojson::value();
+  }
 
   return picojson::value(config).serialize(true);
 }

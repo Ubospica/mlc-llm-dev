@@ -16,7 +16,7 @@ from mlc_chat.serve.engine import ModelInfo
 
 def _parse_args():
     args = argparse.ArgumentParser()
-    args.add_argument("--model-lib-path", type=str, required=True)
+    # args.add_argument("--model-lib-path", type=str, required=True)
     # Download dataset from
     # https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
     args.add_argument("--dataset", type=str, required=True)
@@ -24,11 +24,11 @@ def _parse_args():
     args.add_argument("--num-prompts", type=int, default=500)
     args.add_argument("--batch-size", type=int, default=80)
     args.add_argument("--page-size", type=int, default=16)
-    args.add_argument("--max-total-seq-length", type=int)
+    args.add_argument("--max-total-seq-length", type=int, default=2048)
     args.add_argument("--seed", type=int, default=0)
 
     parsed = args.parse_args()
-    parsed.model = os.path.dirname(parsed.model_lib_path)
+    # parsed.model = os.path.dirname(parsed.model_lib_path)
     assert parsed.batch_size % 16 == 0
     assert parsed.page_size == 16
     return parsed
@@ -100,7 +100,12 @@ def benchmark(args: argparse.Namespace):
     random.seed(args.seed)
 
     # Initialize model loading info and KV cache config
-    model = ModelInfo(args.model, args.model_lib_path, args.device)
+    # model = ModelInfo(args.model, args.model_lib_path, args.device)
+    model = ModelInfo(
+        "dist/Llama-2-7b-chat-hf-q4f16_1-MLC",
+        model_lib_path="dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so",
+        device=args.device,
+    )
     kv_cache_config = KVCacheConfig(
         page_size=args.page_size,
         max_num_sequence=args.batch_size,
@@ -110,7 +115,9 @@ def benchmark(args: argparse.Namespace):
     # Create engine
     engine = Engine(model, kv_cache_config)
     # Sample prompts from dataset
-    prompts, generation_config = sample_requests(args.dataset, args.num_prompts, args.model)
+    prompts, generation_config = sample_requests(
+        args.dataset, args.num_prompts, "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
+    )
     # Engine statistics
     num_runs = 1
     single_token_prefill_latency = []
@@ -157,3 +164,15 @@ def benchmark(args: argparse.Namespace):
 if __name__ == "__main__":
     ARGS = _parse_args()
     benchmark(ARGS)
+
+
+# Average end-to-end latency: 846.4184 seconds for the entire batch
+
+# Single token prefill latency: 2033.5524 ms/tok
+# Single token decode latency: 38.0487 ms/tok
+# Engine prefill time: 30.9315 s
+# Engine decode time: 793.7109 s
+# Request throughput: 0.5907 req/s
+# Prefill token throughput: 3485.8991 tok/s
+# Decode token throughput: 155.8099 tok/s
+# Overall token throughput: 273.4960 tok/s

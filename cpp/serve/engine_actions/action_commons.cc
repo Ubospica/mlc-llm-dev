@@ -47,6 +47,7 @@ void ProcessFinishedRequest(Array<Request> finished_requests, EngineState estate
 
 void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Model> models,
                            FRequestStreamCallback request_stream_callback,
+                           GrammarTokenizerConfig tokenizer_config,
                            int max_single_sequence_length) {
   Array<Request> finished_requests;
   finished_requests.reserve(requests.size());
@@ -62,6 +63,19 @@ void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Mo
     // When there is no new delta tokens nor a finish reason, no need to invoke callback.
     if (delta_token_ids.empty() && !finish_reason.defined()) {
       continue;
+    }
+
+    if (rstate->mstates[0]->grammar_matcher) {
+      const auto& grammar_matcher = rstate->mstates[0]->grammar_matcher.value();
+      for (auto token_id : delta_token_ids) {
+        if (tokenizer_config->token_lookup_map.count(token_id) == 0) {
+          continue;
+        }
+        auto codepoints = tokenizer_config->token_lookup_map.at(token_id).token;
+        for (auto codepoint : codepoints) {
+          grammar_matcher->AcceptChar(codepoint, true);
+        }
+      }
     }
 
     callback_delta_outputs.push_back(

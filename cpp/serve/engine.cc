@@ -15,10 +15,12 @@
 #include <tuple>
 
 #include "../tokenizers.h"
+#include "config.h"
 #include "engine_actions/action.h"
 #include "engine_actions/action_commons.h"
 #include "engine_state.h"
 #include "event_trace_recorder.h"
+#include "grammar/grammar_tokenizer_config.h"
 #include "model.h"
 #include "request.h"
 #include "request_state.h"
@@ -56,6 +58,8 @@ class EngineImpl : public Engine {
     this->sampler_ = Sampler::Create(/*sampler_kind=*/"cpu", trace_recorder_);
     this->tokenizer_ = Tokenizer::FromPath(tokenizer_path);
     this->token_table_ = tokenizer_->TokenTable();
+    this->json_tokenizer_config_ =
+        GrammarTokenizerConfig(this->tokenizer_, BNFGrammar::GetJSONGrammar());
     // Step 2. Initialize each model independently.
     this->models_.clear();
     for (const auto& model_info : model_infos) {
@@ -76,21 +80,20 @@ class EngineImpl : public Engine {
       // Speculative decoding is only possible for more than one model.
       ICHECK_GT(this->models_.size(), 1U);
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,           //
-                                          this->sampler_,          //
-                                          this->kv_cache_config_,  //
+          EngineAction::NewRequestPrefill(this->models_, this->sampler_,
+                                          this->json_tokenizer_config_, this->kv_cache_config_,
                                           this->trace_recorder_),
-          EngineAction::BatchDraft(this->models_, this->sampler_, this->trace_recorder_,
-                                   this->engine_mode_->spec_draft_length),
+          EngineAction::BatchDraft(this->models_, this->sampler_, this->json_tokenizer_config_,
+                                   this->trace_recorder_, this->engine_mode_->spec_draft_length),
           EngineAction::BatchVerify(this->models_, this->sampler_, this->kv_cache_config_,
                                     this->trace_recorder_)};
     } else {
       this->actions_ = {
-          EngineAction::NewRequestPrefill(this->models_,           //
-                                          this->sampler_,          //
-                                          this->kv_cache_config_,  //
+          EngineAction::NewRequestPrefill(this->models_, this->sampler_,
+                                          this->json_tokenizer_config_, this->kv_cache_config_,
                                           this->trace_recorder_),
-          EngineAction::BatchDecode(this->models_, this->sampler_, this->trace_recorder_)};
+          EngineAction::BatchDecode(this->models_, this->sampler_, this->json_tokenizer_config_,
+                                    this->trace_recorder_)};
     }
     // Step 4. Automatically set the threading backend max concurrency.
     SetThreadMaxConcurrency();
@@ -169,7 +172,8 @@ class EngineImpl : public Engine {
       Array<Request> processed_requests = action->Step(estate_);
       if (!processed_requests.empty()) {
         ActionStepPostProcess(processed_requests, estate_, models_,
-                              request_stream_callback_.value(), max_single_sequence_length_);
+                              request_stream_callback_.value(), json_tokenizer_config_,
+                              max_single_sequence_length_);
         return;
       }
     }
@@ -199,6 +203,7 @@ class EngineImpl : public Engine {
   Sampler sampler_;
   Tokenizer tokenizer_;
   std::vector<std::string> token_table_;
+  GrammarTokenizerConfig json_tokenizer_config_;
   // Models
   Array<Model> models_;
   // Request stream callback function

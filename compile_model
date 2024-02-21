@@ -1,0 +1,8 @@
+mlc_chat convert_weight ./dist/models/Llama-2-7b-chat-hf/ \
+    --quantization q4f16_1 \
+    -o dist/Llama-2-7b-chat-hf-q4f16_1-MLC
+mlc_chat gen_config ./dist/models/Llama-2-7b-chat-hf/ \
+    --quantization q4f16_1 --conv-template redpajama_chat \
+    -o dist/Llama-2-7b-chat-hf-q4f16_1-MLC/
+mlc_chat compile ./dist/Llama-2-7b-chat-hf-q4f16_1-MLC/mlc-chat-config.json \
+    --device cuda -o dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so

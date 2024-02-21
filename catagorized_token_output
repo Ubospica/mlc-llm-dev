@@ -1,0 +1,606 @@
+Rule: main Sequence: ([{] members_or_ws [}] ws) Position: 0
+Rule id: 0 Sequence id: 4
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: main Sequence: ([{] members_or_ws [}] ws) Position: 2
+Rule id: 0 Sequence id: 4
+Accepted: 2 (<}> <}\r> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: main Sequence: ([[] elements_or_ws [\]] ws) Position: 0
+Rule id: 0 Sequence id: 9
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
+Rejected: 31734
+Uncertain: 0 ()
+Rule: main Sequence: ([[] elements_or_ws [\]] ws) Position: 2
+Rule id: 0 Sequence id: 9
+Accepted: 1 (<]> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: value Sequence: ([{] members_or_ws [}]) Position: 0
+Rule id: 1 Sequence id: 14
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: value Sequence: ([{] members_or_ws [}]) Position: 2
+Rule id: 1 Sequence id: 14
+Accepted: 1 (<}> )
+Rejected: 31655
+Uncertain: 84 (<}\r> <}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},> <},\\> <},{> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
+Rule: value Sequence: ([[] elements_or_ws [\]]) Position: 0
+Rule id: 1 Sequence id: 18
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
+Rejected: 31732
+Uncertain: 2 (<[])> <[]{> )
+Rule: value Sequence: ([[] elements_or_ws [\]]) Position: 2
+Rule id: 1 Sequence id: 18
+Accepted: 1 (<]> )
+Rejected: 31700
+Uncertain: 39 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <],> <],[> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
+Rule: value Sequence: ([\"] characters [\"]) Position: 0
+Rule id: 1 Sequence id: 22
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rejected: 31699
+Uncertain: 0 ()
+Rule: value Sequence: ([\"] characters [\"]) Position: 2
+Rule id: 1 Sequence id: 22
+Accepted: 1 (<\"> )
+Rejected: 31699
+Uncertain: 40 (<\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rule: value Sequence: ([0-9] fraction exponent) Position: 0
+Rule id: 1 Sequence id: 26
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: value Sequence: ([1-9] digits fraction exponent) Position: 0
+Rule id: 1 Sequence id: 31
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: value Sequence: ([\-] [0-9] fraction exponent) Position: 0
+Rule id: 1 Sequence id: 36
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: value Sequence: ([\-] [0-9] fraction exponent) Position: 1
+Rule id: 1 Sequence id: 36
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: value Sequence: ([\-] [1-9] digits fraction exponent) Position: 0
+Rule id: 1 Sequence id: 42
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: value Sequence: ([\-] [1-9] digits fraction exponent) Position: 1
+Rule id: 1 Sequence id: 42
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: value Sequence: ([t] [r] [u] [e]) Position: 0
+Rule id: 1 Sequence id: 47
+Accepted: 3 (<t> <tr> <true> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: value Sequence: ([t] [r] [u] [e]) Position: 1
+Rule id: 1 Sequence id: 47
+Accepted: 2 (<r> <ru> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: value Sequence: ([t] [r] [u] [e]) Position: 2
+Rule id: 1 Sequence id: 47
+Accepted: 2 (<u> <ue> )
+Rejected: 31719
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
+Rule: value Sequence: ([t] [r] [u] [e]) Position: 3
+Rule id: 1 Sequence id: 47
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 0
+Rule id: 1 Sequence id: 53
+Accepted: 4 (<f> <fa> <fal> <false> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 1
+Rule id: 1 Sequence id: 53
+Accepted: 4 (<a> <al> <als> <alse> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 2
+Rule id: 1 Sequence id: 53
+Accepted: 2 (<l> <ls> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 3
+Rule id: 1 Sequence id: 53
+Accepted: 2 (<s> <se> )
+Rejected: 31667
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
+Rule: value Sequence: ([f] [a] [l] [s] [e]) Position: 4
+Rule id: 1 Sequence id: 53
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: value Sequence: ([n] [u] [l] [l]) Position: 0
+Rule id: 1 Sequence id: 58
+Accepted: 3 (<n> <nu> <null> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: value Sequence: ([n] [u] [l] [l]) Position: 1
+Rule id: 1 Sequence id: 58
+Accepted: 3 (<u> <ul> <ull> )
+Rejected: 31735
+Uncertain: 2 (<ulla> <ulle> )
+Rule: value Sequence: ([n] [u] [l] [l]) Position: 2
+Rule id: 1 Sequence id: 58
+Accepted: 2 (<l> <ll> )
+Rejected: 31734
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
+Rule: value Sequence: ([n] [u] [l] [l]) Position: 3
+Rule id: 1 Sequence id: 58
+Accepted: 1 (<l> )
+Rejected: 31401
+Uncertain: 338
+Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 0
+Rule id: 2 Sequence id: 69
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rejected: 31699
+Uncertain: 0 ()
+Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 2
+Rule id: 2 Sequence id: 69
+Accepted: 5 (<\"> <\"\r> <\":> <\":\"> <\":{\"> )
+Rejected: 31735
+Uncertain: 0 ()
+Rule: members_or_ws Sequence: ([\"] characters [\"] ws [:] ws value ws members_rest) Position: 4
+Rule id: 2 Sequence id: 69
+Accepted: 5 (<:> <:\"> <:-> <:[> <:{> )
+Rejected: 31735
+Uncertain: 0 ()
+Rule: members_or_ws Sequence: ([ ] members_or_ws) Position: 0
+Rule id: 2 Sequence id: 72
+Accepted: 46 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > < \"> < \"\"> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"^> < \"_> < \"`> < \"{> )
+Rejected: 15331
+Uncertain: 16363
+Rule: members_or_ws Sequence: ([\n] members_or_ws) Position: 0
+Rule id: 2 Sequence id: 75
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Rule: members_or_ws Sequence: ([\r] members_or_ws) Position: 0
+Rule id: 2 Sequence id: 78
+Accepted: 1 (<\r> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: members_or_ws Sequence: ([\t] members_or_ws) Position: 0
+Rule id: 2 Sequence id: 81
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 0
+Rule id: 3 Sequence id: 95
+Accepted: 3 (<,> <,\r> <,\"> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 2
+Rule id: 3 Sequence id: 95
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rejected: 31699
+Uncertain: 0 ()
+Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 4
+Rule id: 3 Sequence id: 95
+Accepted: 5 (<\"> <\"\r> <\":> <\":\"> <\":{\"> )
+Rejected: 31735
+Uncertain: 0 ()
+Rule: members_rest Sequence: ([,] ws [\"] characters [\"] ws [:] ws value ws members_rest) Position: 6
+Rule id: 3 Sequence id: 95
+Accepted: 5 (<:> <:\"> <:-> <:[> <:{> )
+Rejected: 31735
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 103
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 103
+Accepted: 4 (<}> <}\r> <},> <},{> )
+Rejected: 31655
+Uncertain: 81 (<}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},\\> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
+Rule: elements_or_ws Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 109
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
+Rejected: 31732
+Uncertain: 2 (<[])> <[]{> )
+Rule: elements_or_ws Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 109
+Accepted: 3 (<]> <],> <],[> )
+Rejected: 31700
+Uncertain: 37 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
+Rule: elements_or_ws Sequence: ([\"] characters [\"] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 115
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rejected: 31699
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\"] characters [\"] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 115
+Accepted: 5 (<\"> <\"\r> <\",> <\",\r> <\",\"> )
+Rejected: 31699
+Uncertain: 36 (<\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rule: elements_or_ws Sequence: ([0-9] fraction exponent ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 121
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([1-9] digits fraction exponent ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 128
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 135
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 1
+Rule id: 4 Sequence id: 135
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 143
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 1
+Rule id: 4 Sequence id: 143
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 150
+Accepted: 3 (<t> <tr> <true> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 1
+Rule id: 4 Sequence id: 150
+Accepted: 2 (<r> <ru> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 150
+Accepted: 2 (<u> <ue> )
+Rejected: 31719
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
+Rule: elements_or_ws Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 3
+Rule id: 4 Sequence id: 150
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 158
+Accepted: 4 (<f> <fa> <fal> <false> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 1
+Rule id: 4 Sequence id: 158
+Accepted: 4 (<a> <al> <als> <alse> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 158
+Accepted: 2 (<l> <ls> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 3
+Rule id: 4 Sequence id: 158
+Accepted: 2 (<s> <se> )
+Rejected: 31667
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
+Rule: elements_or_ws Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 4
+Rule id: 4 Sequence id: 158
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 0
+Rule id: 4 Sequence id: 165
+Accepted: 3 (<n> <nu> <null> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 1
+Rule id: 4 Sequence id: 165
+Accepted: 3 (<u> <ul> <ull> )
+Rejected: 31735
+Uncertain: 2 (<ulla> <ulle> )
+Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 2
+Rule id: 4 Sequence id: 165
+Accepted: 2 (<l> <ll> )
+Rejected: 31734
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
+Rule: elements_or_ws Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 3
+Rule id: 4 Sequence id: 165
+Accepted: 1 (<l> )
+Rejected: 31401
+Uncertain: 338
+Rule: elements_or_ws Sequence: ([ ] elements_or_ws) Position: 0
+Rule id: 4 Sequence id: 168
+Accepted: 70 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > < \"> < \"\"> < \"\",> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"^> < \"_> < \"`> < \"{> < -> < [> < [\"> < [-> < [[> < []> < [],> < [{> < f> < fa> < fal> < false> < n> < nu> < null> < t> < tr> < true> < {> < {\r> < {\"> < {}> < {},> )
+Rejected: 15331
+Uncertain: 16339
+Rule: elements_or_ws Sequence: ([\n] elements_or_ws) Position: 0
+Rule id: 4 Sequence id: 171
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\r] elements_or_ws) Position: 0
+Rule id: 4 Sequence id: 174
+Accepted: 1 (<\r> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: elements_or_ws Sequence: ([\t] elements_or_ws) Position: 0
+Rule id: 4 Sequence id: 177
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Rule: elements Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 185
+Accepted: 4 (<{> <{\r> <{\"> <{}> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements Sequence: ([{] members_or_ws [}] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 185
+Accepted: 4 (<}> <}\r> <},> <},{> )
+Rejected: 31655
+Uncertain: 81 (<}\"> <}\")> <}\",> <}$> <}$$> <}$,> <}$-> <}$.> <}%> <}&> <}\'> <}(> <}(\\> <})> <})$> <})$,> <})$.> <}))> <}),> <}).> <});> <})\\> <})^> <}+> <}+\\> <},\\> <}-> <}-\\> <}.> <}/> <}:> <};> <}</> <}=> <}=\\> <}>> <}[> <}\\> <}\\)> <}\\,> <}\\,\\> <}\\\\> <}]> <}](> <}^> <}^\\> <}^{> <}^{(> <}^{-> <}^{\\> <}_> <}_\\> <}_{> <}_{\\> <}`> <}{> <}{(> <}{\\> <}{|> <}|> <}}> <}}$> <}}$,> <}}$.> <}}%> <}}(> <}}(\\> <}})> <}},> <}}.> <}}=> <}}\\> <}}^> <}}^{> <}}_> <}}_{> <}}_{\\> <}}{> <}}{\\> <}}}> <}}}\\> )
+Rule: elements Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 191
+Accepted: 6 (<[> <[\"> <[-> <[[> <[]> <[{> )
+Rejected: 31732
+Uncertain: 2 (<[])> <[]{> )
+Rule: elements Sequence: ([[] elements_or_ws [\]] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 191
+Accepted: 3 (<]> <],> <],[> )
+Rejected: 31700
+Uncertain: 37 (<]\"> <]$> <]$,> <]$.> <](> <](#> <](#)> <](/> <])> <]))> <]),> <]).> <]);> <]*> <]+> <]->> <].> <].[> <]/> <]:> <];> <]=> <]=\"> <][> <][\'> <]\\> <]]> <]])> <]],> <]];> <]_> <]`> <]`.> <]{> <]{\'> <]{\\> <]}> )
+Rule: elements Sequence: ([\"] characters [\"] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 197
+Accepted: 41 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rejected: 31699
+Uncertain: 0 ()
+Rule: elements Sequence: ([\"] characters [\"] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 197
+Accepted: 5 (<\"> <\"\r> <\",> <\",\r> <\",\"> )
+Rejected: 31699
+Uncertain: 36 (<\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rule: elements Sequence: ([0-9] fraction exponent ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 203
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: elements Sequence: ([1-9] digits fraction exponent ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 210
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: elements Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 217
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: elements Sequence: ([\-] [0-9] fraction exponent ws elements_rest) Position: 1
+Rule id: 5 Sequence id: 217
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: elements Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 225
+Accepted: 1 (<-> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: elements Sequence: ([\-] [1-9] digits fraction exponent ws elements_rest) Position: 1
+Rule id: 5 Sequence id: 225
+Accepted: 9 (<1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31731
+Uncertain: 0 ()
+Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 232
+Accepted: 3 (<t> <tr> <true> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 1
+Rule id: 5 Sequence id: 232
+Accepted: 2 (<r> <ru> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 232
+Accepted: 2 (<u> <ue> )
+Rejected: 31719
+Uncertain: 19 (<ued> <ueil> <uel> <uela> <uelle> <uellement> <uen> <uent> <uer> <uerdo> <uerte> <uerto> <ues> <uese> <uest> <uesto> <uet> <uetooth> <uez> )
+Rule: elements Sequence: ([t] [r] [u] [e] ws elements_rest) Position: 3
+Rule id: 5 Sequence id: 232
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 240
+Accepted: 4 (<f> <fa> <fal> <false> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 1
+Rule id: 5 Sequence id: 240
+Accepted: 4 (<a> <al> <als> <alse> )
+Rejected: 31736
+Uncertain: 0 ()
+Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 240
+Accepted: 2 (<l> <ls> )
+Rejected: 31738
+Uncertain: 0 ()
+Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 3
+Rule id: 5 Sequence id: 240
+Accepted: 2 (<s> <se> )
+Rejected: 31667
+Uncertain: 71 (<search> <season> <seau> <sec> <second> <seconds> <secret> <sect> <section> <sections> <secure> <security> <sed> <see> <seed> <seen> <sef> <seg> <segment> <segu> <seh> <sein> <seite> <sel> <select> <selected> <selection> <selector> <selenium> <self> <selves> <sem> <sen> <send> <sender> <sens> <sent> <sep> <separ> <seq> <sequ> <sequence> <sequently> <ser> <serial> <serie> <series> <sero> <sers> <sert> <serv> <servable> <serve> <server> <service> <services> <servlet> <session> <set> <setAttribute> <setState> <setText> <setminus> <setopt> <sets> <sett> <setting> <settings> <setup> <sex> <sey> )
+Rule: elements Sequence: ([f] [a] [l] [s] [e] ws elements_rest) Position: 4
+Rule id: 5 Sequence id: 240
+Accepted: 1 (<e> )
+Rejected: 31110
+Uncertain: 629
+Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 0
+Rule id: 5 Sequence id: 247
+Accepted: 3 (<n> <nu> <null> )
+Rejected: 31737
+Uncertain: 0 ()
+Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 1
+Rule id: 5 Sequence id: 247
+Accepted: 3 (<u> <ul> <ull> )
+Rejected: 31735
+Uncertain: 2 (<ulla> <ulle> )
+Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 2
+Rule id: 5 Sequence id: 247
+Accepted: 2 (<l> <ll> )
+Rejected: 31734
+Uncertain: 4 (<lla> <lla\u00e7os> <lle> <lles> )
+Rule: elements Sequence: ([n] [u] [l] [l] ws elements_rest) Position: 3
+Rule id: 5 Sequence id: 247
+Accepted: 1 (<l> )
+Rejected: 31401
+Uncertain: 338
+Rule: elements_rest Sequence: ([,] ws elements) Position: 0
+Rule id: 6 Sequence id: 252
+Accepted: 5 (<,> <,\r> <,\"> <,-> <,[> )
+Rejected: 31735
+Uncertain: 0 ()
+Rule: characters Sequence: ([^\"\\] characters) Position: 0
+Rule id: 7 Sequence id: 257
+Accepted: 31545
+Rejected: 68 (<\"> <\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> <\\> <\\\"> <\\\",> <\\\":> <\\%> <\\\'> <\\)> <\\).> <\\,> <\\,\\> <\\.> <\\/> <\\;> <\\<> <\\<^> <\\\\> <\\]> <\\_> <\\{> <\\{\\> <\\|> <\\|_{> <\\}> <\\}$> <\\}$,> <\\}$.> <\\}\\> )
+Uncertain: 127 (< \"> < \"\"> < \"\"\"> < \"\")> < \"\",> < \"\";> < \"#> < \"$> < \"${> < \"%> < \"\'> < \"(> < \")> < \");> < \"*> < \"+> < \",> < \",\"> < \"-> < \".> < \"...> < \"/> < \":> < \";> < \"<> < \"</> < \"@> < \"[> < \"\\> < \"\\<> < \"^> < \"_> < \"`> < \"{> < $(\"> < $(\"#> < $(\".> < $\\{> < \'\"> < (\"> < (\\<> < =\"> < @\"> < [\"> < \\$> < \\(> < \\(\\> < \\({\\> < \\)> < \\,> < \\;> < \\<> < \\[> < \\[\\> < \\]> < \\{> < \\|> < `\"> < {\"> <!\"> <!\");> <!(\"> <%\"> <\'\"> <(\"> <(\"#> <(\"%> <(\",> <(\".> <(\"/> <(\"<> <(\"@> <(\"\\> <()\"> <(@\"> <)\"> <)\")> <)\",> <)\\)> <)\\,> <*\"> <+\"> <,\"> <,\\,> <--\"> <.\"> <.\")> <.\");> <.\",> <...\"> </\"> <:\"> <:@\"> <;\"> <;\">> <=\"> <=\"\"> <=\"#> <=\"$> <=\"${> <=\".> <=\"/> <=\"<\?> <=\"@> <=\"@+> <=\"{> <==\"> <=\\{> <>\"> <>\",> <>\";> <>\\<> <>\\<^> <\?\"> <@\"> <@\",> <[\"> <]\"> <]=\"> <_\"> <{\"> <}\"> <}\")> <}\",> <}\\)> <}\\,> <}\\,\\> )
+Rule: characters Sequence: ([\\] escape characters) Position: 0
+Rule id: 7 Sequence id: 261
+Accepted: 6 (<\\> <\\\"> <\\\",> <\\\":> <\\/> <\\\\> )
+Rejected: 31734
+Uncertain: 0 ()
+Rule: escape Sequence: ([\"]) Position: 0
+Rule id: 8 Sequence id: 265
+Accepted: 1 (<\"> )
+Rejected: 31699
+Uncertain: 40 (<\"\r> <\"\"> <\")> <\"))> <\"));> <\"),> <\").> <\");> <\");\r> <\")]> <\")`> <\"+> <\",> <\",\r> <\",\"> <\".> <\".$> <\"/> <\"/>> <\":> <\":\"> <\":{\"> <\";> <\";\r> <\"=>> <\">> <\">\r> <\"><> <\"></> <\"\?> <\"\?>> <\"\\> <\"]> <\"])> <\"],> <\"].> <\"];> <\"`> <\"}> <\"},> )
+Rule: escape Sequence: ([\\]) Position: 0
+Rule id: 8 Sequence id: 267
+Accepted: 1 (<\\> )
+Rejected: 31713
+Uncertain: 26 (<\\\"> <\\\",> <\\\":> <\\%> <\\\'> <\\)> <\\).> <\\,> <\\,\\> <\\.> <\\/> <\\;> <\\<> <\\<^> <\\\\> <\\]> <\\_> <\\{> <\\{\\> <\\|> <\\|_{> <\\}> <\\}$> <\\}$,> <\\}$.> <\\}\\> )
+Rule: escape Sequence: ([/]) Position: 0
+Rule id: 8 Sequence id: 269
+Accepted: 1 (</> )
+Rejected: 31711
+Uncertain: 28 (</\"> </#> </$> </%> </\'> </(> </)> </),> </).> </*> </**> </,> </-> </.> <//> <///> <////> <////////> <////////////////> </:> </>> </\?> </@> </\\> </_> </`> </{> </~> )
+Rule: escape Sequence: ([b]) Position: 0
+Rule id: 8 Sequence id: 271
+Accepted: 1 (<b> )
+Rejected: 31495
+Uncertain: 244
+Rule: escape Sequence: ([f]) Position: 0
+Rule id: 8 Sequence id: 273
+Accepted: 1 (<f> )
+Rejected: 31516
+Uncertain: 223
+Rule: escape Sequence: ([n]) Position: 0
+Rule id: 8 Sequence id: 275
+Accepted: 1 (<n> )
+Rejected: 31544
+Uncertain: 195 (<na> <nab> <nabla> <nach> <nad> <nah> <nahm> <nahme> <nahmen> <naio> <naire> <nak> <nake> <nal> <nam> <name> <named> <names> <namespace> <nan> <nant> <nap> <napshot> <nar> <nas> <nat> <native> <nats> <natural> <nav> <navbar> <navigation> <nb> <nbsp> <nc> <nd> <nde> <nder> <ne> <nea> <near> <necess> <nect> <nection> <ned> <nederb\u00f6rd> <need> <neg> <negative> <nego> <neh> <nehm> <nehmen> <nehmer> <nej> <nek> <nel> <nell> <nelle> <nem> <nement> <nen> <neo> <neq> <ner> <nero> <ners> <nes> <ness> <nest> <nested> <net> <nete> <nett> <network> <neum> <neur> <neut> <new> <newcommand> <news> <nex> <next> <ney> <nez> <ng> <nginx> <ni> <nia> <nic> <nica> <nice> <nick> <nico> <nie> <niej> <niejs> <nier> <nig> <night> <nih> <nik> <nika> <nil> <nim> <ning> <ningar> <ningen> <ninger> <nings> <nio> <nis> <nisse> <nit> <nitt> <nitz> <niu> <nius> <ni\u0119> <nja> <nl> <nm> <nn> <no> <noc> <node> <nodes> <nof> <nofollow> <nog> <noindent> <nom> <nome> <non> <none> <nonumber> <nor> <noreferrer> <norm> <normal> <nos> <nost> <nosti> <not> <notation> <note> <notes> <nothing> <notification> <notify> <notin> <nou> <nov> <now> <nown> <no\u015bci> <no\u015b\u0107> <np> <npm> <nr> <ns> <nsylvan> <nt> <nten> <nth> <ntil> <nu> <null> <num> <number> <numbers> <numer> <numerable> <numeric> <numpy> <nung> <nungen> <nut> <nx> <ny> <nych> <nym> <n\u00e1> <n\u00e9> <n\u00e9e> <n\u00ed> <n\u00edch> <n\u00edho> <n\u00edk> <n\u00edm> <n\u00fd> <n\u00fdch> <n\u0105> <n\u0119> <n\u011b> )
+Rule: escape Sequence: ([r]) Position: 0
+Rule id: 8 Sequence id: 277
+Accepted: 1 (<r> )
+Rejected: 31303
+Uncertain: 436
+Rule: escape Sequence: ([t]) Position: 0
+Rule id: 8 Sequence id: 279
+Accepted: 1 (<t> )
+Rejected: 31498
+Uncertain: 241
+Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 0
+Rule id: 8 Sequence id: 285
+Accepted: 17 (<u> <ua> <ub> <uba> <ube> <uc> <uca> <uce> <ud> <uda> <udad> <ude> <ue> <ued> <uf> <ufe> <uff> )
+Rejected: 31723
+Uncertain: 0 ()
+Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 1
+Rule id: 8 Sequence id: 285
+Accepted: 171 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AAAA> <AB> <ABC> <AC> <ACE> <AD> <ADD> <AE> <AF> <Ab> <Ac> <Acc> <Ad> <Add> <Aff> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Bad> <Bbb> <Be> <C> <CA> <CAA> <CB> <CC> <CCE> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DBC> <DC> <DD> <DE> <DEF> <DF> <Da> <Db> <De> <Deb> <Dec> <Def> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <FFFF> <Fa> <Face> <Fe> <Feed> <a> <aa> <aaaa> <ab> <aba> <abad> <abb> <abc> <abe> <ac> <aca> <acc> <ace> <ad> <ada> <add> <ade> <aded> <ae> <af> <aff> <b> <ba> <bad> <bb> <bbe> <bc> <bd> <be> <bec> <bed> <bf> <c> <ca> <cade> <cb> <cc> <cca> <ccc> <cd> <ce> <ceae> <ced> <ceed> <cf> <d> <da> <dade> <db> <dbc> <dc> <dd> <de> <deb> <dec> <ded> <def> <df> <e> <ea> <ead> <eb> <ebb> <ec> <eca> <ed> <eda> <edad> <ede> <eded> <ee> <eed> <ef> <efe> <eff> <f> <fa> <fab> <fac> <face> <fade> <fb> <fc> <fd> <fe> <feed> <ff> <ffe> <fff> <ffff> )
+Rejected: 31544
+Uncertain: 25 (<Accept> <Access> <Accessor> <AccessorImpl> <DEFAULT> <Default> <Defaults> <Effect> <accept> <access> <aceae> <addClass> <addEventListener> <added> <affen> <babel> <because> <cadem> <cademy> <cedes> <default> <effect> <facebook> <faces> <ffect> )
+Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 2
+Rule id: 8 Sequence id: 285
+Accepted: 154 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AB> <ABC> <AC> <ACE> <AD> <ADD> <AE> <AF> <Ab> <Ac> <Acc> <Ad> <Add> <Aff> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Bad> <Bbb> <Be> <C> <CA> <CAA> <CB> <CC> <CCE> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DBC> <DC> <DD> <DE> <DEF> <DF> <Da> <Db> <De> <Deb> <Dec> <Def> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <Fa> <Fe> <a> <aa> <ab> <aba> <abb> <abc> <abe> <ac> <aca> <acc> <ace> <ad> <ada> <add> <ade> <ae> <af> <aff> <b> <ba> <bad> <bb> <bbe> <bc> <bd> <be> <bec> <bed> <bf> <c> <ca> <cb> <cc> <cca> <ccc> <cd> <ce> <ced> <cf> <d> <da> <db> <dbc> <dc> <dd> <de> <deb> <dec> <ded> <def> <df> <e> <ea> <ead> <eb> <ebb> <ec> <eca> <ed> <eda> <ede> <ee> <eed> <ef> <efe> <eff> <f> <fa> <fab> <fac> <fb> <fc> <fd> <fe> <ff> <ffe> <fff> )
+Rejected: 31444
+Uncertain: 142 (<AAAA> <ABASE> <Accept> <Access> <Accessor> <AccessorImpl> <Account> <Adapter> <Address> <Back> <Background> <Bean> <BeanFactory> <Before> <CCESS> <Cache> <DEBUG> <DEFAULT> <Debug> <Decimal> <Default> <Defaults> <Definition> <Each> <Effect> <FFER> <FFFF> <Face> <Fact> <Factory> <Feature> <Feed> <aaaa> <abad> <abama> <aban> <abase> <abei> <abel> <abeled> <aben> <abestanden> <abet> <abeth> <accept> <access> <acci> <acco> <account> <aceae> <acent> <aces> <adal> <adamente> <adapter> <adas> <adata> <addClass> <addEventListener> <added> <adding> <addle> <addr> <address> <addy> <aded> <adel> <adem> <aden> <ader> <aders> <ades> <adesh> <afen> <affen> <baar> <babel> <bably> <bach> <back> <backend> <background> <backgroundColor> <bben> <bean> <beans> <because> <beck> <beeld> <before> <cache> <cade> <cadem> <cademy> <ccess> <ceae> <cean> <cedes> <cedure> <ceed> <dade> <debug> <deck> <decl> <decode> <decor> <deep> <default> <defin> <define> <defined> <definition> <defn> <each> <eben> <ecause> <edad> <eded> <eden> <eder> <ederb> <ederb\u00f6rd> <edes> <edeut> <effect> <efficient> <face> <facebook> <faces> <fach> <fact> <factor> <factory> <fade> <feature> <features> <fect> <fection> <feed> <ffect> <ffen> <ffff> )
+Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 3
+Rule id: 8 Sequence id: 285
+Accepted: 104 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <AA> <AB> <AC> <AD> <AE> <AF> <Ab> <Ac> <Ad> <B> <BA> <BB> <BC> <BD> <BE> <BF> <Be> <C> <CA> <CB> <CC> <CD> <CE> <CF> <Ca> <D> <DA> <DB> <DC> <DD> <DE> <DF> <Da> <Db> <De> <E> <EB> <EC> <ED> <EE> <EF> <Ed> <F> <FA> <FB> <FC> <FD> <FE> <FF> <Fa> <Fe> <a> <aa> <ab> <ac> <ad> <ae> <af> <b> <ba> <bb> <bc> <bd> <be> <bf> <c> <ca> <cb> <cc> <cd> <ce> <cf> <d> <da> <db> <dc> <dd> <de> <df> <e> <ea> <eb> <ec> <ed> <ee> <ef> <f> <fa> <fb> <fc> <fd> <fe> <ff> )
+Rejected: 30912
+Uncertain: 724
+Rule: escape Sequence: ([u] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]) Position: 4
+Rule id: 8 Sequence id: 285
+Accepted: 22 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> <A> <B> <C> <D> <E> <F> <a> <b> <c> <d> <e> <f> )
+Rejected: 28132
+Uncertain: 3586
+Rule: digits Sequence: ([0-9]) Position: 0
+Rule id: 9 Sequence id: 288
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: digits Sequence: ([0-9] digits) Position: 0
+Rule id: 9 Sequence id: 291
+Accepted: 10 (<0> <1> <2> <3> <4> <5> <6> <7> <8> <9> )
+Rejected: 31730
+Uncertain: 0 ()
+Rule: fraction Sequence: ([.] digits) Position: 0
+Rule id: 10 Sequence id: 295
+Accepted: 1 (<.> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: exponent Sequence: ([e] sign digits) Position: 0
+Rule id: 11 Sequence id: 301
+Accepted: 1 (<e> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: exponent Sequence: ([E] sign digits) Position: 0
+Rule id: 11 Sequence id: 305
+Accepted: 1 (<E> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: sign Sequence: ([+]) Position: 0
+Rule id: 12 Sequence id: 309
+Accepted: 1 (<+> )
+Rejected: 31727
+Uncertain: 12 (<+\"> <+$> <+\'> <+(> <+)> <++> <++)> <++){> <++,> <++;> <+=> <+\\> )
+Rule: sign Sequence: ([\-]) Position: 0
+Rule id: 12 Sequence id: 311
+Accepted: 1 (<-> )
+Rejected: 31710
+Uncertain: 29 (<-$> <-%> <-(> <-)> <-+> <-,> <--> <--\"> <--+> <---> <---+> <----> <----+> <-----> <------> <------+> <-------> <--------> <---------+> <----------> <------------> <----------------> <-->> <-.> <->> <->_> <->{> <-\\> <-}> )
+Rule: ws Sequence: ([ ] ws) Position: 0
+Rule id: 13 Sequence id: 316
+Accepted: 17 (< > < \r> <  > <   > <    > <     > <      > <       > <        > <         > <          > <           > <            > <             > <              > <               > <                > )
+Rejected: 15331
+Uncertain: 16392
+Rule: ws Sequence: ([\n] ws) Position: 0
+Rule id: 13 Sequence id: 319
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Rule: ws Sequence: ([\r] ws) Position: 0
+Rule id: 13 Sequence id: 322
+Accepted: 1 (<\r> )
+Rejected: 31739
+Uncertain: 0 ()
+Rule: ws Sequence: ([\t] ws) Position: 0
+Rule id: 13 Sequence id: 325
+Accepted: 0 ()
+Rejected: 31740
+Uncertain: 0 ()
+Preprocess time: 1423.96 ms
