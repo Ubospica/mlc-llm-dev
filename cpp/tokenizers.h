@@ -25,6 +25,7 @@ class TokenizerObj : public Object {
  public:
   /*! \brief The underlying tokenizer. */
   std::unique_ptr<tokenizers::Tokenizer> tokenizer;
+  std::vector<std::string> token_table;
 
   /*! \brief Encode text into ids. */
   std::vector<int32_t> Encode(const std::string& text) const;
@@ -32,6 +33,22 @@ class TokenizerObj : public Object {
   std::string Decode(const std::vector<int32_t>& token_ids) const;
   /*! \brief Return the token table of the tokenizer. */
   const std::vector<std::string>& TokenTable();
+
+  /*!
+   * \brief Returns the vocabulary size. Special tokens are considered.
+   */
+  size_t GetVocabSize() const;
+
+  /*!
+   * \brief Convert the given id to its corresponding token if it exists. If not, return an
+   * empty string.
+   */
+  const std::string& IdToToken(int32_t token_id) const;
+
+  /*!
+   * \brief Convert the given token to its corresponding id if it exists. If not, return -1.
+   */
+  int32_t TokenToId(const std::string& token) const;
 
   static constexpr const char* _type_key = "mlc.Tokenizer";
   static constexpr const bool _type_has_method_sequal_reduce = false;
