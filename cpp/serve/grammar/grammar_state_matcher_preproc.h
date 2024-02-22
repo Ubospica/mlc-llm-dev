@@ -49,25 +49,7 @@ struct CatagorizedTokens {
 
   CatagorizedTokens(std::vector<int32_t>&& accepted_indices,
                     std::vector<int32_t>&& rejected_indices,
-                    std::vector<int32_t>&& uncertain_indices) {
-    auto size_acc = accepted_indices.size();
-    auto size_rej = rejected_indices.size();
-    auto size_unc = uncertain_indices.size();
-    not_saved_index =
-        (size_acc >= size_rej && size_acc >= size_unc)
-            ? NotSavedIndex::kAccepted
-            : (size_rej >= size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
-
-    if (not_saved_index != NotSavedIndex::kAccepted) {
-      this->accepted_indices = std::move(accepted_indices);
-    }
-    if (not_saved_index != NotSavedIndex::kRejected) {
-      this->rejected_indices = std::move(rejected_indices);
-    }
-    if (not_saved_index != NotSavedIndex::kUncertain) {
-      this->uncertain_indices = std::move(uncertain_indices);
-    }
-  }
+                    std::vector<int32_t>&& uncertain_indices);
 };
 
 /*!
@@ -127,82 +109,10 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
       : GrammarStateMatcherBase(grammar, init_rule_position) {}
 
   CatagorizedTokens GetCatagorizedTokens(const std::vector<TokenAndId>& sorted_token_and_ids,
-                                         bool is_main_rule) {
-    // Support the current stack contains only one stack with one RulePosition.
-    // Iterate over all tokens. Split them into three categories:
-    // - accepted_indices: If a token is accepted by current rule
-    // - rejected_indices: If a token is rejected by current rule
-    // - uncertain_indices: If a prefix of a token is accepted by current rule and comes to the end
-    // of the rule. In real matching process, it still can be accepted or rejected by a parent rule.
-    // So it is uncertain.
-
-    // Note many tokens may contain the same prefix, so we will avoid unnecessary matching
-    static std::vector<int32_t> accepted_indices;
-    static std::vector<int32_t> rejected_indices;
-    static std::vector<int32_t> uncertain_indices;
-
-    // For every character in the current token, stores whether it is possible to reach the end of
-    // the rule when matching until this character. Useful for rollback.
-    static std::vector<bool> can_see_end_stack;
-
-    accepted_indices.clear();
-    rejected_indices.clear();
-    uncertain_indices.clear();
-    can_see_end_stack.clear();
-    can_see_end_stack.push_back(CanReachEnd());
-
-    int prev_matched_size = 0;
-    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
-      const auto& token = sorted_token_and_ids[i].token;
-      const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
-
-      // Find the longest common prefix with the accepted part of the previous token.
-      auto prev_useful_size = 0;
-      if (prev_token) {
-        prev_useful_size = std::min(prev_matched_size, static_cast<int>(token.size()));
-        for (int j = 0; j < prev_useful_size; ++j) {
-          if (token[j] != (*prev_token)[j]) {
-            prev_useful_size = j;
-            break;
-          }
-        }
-        RollbackSteps(prev_matched_size - prev_useful_size);
-        can_see_end_stack.erase(can_see_end_stack.end() - (prev_matched_size - prev_useful_size),
-                                can_see_end_stack.end());
-      }
-
-      // Find if the current token is accepted or rejected or uncertain.
-      bool accepted = true;
-      bool can_see_end = can_see_end_stack.back();
-      prev_matched_size = prev_useful_size;
-      for (int j = prev_useful_size; j < token.size(); ++j) {
-        if (!AcceptCodepoint(token[j], false)) {
-          accepted = false;
-          break;
-        }
-        if (CanReachEnd()) {
-          can_see_end = true;
-        }
-        can_see_end_stack.push_back(can_see_end);
-        prev_matched_size = j + 1;
-      }
-      if (accepted) {
-        accepted_indices.push_back(i);
-      } else if (can_see_end && !is_main_rule) {
-        // If the current rule is the main rule, there will be no uncertain indices since we will
-        // never consider its parent rule. Unaccepted tokens are just rejected.
-        uncertain_indices.push_back(i);
-      } else {
-        rejected_indices.push_back(i);
-      }
-    }
-    RollbackSteps(prev_matched_size);
-    return CatagorizedTokens(std::move(accepted_indices), std::move(rejected_indices),
-                             std::move(uncertain_indices));
-  }
+                                         bool is_main_rule);
 };
 
-bool TokenAndId::operator<(const TokenAndId& other) const {
+inline bool TokenAndId::operator<(const TokenAndId& other) const {
   for (size_t i = 0; i < token.size(); ++i) {
     if (i >= other.token.size()) {
       return false;
@@ -216,8 +126,105 @@ bool TokenAndId::operator<(const TokenAndId& other) const {
   return token.size() < other.token.size();
 }
 
-std::string ReplaceUnderscoreWithSpace(const std::string& str,
-                                       const std::string& kSpecialUnderscore) {
+inline CatagorizedTokens::CatagorizedTokens(std::vector<int32_t>&& accepted_indices,
+                                            std::vector<int32_t>&& rejected_indices,
+                                            std::vector<int32_t>&& uncertain_indices) {
+  auto size_acc = accepted_indices.size();
+  auto size_rej = rejected_indices.size();
+  auto size_unc = uncertain_indices.size();
+  not_saved_index =
+      (size_acc >= size_rej && size_acc >= size_unc)
+          ? NotSavedIndex::kAccepted
+          : (size_rej >= size_unc ? NotSavedIndex::kRejected : NotSavedIndex::kUncertain);
+
+  if (not_saved_index != NotSavedIndex::kAccepted) {
+    this->accepted_indices = std::move(accepted_indices);
+  }
+  if (not_saved_index != NotSavedIndex::kRejected) {
+    this->rejected_indices = std::move(rejected_indices);
+  }
+  if (not_saved_index != NotSavedIndex::kUncertain) {
+    this->uncertain_indices = std::move(uncertain_indices);
+  }
+}
+
+inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens(
+    const std::vector<TokenAndId>& sorted_token_and_ids, bool is_main_rule) {
+  // Support the current stack contains only one stack with one RulePosition.
+  // Iterate over all tokens. Split them into three categories:
+  // - accepted_indices: If a token is accepted by current rule
+  // - rejected_indices: If a token is rejected by current rule
+  // - uncertain_indices: If a prefix of a token is accepted by current rule and comes to the end
+  // of the rule. In real matching process, it still can be accepted or rejected by a parent rule.
+  // So it is uncertain.
+
+  // Note many tokens may contain the same prefix, so we will avoid unnecessary matching
+  static std::vector<int32_t> accepted_indices;
+  static std::vector<int32_t> rejected_indices;
+  static std::vector<int32_t> uncertain_indices;
+
+  // For every character in the current token, stores whether it is possible to reach the end of
+  // the rule when matching until this character. Useful for rollback.
+  static std::vector<bool> can_see_end_stack;
+
+  accepted_indices.clear();
+  rejected_indices.clear();
+  uncertain_indices.clear();
+  can_see_end_stack.clear();
+  can_see_end_stack.push_back(CanReachEnd());
+
+  int prev_matched_size = 0;
+  for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+    const auto& token = sorted_token_and_ids[i].token;
+    const auto* prev_token = i > 0 ? &sorted_token_and_ids[i - 1].token : nullptr;
+
+    // Find the longest common prefix with the accepted part of the previous token.
+    auto prev_useful_size = 0;
+    if (prev_token) {
+      prev_useful_size = std::min(prev_matched_size, static_cast<int>(token.size()));
+      for (int j = 0; j < prev_useful_size; ++j) {
+        if (token[j] != (*prev_token)[j]) {
+          prev_useful_size = j;
+          break;
+        }
+      }
+      RollbackSteps(prev_matched_size - prev_useful_size);
+      can_see_end_stack.erase(can_see_end_stack.end() - (prev_matched_size - prev_useful_size),
+                              can_see_end_stack.end());
+    }
+
+    // Find if the current token is accepted or rejected or uncertain.
+    bool accepted = true;
+    bool can_see_end = can_see_end_stack.back();
+    prev_matched_size = prev_useful_size;
+    for (int j = prev_useful_size; j < token.size(); ++j) {
+      if (!AcceptCodepoint(token[j], false)) {
+        accepted = false;
+        break;
+      }
+      if (CanReachEnd()) {
+        can_see_end = true;
+      }
+      can_see_end_stack.push_back(can_see_end);
+      prev_matched_size = j + 1;
+    }
+    if (accepted) {
+      accepted_indices.push_back(i);
+    } else if (can_see_end && !is_main_rule) {
+      // If the current rule is the main rule, there will be no uncertain indices since we will
+      // never consider its parent rule. Unaccepted tokens are just rejected.
+      uncertain_indices.push_back(i);
+    } else {
+      rejected_indices.push_back(i);
+    }
+  }
+  RollbackSteps(prev_matched_size);
+  return CatagorizedTokens(std::move(accepted_indices), std::move(rejected_indices),
+                           std::move(uncertain_indices));
+}
+
+inline std::string ReplaceUnderscoreWithSpace(const std::string& str,
+                                              const std::string& kSpecialUnderscore) {
   std::string res;
   size_t pos = 0;
   while (pos < str.size()) {
@@ -232,9 +239,8 @@ std::string ReplaceUnderscoreWithSpace(const std::string& str,
   return res;
 }
 
-std::shared_ptr<GrammarStateInitContext> CreateInitContext(
+inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
     const BNFGrammar& grammar, const std::vector<std::string>& token_table) {
-  std::cout << 123 << std::endl;
   using RuleExprType = BNFGrammarNode::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
 

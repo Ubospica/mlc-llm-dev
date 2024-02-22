@@ -142,33 +142,16 @@ class RulePositionTree {
     return id;
   }
 
-  /*! \brief See GetNextPosition. */
-  bool IsEndPosition(const RulePosition& rule_position) const {
-    return rule_position.parent_id == RulePosition::kNoParent &&
-           grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id;
-  }
-
   /*!
    * \brief Update a node in the stack to the next position. Next position means either the next
    * element in the current rule, or if the current element is the last element in the rule, the
    * next element in the parent rule. If the current node is the last element in the main rule, it
    * is at the end position.
    */
-  RulePosition GetNextPosition(RulePosition rule_position) const {
-    if (IsEndPosition(rule_position)) {
-      return kInvalidRulePosition;
-    }
-    rule_position = RulePosition(rule_position.rule_id, rule_position.sequence_id,
-                                 rule_position.element_id + 1, rule_position.parent_id);
-    while (rule_position.parent_id != RulePosition::kNoParent &&
-           grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id) {
-      auto parent_rule_position = node_buffer_[rule_position.parent_id];
-      rule_position =
-          RulePosition(parent_rule_position.rule_id, parent_rule_position.sequence_id,
-                       parent_rule_position.element_id + 1, parent_rule_position.parent_id);
-    }
-    return rule_position;
-  }
+  RulePosition GetNextPosition(RulePosition rule_position) const;
+
+  /*! \brief See GetNextPosition. */
+  bool IsEndPosition(const RulePosition& rule_position) const;
 
   /*! \brief Attach an additional reference to the node with the given id. */
   void AttachRefTo(int32_t id) {
@@ -198,89 +181,19 @@ class RulePositionTree {
     return node_buffer_[id];
   }
 
-  /*! \brief Print the stack with the given top id to a string. */
-  std::string PrintStackByTopId(int32_t top_id) const {
-    std::stringstream ss;
-    std::vector<int32_t> stack;
-    for (auto cur_id = top_id; cur_id != RulePosition::kNoParent;
-         cur_id = node_buffer_[cur_id].parent_id) {
-      stack.push_back(cur_id);
-    }
-    ss << "{\n";
-    for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
-      ss << PrintNode(*it) << "\n";
-    }
-    ss << "}";
-    return ss.str();
-  }
-
   /*! \brief Print the node with the given id to a string. */
-  std::string PrintNode(int32_t id) const {
-    std::stringstream ss;
-    const auto& rule_position = node_buffer_[id];
-    ss << "id: " << id;
-    ss << ", rule " << rule_position.rule_id << ": "
-       << grammar_->GetRule(rule_position.rule_id).name;
-    ss << ", sequence " << rule_position.sequence_id << ": "
-       << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id);
-    ss << ", element id: " << rule_position.element_id << ", parent id: " << rule_position.parent_id
-       << ", ref count: " << rule_position.reference_count;
-    return ss.str();
-  }
-
+  std::string PrintNode(int32_t id) const;
+  /*! \brief Print the stack with the given top id to a string. */
+  std::string PrintStackByTopId(int32_t top_id) const;
   /*!
-   * \brief Check the well-formedness of the tree and the associated buffer.
+   * \brief Check the well-formedness of the tree and the associated buffer. For debug purpose.
    * \details This function checks the following properties:
    * 1. Every node is pointed directly or indirectly by a outside pointer.
    * 2. Every node's reference count is consistent with the actual reference count.
    * 3. All ids and positions are valid.
    * 4. If a node in the buffer is free, it should be equal to kInvalidRulePosition.
    */
-  void CheckWellFormed(const std::vector<int32_t>& outside_pointers) const {
-    const auto& buffer = node_buffer_.buffer_;
-    std::unordered_set<int32_t> free_nodes_set(node_buffer_.free_nodes_.begin(),
-                                               node_buffer_.free_nodes_.end());
-    int buffer_size = static_cast<int>(buffer.size());
-    std::vector<int> new_reference_counter(buffer_size, 0);
-    std::vector<bool> visited(buffer_size, false);
-    std::queue<int> visit_queue;
-    for (auto id : outside_pointers) {
-      CHECK(id >= 0 && id < buffer_size);
-      CHECK(buffer[id] != kInvalidRulePosition);
-      new_reference_counter[id]++;
-      if (visited[id] == false) {
-        visited[id] = true;
-        visit_queue.push(id);
-      }
-    }
-    while (!visit_queue.empty()) {
-      auto cur_id = visit_queue.front();
-      visit_queue.pop();
-      const auto& rule_position = buffer[cur_id];
-      if (rule_position.parent_id != RulePosition::kNoParent) {
-        CHECK(rule_position.parent_id >= 0 && rule_position.parent_id < buffer_size);
-        CHECK(buffer[rule_position.parent_id] != kInvalidRulePosition);
-        new_reference_counter[rule_position.parent_id]++;
-        if (visited[rule_position.parent_id] == false) {
-          visited[rule_position.parent_id] = true;
-          visit_queue.push(rule_position.parent_id);
-        }
-      }
-    }
-
-    for (int i = 0; i < static_cast<int32_t>(buffer.size()); ++i) {
-      if (free_nodes_set.count(i)) {
-        CHECK(buffer[i] == kInvalidRulePosition);
-        CHECK(visited[i] == false);
-      } else {
-        CHECK(visited[i] == true);
-        CHECK(buffer[i] != kInvalidRulePosition);
-        CHECK(new_reference_counter[i] == buffer[i].reference_count)
-            << "Reference counters unmatch for node #" << i << ": Updated "
-            << new_reference_counter[i] << ", Original " << buffer[i].reference_count;
-      }
-    }
-  }
+  void CheckWellFormed(const std::vector<int32_t>& outside_pointers) const;
 
  private:
   /*! \brief The grammar associated with this RulePositionTree. */
@@ -356,30 +269,13 @@ class StackTopsHistory {
    * \param history_position_to_latest The number of steps behind the latest record. 0 means the
    * latest record.
    */
-  std::string PrintHistory(int history_position_to_latest = 0) const {
-    const auto& latest_tops =
-        stack_tops_history_[stack_tops_history_.size() - 1 - history_position_to_latest];
-    std::stringstream ss;
-    ss << "Stacks tops size: " << latest_tops.size() << std::endl;
-    int cnt = 0;
-    for (auto id : latest_tops) {
-      ss << "Stack #" << cnt << ": " << tree_->PrintStackByTopId(id) << "\n";
-      ++cnt;
-    }
-    return ss.str();
-  }
+  std::string PrintHistory(int history_position_to_latest = 0) const;
 
   /*! \brief Get the number of history records. */
   int Size() const { return stack_tops_history_.size(); }
 
   /*! \brief Check the well-formedness of the tree and the associated buffer. */
-  void CheckWellFormed() const {
-    std::vector<int32_t> outside_pointers;
-    for (const auto& stack_tops : stack_tops_history_) {
-      outside_pointers.insert(outside_pointers.end(), stack_tops.begin(), stack_tops.end());
-    }
-    tree_->CheckWellFormed(outside_pointers);
-  }
+  void CheckWellFormed() const;
 
  private:
   /*! \brief Pop the oldest history record. Possibly frees node that do not exist in any stack any
@@ -409,6 +305,129 @@ class StackTopsHistory {
   /*! \brief The history of stack tops. */
   std::deque<std::vector<int32_t>> stack_tops_history_;
 };
+
+/*! \brief See GetNextPosition. */
+inline bool RulePositionTree::IsEndPosition(const RulePosition& rule_position) const {
+  return rule_position.parent_id == RulePosition::kNoParent &&
+         grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id;
+}
+
+/*!
+ * \brief Update a node in the stack to the next position. Next position means either the next
+ * element in the current rule, or if the current element is the last element in the rule, the
+ * next element in the parent rule. If the current node is the last element in the main rule, it
+ * is at the end position.
+ */
+inline RulePosition RulePositionTree::GetNextPosition(RulePosition rule_position) const {
+  if (IsEndPosition(rule_position)) {
+    return kInvalidRulePosition;
+  }
+  rule_position = RulePosition(rule_position.rule_id, rule_position.sequence_id,
+                               rule_position.element_id + 1, rule_position.parent_id);
+  while (rule_position.parent_id != RulePosition::kNoParent &&
+         grammar_->GetRuleExpr(rule_position.sequence_id).size() == rule_position.element_id) {
+    auto parent_rule_position = node_buffer_[rule_position.parent_id];
+    rule_position =
+        RulePosition(parent_rule_position.rule_id, parent_rule_position.sequence_id,
+                     parent_rule_position.element_id + 1, parent_rule_position.parent_id);
+  }
+  return rule_position;
+}
+
+inline std::string RulePositionTree::PrintNode(int32_t id) const {
+  std::stringstream ss;
+  const auto& rule_position = node_buffer_[id];
+  ss << "id: " << id;
+  ss << ", rule " << rule_position.rule_id << ": " << grammar_->GetRule(rule_position.rule_id).name;
+  ss << ", sequence " << rule_position.sequence_id << ": "
+     << BNFGrammarPrinter(grammar_).PrintRuleExpr(rule_position.sequence_id);
+  ss << ", element id: " << rule_position.element_id << ", parent id: " << rule_position.parent_id
+     << ", ref count: " << rule_position.reference_count;
+  return ss.str();
+}
+
+inline std::string RulePositionTree::PrintStackByTopId(int32_t top_id) const {
+  std::stringstream ss;
+  std::vector<int32_t> stack;
+  for (auto cur_id = top_id; cur_id != RulePosition::kNoParent;
+       cur_id = node_buffer_[cur_id].parent_id) {
+    stack.push_back(cur_id);
+  }
+  ss << "{\n";
+  for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+    ss << PrintNode(*it) << "\n";
+  }
+  ss << "}";
+  return ss.str();
+}
+
+inline void RulePositionTree::CheckWellFormed(const std::vector<int32_t>& outside_pointers) const {
+  const auto& buffer = node_buffer_.buffer_;
+  std::unordered_set<int32_t> free_nodes_set(node_buffer_.free_nodes_.begin(),
+                                             node_buffer_.free_nodes_.end());
+  int buffer_size = static_cast<int>(buffer.size());
+  std::vector<int> new_reference_counter(buffer_size, 0);
+  std::vector<bool> visited(buffer_size, false);
+  std::queue<int> visit_queue;
+  for (auto id : outside_pointers) {
+    CHECK(id >= 0 && id < buffer_size);
+    CHECK(buffer[id] != kInvalidRulePosition);
+    new_reference_counter[id]++;
+    if (visited[id] == false) {
+      visited[id] = true;
+      visit_queue.push(id);
+    }
+  }
+  while (!visit_queue.empty()) {
+    auto cur_id = visit_queue.front();
+    visit_queue.pop();
+    const auto& rule_position = buffer[cur_id];
+    if (rule_position.parent_id != RulePosition::kNoParent) {
+      CHECK(rule_position.parent_id >= 0 && rule_position.parent_id < buffer_size);
+      CHECK(buffer[rule_position.parent_id] != kInvalidRulePosition);
+      new_reference_counter[rule_position.parent_id]++;
+      if (visited[rule_position.parent_id] == false) {
+        visited[rule_position.parent_id] = true;
+        visit_queue.push(rule_position.parent_id);
+      }
+    }
+  }
+
+  for (int i = 0; i < static_cast<int32_t>(buffer.size()); ++i) {
+    if (free_nodes_set.count(i)) {
+      CHECK(buffer[i] == kInvalidRulePosition);
+      CHECK(visited[i] == false);
+    } else {
+      CHECK(visited[i] == true);
+      CHECK(buffer[i] != kInvalidRulePosition);
+      CHECK(new_reference_counter[i] == buffer[i].reference_count)
+          << "Reference counters unmatch for node #" << i << ": Updated "
+          << new_reference_counter[i] << ", Original " << buffer[i].reference_count;
+    }
+  }
+}
+
+inline std::string StackTopsHistory::PrintHistory(int history_position_to_latest) const {
+  const auto& latest_tops =
+      stack_tops_history_[stack_tops_history_.size() - 1 - history_position_to_latest];
+  std::stringstream ss;
+  ss << "Stacks tops size: " << latest_tops.size() << std::endl;
+  int cnt = 0;
+  for (auto id : latest_tops) {
+    ss << "Stack #" << cnt << ": " << tree_->PrintStackByTopId(id) << "\n";
+    ++cnt;
+  }
+  return ss.str();
+}
+
+/*! \brief Check the well-formedness of the tree and the associated buffer. */
+inline void StackTopsHistory::CheckWellFormed() const {
+  std::vector<int32_t> outside_pointers;
+  for (const auto& stack_tops : stack_tops_history_) {
+    outside_pointers.insert(outside_pointers.end(), stack_tops.begin(), stack_tops.end());
+  }
+  tree_->CheckWellFormed(outside_pointers);
+}
 
 }  // namespace serve
 }  // namespace llm
