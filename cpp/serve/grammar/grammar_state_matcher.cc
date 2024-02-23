@@ -126,7 +126,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     }
   }
 
-  void FindNextTokenBitmask(NDArray* next_token_bitmask) {
+  void FindNextTokenBitmask(DLTensor* next_token_bitmask) {
     const auto& tokens_sorted_by_codepoint = init_ctx_->tokens_sorted_by_codepoint;
     const auto& catagorized_tokens_for_grammar = init_ctx_->catagorized_tokens_for_grammar;
     const auto& latest_stack_tops = stack_tops_history_.GetLatest();
