@@ -66,10 +66,9 @@ members ::= "\"" characters "\"" ws ":" ws value members_rest
 members_rest ::= (
     "" |
     "," ws "\"" characters "\"" ws ":" ws value members_rest |
-    "\u0020" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
-    "\u000A" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
-    "\u000D" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
-    "\u0009" ws "," ws "\"" characters "\"" ws ":" ws value members_rest
+    " " ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\n" ws "," ws "\"" characters "\"" ws ":" ws value members_rest |
+    "\t" ws "," ws "\"" characters "\"" ws ":" ws value members_rest
 )
 elements_or_embrace ::= (
     "{" ws members_or_embrace elements_rest ws "]" |
@@ -99,10 +98,9 @@ elements ::= (
 elements_rest ::= (
     "" |
     "," ws elements |
-    "\u0020" ws "," ws elements |
-    "\u000A" ws "," ws elements |
-    "\u000D" ws "," ws elements |
-    "\u0009" ws "," ws elements
+    " " ws "," ws elements |
+    "\n" ws "," ws elements |
+    "\t" ws "," ws elements
 )
 characters ::= "" | [^"\\] characters | "\\" escape characters
 escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
@@ -110,7 +108,7 @@ digits ::= [0-9] | [0-9] digits
 fraction ::= "" | "." digits
 exponent ::= "" |  "e" sign digits | "E" sign digits
 sign ::= "" | "+" | "-"
-ws ::= [ \n\r\t]*
+ws ::= [ \n\t]*
 )";
 
 BNFGrammar BNFGrammar::GetJSONGrammar() {

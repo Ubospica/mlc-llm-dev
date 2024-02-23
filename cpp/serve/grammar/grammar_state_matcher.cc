@@ -259,8 +259,8 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     }
 
     // Finally update the rejected_ids bitset
-    FindNextTokenBitMask(next_token_bitmask, accepted_indices, rejected_indices,
-                         tokens_sorted_by_codepoint);
+    bool can_reach_end = CanReachEnd();
+    FindNextTokenBitMask(next_token_bitmask, accepted_indices, rejected_indices, can_reach_end);
   }
 
   void Rollback(int num_tokens) {
@@ -275,34 +275,42 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
 
  private:
   void FindNextTokenBitMask(DLTensor* next_token_bitmask, std::vector<int32_t>& accepted_indices,
-                            std::vector<int32_t>& rejected_indices,
-                            const std::vector<TokenAndId>& tokens_sorted_by_codepoint) {
+                            std::vector<int32_t>& rejected_indices, bool can_reach_end) {
+    // accepted_ids = Union(accepted_indices, all_tokens - rejected_indices)
     // rejected_ids = Intersect(all_tokens - accepted_indices, rejected_indices)
     DCHECK(next_token_bitmask->dtype.code == kDLUInt && next_token_bitmask->dtype.bits == 32 &&
            next_token_bitmask->data && next_token_bitmask->ndim == 1 && next_token_bitmask->shape);
 
     BitsetManager next_token_bitset(reinterpret_cast<uint32_t*>(next_token_bitmask->data),
                                     next_token_bitmask->shape[0]);
-    next_token_bitset.Reset(init_ctx_->vocab_size, true);
 
     if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
       // When rejected_indices = all_tokens, we can just set rejected_ids = all_tokens - accepted
-      auto it_acc = accepted_indices.begin();
-      for (int i = 0; i < static_cast<int>(tokens_sorted_by_codepoint.size()); ++i) {
-        while (it_acc != accepted_indices.end() && *it_acc < i) {
-          ++it_acc;
+      next_token_bitset.Reset(init_ctx_->vocab_size, false);
+      for (int idx : accepted_indices) {
+        next_token_bitset.Set(init_ctx_->tokens_sorted_by_codepoint[idx].id, true);
+      }
+
+      if (can_reach_end) {
+        for (int idx : init_ctx_->stop_token_ids) {
+          next_token_bitset.Set(idx, true);
         }
-        if (it_acc != accepted_indices.end() && *it_acc == i) {
-          ++it_acc;
-          continue;
-        }
-        next_token_bitset.Set(tokens_sorted_by_codepoint[i].id, false);
       }
     } else {
       // Otherwise, rejected_ids = rejected_indices - accepted_indices
+      next_token_bitset.Reset(init_ctx_->vocab_size, true);
       DifferenceWith(&rejected_indices, accepted_indices);
       for (int idx : rejected_indices) {
-        next_token_bitset.Set(tokens_sorted_by_codepoint[idx].id, false);
+        next_token_bitset.Set(init_ctx_->tokens_sorted_by_codepoint[idx].id, false);
+      }
+
+      for (int idx : init_ctx_->special_token_ids) {
+        next_token_bitset.Set(idx, false);
+      }
+      if (!can_reach_end) {
+        for (int idx : init_ctx_->stop_token_ids) {
+          next_token_bitset.Set(idx, false);
+        }
       }
     }
   }
@@ -388,7 +396,8 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherMatchCompleteString")
  * \returns A tuple of rejected token ids.
  */
 IntTuple GetRejectedTokenIds(GrammarStateMatcher matcher) {
-  auto vocab_size = matcher.as<GrammarStateMatcherNodeImpl>()->init_ctx_->vocab_size;
+  auto init_ctx = matcher.as<GrammarStateMatcherNodeImpl>()->init_ctx_;
+  auto vocab_size = init_ctx->vocab_size;
   auto bitset_size = BitsetManager::GetBitsetSize(vocab_size);
   auto ndarray = NDArray::Empty(ShapeTuple{static_cast<long>(bitset_size)},
                                 DLDataType{kDLUInt, 32, 1}, DLDevice{kDLCPU, 0});
@@ -403,16 +412,49 @@ IntTuple GetRejectedTokenIds(GrammarStateMatcher matcher) {
             << std::endl;
 
   auto bitset = BitsetManager(reinterpret_cast<uint32_t*>(dltensor.data), bitset_size);
-  std::vector<long> res_vector;
+  std::vector<long> rejected_ids;
+  std::vector<long> accepted_ids;
   for (int i = 0; i < vocab_size; i++) {
     if (bitset[i] == 0) {
-      res_vector.push_back(i);
+      rejected_ids.push_back(i);
+    } else {
+      accepted_ids.push_back(i);
     }
+  }
+
+  if (rejected_ids.size() < 500) {
+    std::cout << "Rejected: ";
+    for (auto id : rejected_ids) {
+      std::cout << "<";
+      auto token = init_ctx->token_table[id];
+      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, "▁");
+      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
+      for (auto c : codepoints) {
+        std::cout << CodepointToPrintable(c);
+      }
+      std::cout << "> ";
+    }
+    std::cout << "\n";
+  }
+
+  if (accepted_ids.size() < 500) {
+    std::cout << "Accepted: ";
+    for (auto id : accepted_ids) {
+      std::cout << "<";
+      auto token = init_ctx->token_table[id];
+      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, "▁");
+      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
+      for (auto c : codepoints) {
+        std::cout << CodepointToPrintable(c);
+      }
+      std::cout << "> ";
+    }
+    std::cout << "\n";
   }
 
   dltensor_manager->deleter(dltensor_manager);
 
-  auto ret = IntTuple(res_vector);
+  auto ret = IntTuple(rejected_ids);
   return ret;
 }
 

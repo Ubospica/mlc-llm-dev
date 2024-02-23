@@ -60,6 +60,7 @@ struct CatagorizedTokens {
  */
 class GrammarStateInitContext {
  public:
+  std::vector<std::string> token_table;
   BNFGrammar grammar;
   /*! \brief The vocabulary size of the tokenizer. */
   size_t vocab_size;
@@ -245,6 +246,7 @@ inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
   using RuleExprType = BNFGrammarNode::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
 
+  ptr->token_table = token_table;
   ptr->grammar = grammar;
   ptr->vocab_size = token_table.size();
 
