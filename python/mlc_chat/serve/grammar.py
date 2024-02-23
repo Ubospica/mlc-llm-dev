@@ -152,7 +152,7 @@ class GrammarStateMatcher(Object):
             max_rollback_steps,
         )
 
-    def accept_char(self, codepoint: int, drop_old: bool = True) -> bool:
+    def accept_char(self, codepoint: int) -> bool:
         """Accept one unicode character to the current state.
 
         Parameters
@@ -165,18 +165,8 @@ class GrammarStateMatcher(Object):
             of states exceeds the limit of saved history.
         """
         return _ffi_api.GrammarStateMatcherAcceptCodepoint(  # type: ignore  # pylint: disable=no-member
-            self, codepoint, drop_old
+            self, codepoint
         )
-
-    def can_reach_end(self) -> bool:
-        """Returns true if the matcher already reached the end of the grammar.
-
-        Note
-        ----
-        Since the matcher maintains a non-deterministic state internally, even though the matcher
-        reaches the end, it may still have other paths that can continue to accept new characters.
-        """
-        return _ffi_api.GrammarStateMatcherCanReachEnd(self)  # type: ignore  # pylint: disable=no-member
 
     def match_complete_string(self, string: str) -> bool:
         """Check if a matcher can accept the complete string, and then reach the end of the

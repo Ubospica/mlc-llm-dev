@@ -12,29 +12,19 @@
 namespace mlc {
 namespace llm {
 
-class DynamicBitSet {
+class BitsetManager {
  public:
-  explicit DynamicBitSet(int size = 0, bool value = false)
-      : size_(size),
-        internal_size_((size + 31) / 32),
-        data_(internal_size_, value ? 0xFFFFFFFF : 0) {}
+  BitsetManager(uint32_t* data, int buffer_size) : data_(data), buffer_size_(buffer_size) {}
 
-  bool operator[](int index) const { return (data_[index / 32] >> (index % 32)) & 1; }
+  static int GetBitsetSize(int size) { return (size + 31) / 32; }
 
-  void Reset(int size = -1, bool value = false) {
-    if (size != -1) {
-      size_ = size;
-      internal_size_ = (size + 31) / 32;
-    }
-    if (value) {
-      data_.assign(internal_size_, 0xFFFFFFFF);
-    } else {
-      data_.assign(internal_size_, 0);
-    }
+  bool operator[](int index) const {
+    DCHECK(index >= 0 && index / 32 < buffer_size_);
+    return (data_[index / 32] >> (index % 32)) & 1;
   }
 
-  void Set(int index, bool value = true) {
-    DCHECK(index < size_);
+  void Set(int index, bool value) {
+    DCHECK(index >= 0 && index / 32 < buffer_size_);
     if (value) {
       data_[index / 32] |= 1 << (index % 32);
     } else {
@@ -42,14 +32,14 @@ class DynamicBitSet {
     }
   }
 
-  int Size() const { return size_; }
-
-  int InternalSize() const { return internal_size_; }
+  void Reset(int size, bool value) {
+    DCHECK(buffer_size_ >= GetBitsetSize(size));
+    std::memset(data_, value ? 0xFF : 0, GetBitsetSize(size) * sizeof(uint32_t));
+  }
 
  private:
-  int size_;
-  int internal_size_;
-  std::vector<int32_t> data_;
+  uint32_t* const data_;
+  const int buffer_size_;
 };
 
 }  // namespace llm

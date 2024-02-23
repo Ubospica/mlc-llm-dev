@@ -56,7 +56,7 @@ class GrammarStateMatcherNode : public Object {
    * of the tokenizer, the positions of rejected tokens to 1, and other positions to 0.
    * \sa mlc::llm::serve::Sampler.
    */
-  virtual void FindNextTokenBitmask(NDArray* next_token_bitmask) = 0;
+  virtual void FindNextTokenBitmask(DLTensor* next_token_bitmask) = 0;
 
   /*!
    * \brief Rollback the matcher to a previous state.
@@ -75,12 +75,13 @@ class GrammarStateInitContext;
 
 class GrammarStateMatcher : public ObjectRef {
  public:
+  GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext> init_ctx,
+                      int max_rollback_tokens = 0);
+
   /*! \brief Construct a GrammarStateInitContext from a tokenizer and a grammar. The grammar should
    * be the same as the grammar used to construct the GrammarStateMatcher. */
   static std::shared_ptr<GrammarStateInitContext> CreateInitContext(
       const BNFGrammar& grammar, const std::vector<std::string>& token_table);
-  GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext> init_ctx,
-                      int max_rollback_tokens = 0);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(GrammarStateMatcher, ObjectRef, GrammarStateMatcherNode);
 };

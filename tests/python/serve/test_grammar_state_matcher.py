@@ -8,7 +8,7 @@ from mlc_chat.serve import BNFGrammar, GrammarStateMatcher
 from mlc_chat.tokenizer import Tokenizer
 
 
-@pytest.fixture(scope="function")
+# @pytest.fixture(scope="function")
 def json_grammar():
     return BNFGrammar.get_json_grammar()
 
@@ -50,7 +50,6 @@ def json_grammar():
 
 def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
     assert GrammarStateMatcher(json_grammar).match_complete_string(json_inputs_accepted)
-
 
 
 # test_json_accept(json_grammar(), '{"name": "John"}')
@@ -229,13 +228,16 @@ def test_get_rejected_token_ids_short(json_grammar: BNFGrammar):
     for c in test_input_str:
         rejected_token_ids = grammar_state_matcher.get_rejected_token_ids()
         real_sizes.append(len(rejected_token_ids))
+        print("len(rejected_token_ids):", len(rejected_token_ids))
         grammar_state_matcher.accept_char(ord(c))
-        # print("accepting:", c)
+        print("accepting:", c)
+    print(real_sizes)
+    print(expected_sizes)
     assert real_sizes == expected_sizes
 
 
-# test_get_rejected_token_ids_short(json_grammar())
-# exit()
+test_get_rejected_token_ids_short(json_grammar())
+exit()
 
 
 def test_get_rejected_token_ids_long(json_grammar: BNFGrammar):
