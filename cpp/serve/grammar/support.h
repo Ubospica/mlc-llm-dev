@@ -49,34 +49,39 @@ class BitsetManager {
  * \brief Unionize the target set with the source set, and store the result in the target
  * set in O(n) time complexity. Suppose that both sets are sorted.
  */
-void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
-  static std::vector<int32_t> result;
-  result.clear();
-  result.reserve(target->size() + source.size());
-  auto it1 = target->begin();
-  auto it2 = source.begin();
-  while (it1 != target->end() && it2 != source.end()) {
-    if (*it1 < *it2) {
-      result.push_back(*it1);
-      ++it1;
-    } else if (*it1 > *it2) {
-      result.push_back(*it2);
-      ++it2;
+void IntsetUnion(std::vector<int32_t>* lhs, const std::vector<int32_t>& rhs) {
+  int original_lhs_size = lhs->size();
+  int rhs_size = rhs.size();
+
+  lhs->resize(original_lhs_size + rhs_size);
+
+  auto it_lhs = lhs->rbegin() + rhs_size;
+  auto it_rhs = rhs.rbegin();
+  auto it_result = lhs->rbegin();
+
+  while (it_lhs != lhs->rend() && it_rhs != rhs.rend()) {
+    if (*it_lhs > *it_rhs) {
+      *it_result = *it_lhs;
+      ++it_lhs;
+    } else if (*it_lhs < *it_rhs) {
+      *it_result = *it_rhs;
+      ++it_rhs;
     } else {
-      result.push_back(*it1);
-      ++it1;
-      ++it2;
+      *it_result = *it_lhs;
+      ++it_lhs;
+      ++it_rhs;
     }
+    ++it_result;
   }
-  while (it1 != target->end()) {
-    result.push_back(*it1);
-    ++it1;
+
+  while (it_rhs != rhs.rend()) {
+    *it_result = *it_rhs;
+    ++it_result;
+    ++it_rhs;
   }
-  while (it2 != source.end()) {
-    result.push_back(*it2);
-    ++it2;
-  }
-  target->swap(result);
+
+  auto last = std::unique(lhs->begin(), lhs->end());
+  lhs->erase(last, lhs->end());
 }
 
 /*!
@@ -85,30 +90,29 @@ void UnionizeWith(std::vector<int32_t>* target, const std::vector<int32_t>& sour
  * \note When the target is {-1}, it represents the universal set. The result will be the source
  * set.
  */
-void IntersectWith(std::vector<int32_t>* target, const std::vector<int32_t>& source) {
-  static std::vector<int32_t> result;
-
-  if (!target->empty() && target->at(0) == -1) {
-    *target = source;
+void IntsetIntersection(std::vector<int32_t>* lhs, const std::vector<int32_t>& rhs) {
+  if (lhs->size() == 1 && (*lhs)[0] == -1) {
+    *lhs = rhs;
     return;
   }
 
-  result.clear();
-  result.reserve(std::min(target->size(), source.size()));
-  auto it1 = target->begin();
-  auto it2 = source.begin();
-  while (it1 != target->end() && it2 != source.end()) {
-    if (*it1 < *it2) {
-      ++it1;
-    } else if (*it1 > *it2) {
-      ++it2;
+  auto it_lhs = lhs->begin();
+  auto it_rhs = rhs.begin();
+  auto it_result = lhs->begin();
+
+  while (it_lhs != lhs->end() && it_rhs != rhs.end()) {
+    if (*it_lhs < *it_rhs) {
+      ++it_lhs;
+    } else if (*it_lhs > *it_rhs) {
+      ++it_rhs;
     } else {
-      result.push_back(*it1);
-      ++it1;
-      ++it2;
+      *it_result = *it_lhs;
+      ++it_lhs;
+      ++it_rhs;
+      ++it_result;
     }
   }
-  target->swap(result);
+  lhs->erase(it_result, lhs->end());
 }
 
 }  // namespace serve
