@@ -283,34 +283,27 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
 
     BitsetManager next_token_bitset(reinterpret_cast<uint32_t*>(next_token_bitmask->data),
                                     next_token_bitmask->shape[0]);
-    next_token_bitset.Reset(init_ctx_->vocab_size, false);
+    next_token_bitset.Reset(init_ctx_->vocab_size, true);
 
     if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
       // When rejected_indices = all_tokens, we can just set rejected_ids = all_tokens - accepted
-      SetRejectIdsWithComplement(&next_token_bitset, accepted_indices, tokens_sorted_by_codepoint);
+      auto it_acc = accepted_indices.begin();
+      for (int i = 0; i < static_cast<int>(tokens_sorted_by_codepoint.size()); ++i) {
+        while (it_acc != accepted_indices.end() && *it_acc < i) {
+          ++it_acc;
+        }
+        if (it_acc != accepted_indices.end() && *it_acc == i) {
+          ++it_acc;
+          continue;
+        }
+        next_token_bitset.Set(tokens_sorted_by_codepoint[i].id, false);
+      }
     } else {
       // Otherwise, rejected_ids = rejected_indices - accepted_indices
       DifferenceWith(&rejected_indices, accepted_indices);
       for (int idx : rejected_indices) {
-        next_token_bitset.Set(tokens_sorted_by_codepoint[idx].id, true);
+        next_token_bitset.Set(tokens_sorted_by_codepoint[idx].id, false);
       }
-    }
-  }
-
-  // Set the tokens in tokens_sorted_by_codepoint that not in accepted_indices to rejected_ids.
-  void SetRejectIdsWithComplement(BitsetManager* rejected_ids,
-                                  const std::vector<int32_t>& accepted_indices,
-                                  const std::vector<TokenAndId>& tokens_sorted_by_codepoint) {
-    auto it_acc = accepted_indices.begin();
-    for (int i = 0; i < static_cast<int>(tokens_sorted_by_codepoint.size()); ++i) {
-      while (it_acc != accepted_indices.end() && *it_acc < i) {
-        ++it_acc;
-      }
-      if (it_acc != accepted_indices.end() && *it_acc == i) {
-        ++it_acc;
-        continue;
-      }
-      rejected_ids->Set(tokens_sorted_by_codepoint[i].id, true);
     }
   }
 
@@ -364,8 +357,8 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherAcceptCodepoint")
       return mutable_node->AcceptCodepoint(codepoint);
     });
 
-/*! \brief Check if a matcher can accept the complete string, and then reach the end of the grammar.
- * For test purpose. */
+/*! \brief Check if a matcher can accept the complete string, and then reach the end of the
+ * grammar. For test purpose. */
 bool MatchCompleteString(GrammarStateMatcher matcher, String str) {
   auto mutable_node =
       const_cast<GrammarStateMatcherNodeImpl*>(matcher.as<GrammarStateMatcherNodeImpl>());
@@ -412,7 +405,7 @@ IntTuple GetRejectedTokenIds(GrammarStateMatcher matcher) {
   auto bitset = BitsetManager(reinterpret_cast<uint32_t*>(dltensor.data), bitset_size);
   std::vector<long> res_vector;
   for (int i = 0; i < vocab_size; i++) {
-    if (bitset[i] == 1) {
+    if (bitset[i] == 0) {
       res_vector.push_back(i);
     }
   }
