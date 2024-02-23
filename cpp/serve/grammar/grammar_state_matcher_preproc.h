@@ -102,16 +102,20 @@ class GrammarStateInitContext {
 
 /* \brief The concrete implementation of GrammarStateMatcherNode. */
 class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
- private:
-  using RuleExpr = BNFGrammarNode::RuleExpr;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
-
  public:
   GrammarStateMatcherForInitContext(const BNFGrammar& grammar, RulePosition init_rule_position)
       : GrammarStateMatcherBase(grammar, init_rule_position) {}
 
   CatagorizedTokens GetCatagorizedTokens(const std::vector<TokenAndId>& tokens_sorted_by_codepoint,
                                          bool is_main_rule);
+
+ private:
+  using RuleExpr = BNFGrammarNode::RuleExpr;
+  using RuleExprType = BNFGrammarNode::RuleExprType;
+  std::vector<int32_t> tmp_accepted_indices_;
+  std::vector<int32_t> tmp_rejected_indices_;
+  std::vector<int32_t> tmp_uncertain_indices_;
+  std::vector<bool> tmp_can_see_end_stack_;
 };
 
 inline bool TokenAndId::operator<(const TokenAndId& other) const {
@@ -161,19 +165,14 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
   // So it is uncertain.
 
   // Note many tokens may contain the same prefix, so we will avoid unnecessary matching
-  static std::vector<int32_t> accepted_indices;
-  static std::vector<int32_t> rejected_indices;
-  static std::vector<int32_t> uncertain_indices;
 
   // For every character in the current token, stores whether it is possible to reach the end of
   // the rule when matching until this character. Useful for rollback.
-  static std::vector<bool> can_see_end_stack;
 
-  accepted_indices.clear();
-  rejected_indices.clear();
-  uncertain_indices.clear();
-  can_see_end_stack.clear();
-  can_see_end_stack.push_back(CanReachEnd());
+  tmp_accepted_indices_.clear();
+  tmp_rejected_indices_.clear();
+  tmp_uncertain_indices_.clear();
+  tmp_can_see_end_stack_.assign({CanReachEnd()});
 
   int prev_matched_size = 0;
   for (int i = 0; i < static_cast<int>(tokens_sorted_by_codepoint.size()); ++i) {
@@ -191,13 +190,14 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
         }
       }
       RollbackSteps(prev_matched_size - prev_useful_size);
-      can_see_end_stack.erase(can_see_end_stack.end() - (prev_matched_size - prev_useful_size),
-                              can_see_end_stack.end());
+      tmp_can_see_end_stack_.erase(
+          tmp_can_see_end_stack_.end() - (prev_matched_size - prev_useful_size),
+          tmp_can_see_end_stack_.end());
     }
 
     // Find if the current token is accepted or rejected or uncertain.
     bool accepted = true;
-    bool can_see_end = can_see_end_stack.back();
+    bool can_see_end = tmp_can_see_end_stack_.back();
     prev_matched_size = prev_useful_size;
     for (int j = prev_useful_size; j < token.size(); ++j) {
       if (!AcceptCodepoint(token[j], false)) {
@@ -207,22 +207,22 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
       if (CanReachEnd()) {
         can_see_end = true;
       }
-      can_see_end_stack.push_back(can_see_end);
+      tmp_can_see_end_stack_.push_back(can_see_end);
       prev_matched_size = j + 1;
     }
     if (accepted) {
-      accepted_indices.push_back(i);
+      tmp_accepted_indices_.push_back(i);
     } else if (can_see_end && !is_main_rule) {
       // If the current rule is the main rule, there will be no uncertain indices since we will
       // never consider its parent rule. Unaccepted tokens are just rejected.
-      uncertain_indices.push_back(i);
+      tmp_uncertain_indices_.push_back(i);
     } else {
-      rejected_indices.push_back(i);
+      tmp_rejected_indices_.push_back(i);
     }
   }
   RollbackSteps(prev_matched_size);
-  return CatagorizedTokens(std::move(accepted_indices), std::move(rejected_indices),
-                           std::move(uncertain_indices));
+  return CatagorizedTokens(std::move(tmp_accepted_indices_), std::move(tmp_rejected_indices_),
+                           std::move(tmp_uncertain_indices_));
 }
 
 inline std::string ReplaceUnderscoreWithSpace(const std::string& str,

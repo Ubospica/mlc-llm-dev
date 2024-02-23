@@ -111,13 +111,13 @@ sign ::= "" | "+" | "-"
 ws ::= [ \n\t]*
 )";
 
-BNFGrammar BNFGrammar::GetJSONGrammar() {
-  static BNFGrammar grammar = BNFGrammar::FromEBNFString(kJSONGrammarString, true, false);
+BNFGrammar BNFGrammar::GetGrammarOfJSON() {
+  static const BNFGrammar grammar = BNFGrammar::FromEBNFString(kJSONGrammarString, true, false);
   return grammar;
 }
 
-TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarGetJSONGrammar").set_body_typed([]() {
-  return BNFGrammar::GetJSONGrammar();
+TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarGetGrammarOfJSON").set_body_typed([]() {
+  return BNFGrammar::GetGrammarOfJSON();
 });
 
 }  // namespace serve

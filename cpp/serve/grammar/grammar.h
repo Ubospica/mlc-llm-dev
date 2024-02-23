@@ -186,7 +186,7 @@ class BNFGrammar : public ObjectRef {
   /*！
    * \brief Get the grammar of standard JSON format. We have built-in support for JSON.
    */
-  static BNFGrammar GetJSONGrammar();
+  static BNFGrammar GetGrammarOfJSON();
 
   /*! \brief Print a BNF grammar. */
   friend std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);

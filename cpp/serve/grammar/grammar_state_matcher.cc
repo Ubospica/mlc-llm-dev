@@ -10,13 +10,13 @@
 #include <chrono>
 #include <queue>
 
-#include "../../support/set_operation.h"
 #include "../../tokenizers.h"
 #include "grammar.h"
 #include "grammar_serializer.h"
 #include "grammar_state_matcher_base.h"
 #include "grammar_state_matcher_preproc.h"
 #include "grammar_state_matcher_state.h"
+#include "support.h"
 
 namespace mlc {
 namespace llm {
@@ -130,6 +130,15 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     return true;
   }
 
+  // Per stack temporary data.
+  // Note here indices store the indices in tokens_sorted_by_codepoint, instead of the token ids.
+  std::vector<int32_t> tmp_accepted_indices_;
+  // {-1} means the universal set, i.e. all tokens
+  std::vector<int32_t> tmp_rejected_indices_;
+  std::vector<int32_t> tmp_accepted_indices_delta_;
+  std::vector<int32_t> tmp_rejected_indices_delta_;
+  std::vector<bool> tmp_uncertain_tokens_bitset_;
+
   void FindNextTokenBitmask(DLTensor* next_token_bitmask) final {
     const auto& tokens_sorted_by_codepoint = init_ctx_->tokens_sorted_by_codepoint;
     const auto& catagorized_tokens_for_grammar = init_ctx_->catagorized_tokens_for_grammar;
@@ -138,15 +147,8 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     // For every stack, we will either find all tokens it accepts, or all tokens it rejects.
     // The final rejected tokens should be not accepted by any stack, and also rejected by every
     // stack.
-
-    // Per stack temporary data.
-    // Note here indices store the indices in tokens_sorted_by_codepoint, instead of the token ids.
-    std::vector<int32_t> accepted_indices;
-    // {-1} means the universal set, i.e. all tokens
-    std::vector<int32_t> rejected_indices{-1};
-    std::vector<int32_t> accepted_indices_delta;
-    std::vector<int32_t> rejected_indices_delta;
-    std::vector<bool> unc_tokens_bitset;
+    tmp_accepted_indices_.clear();
+    tmp_rejected_indices_.assign({-1});
 
     for (auto top : latest_stack_tops) {
       // Step 1. Find the current catagorized_tokens
@@ -156,6 +158,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
           cur_rule_position.element_id == current_sequence.size()) {
         continue;
       }
+
       const auto& catagorized_tokens = catagorized_tokens_for_grammar.at(
           {cur_rule_position.sequence_id, cur_rule_position.element_id});
 
@@ -181,17 +184,17 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
       const std::vector<TCodepoint>* prev_token = nullptr;
       int prev_matched_size = 0;
 
-      accepted_indices_delta.clear();
-      rejected_indices_delta.clear();
+      tmp_accepted_indices_delta_.clear();
+      tmp_rejected_indices_delta_.clear();
 
       if (!is_uncertain_saved) {
         // unc_tokens = all_tokens - accepted_tokens - rejected_tokens
-        unc_tokens_bitset.assign(tokens_sorted_by_codepoint.size(), true);
+        tmp_uncertain_tokens_bitset_.assign(tokens_sorted_by_codepoint.size(), true);
         for (auto idx : catagorized_tokens.accepted_indices) {
-          unc_tokens_bitset[idx] = false;
+          tmp_uncertain_tokens_bitset_[idx] = false;
         }
         for (auto idx : catagorized_tokens.rejected_indices) {
-          unc_tokens_bitset[idx] = false;
+          tmp_uncertain_tokens_bitset_[idx] = false;
         }
       }
 
@@ -200,7 +203,8 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
       while (true) {
         // Step 2.1. Find the current token.
         auto idx = GetNextUncertainToken(is_uncertain_saved, &iterator_uncertain,
-                                         catagorized_tokens.uncertain_indices, unc_tokens_bitset);
+                                         catagorized_tokens.uncertain_indices,
+                                         tmp_uncertain_tokens_bitset_);
         if (idx == -1) {
           break;
         }
@@ -234,9 +238,9 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
 
         // Step 2.4. Push the result to the delta list.
         if (accepted && is_find_accept_mode) {
-          accepted_indices_delta.push_back(idx);
+          tmp_accepted_indices_delta_.push_back(idx);
         } else if (!accepted && !is_find_accept_mode) {
-          rejected_indices_delta.push_back(idx);
+          tmp_rejected_indices_delta_.push_back(idx);
         }
 
         prev_token = &cur_token;
@@ -247,20 +251,21 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
       // Step 3. Update the accepted_indices and rejected_indices
       if (is_find_accept_mode) {
         // accepted_indices += catagorized_tokens.accepted_indices + accepted_indices_delta
-        UnionizeWith(&accepted_indices_delta, catagorized_tokens.accepted_indices);
-        UnionizeWith(&accepted_indices, accepted_indices_delta);
+        UnionizeWith(&tmp_accepted_indices_delta_, catagorized_tokens.accepted_indices);
+        UnionizeWith(&tmp_accepted_indices_, tmp_accepted_indices_delta_);
       } else {
         // rejected_indices = Intersect(
         //     rejected_indices,
         //     catagorized_tokens.rejected_indices + rejected_indices_delta)
-        UnionizeWith(&rejected_indices_delta, catagorized_tokens.rejected_indices);
-        IntersectWith(&rejected_indices, rejected_indices_delta);
+        UnionizeWith(&tmp_rejected_indices_delta_, catagorized_tokens.rejected_indices);
+        IntersectWith(&tmp_rejected_indices_, tmp_rejected_indices_delta_);
       }
     }
 
     // Finally update the rejected_ids bitset
     bool can_reach_end = CanReachEnd();
-    FindNextTokenBitMask(next_token_bitmask, accepted_indices, rejected_indices, can_reach_end);
+    FindNextTokenBitMask(next_token_bitmask, tmp_accepted_indices_, tmp_rejected_indices_,
+                         can_reach_end);
   }
 
   void Rollback(int num_tokens) {
@@ -285,6 +290,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
                                     next_token_bitmask->shape[0]);
 
     if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
+      // std::cout << "Case 1: accepted size: " << accepted_indices.size() << std::endl;
       // When rejected_indices = all_tokens, we can just set rejected_ids = all_tokens - accepted
       next_token_bitset.Reset(init_ctx_->vocab_size, false);
       for (int idx : accepted_indices) {
@@ -298,10 +304,18 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
       }
     } else {
       // Otherwise, rejected_ids = rejected_indices - accepted_indices
+      // std::cout << "Case 2: accepted size: " << accepted_indices.size()
+      //           << ", rejected size: " << rejected_indices.size() << std::endl;
       next_token_bitset.Reset(init_ctx_->vocab_size, true);
-      DifferenceWith(&rejected_indices, accepted_indices);
-      for (int idx : rejected_indices) {
-        next_token_bitset.Set(init_ctx_->tokens_sorted_by_codepoint[idx].id, false);
+
+      auto it_acc = accepted_indices.begin();
+      for (auto i : rejected_indices) {
+        while (it_acc != accepted_indices.end() && *it_acc < i) {
+          ++it_acc;
+        }
+        if (it_acc == accepted_indices.end() || *it_acc != i) {
+          next_token_bitset.Set(init_ctx_->tokens_sorted_by_codepoint[i].id, false);
+        }
       }
 
       for (int idx : init_ctx_->special_token_ids) {

@@ -10,7 +10,7 @@ from mlc_chat.tokenizer import Tokenizer
 
 # @pytest.fixture(scope="function")
 def json_grammar():
-    return BNFGrammar.get_json_grammar()
+    return BNFGrammar.get_grammar_of_json()
 
 
 (json_inputs_accepted,) = tvm.testing.parameters(

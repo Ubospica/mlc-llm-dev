@@ -42,12 +42,13 @@ class GrammarStateMatcherBase {
     InitStackState(init_rule_position);
   }
 
+  std::vector<int32_t> tmp_new_stack_tops_;
+
   bool AcceptCodepoint(TCodepoint codepoint, bool verbose = false) {
     if (verbose) {
       std::cout << "Stack before accepting: " << PrintStackState() << std::endl;
     }
-    static std::vector<int32_t> new_stack_tops;
-    new_stack_tops.clear();
+    tmp_new_stack_tops_.clear();
 
     const auto& prev_stack_tops = stack_tops_history_.GetLatest();
     for (auto old_top : prev_stack_tops) {
@@ -71,16 +72,16 @@ class GrammarStateMatcherBase {
       if (!ok) {
         continue;
       }
-      UpdateNewStackTops(old_top, &new_stack_tops);
+      UpdateNewStackTops(old_top, &tmp_new_stack_tops_);
     }
-    if (new_stack_tops.empty()) {
+    if (tmp_new_stack_tops_.empty()) {
       if (verbose) {
         std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
                   << "\" Rejected" << std::endl;
       }
       return false;
     }
-    stack_tops_history_.PushHistory(new_stack_tops);
+    stack_tops_history_.PushHistory(tmp_new_stack_tops_);
     if (verbose) {
       std::cout << "Codepoint: " << codepoint << " \"" << CodepointToPrintable(codepoint)
                 << "\" Accepted" << std::endl;
@@ -90,7 +91,7 @@ class GrammarStateMatcherBase {
   }
 
   bool CanReachEnd() const {
-    auto last_stack_tops = stack_tops_history_.GetLatest();
+    const auto& last_stack_tops = stack_tops_history_.GetLatest();
     return std::any_of(last_stack_tops.begin(), last_stack_tops.end(),
                        [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
   }
@@ -130,7 +131,7 @@ class GrammarStateMatcherBase {
 
   // Update the old stack top to the next position, and push the new stack tops to new_stack_tops.
   void UpdateNewStackTops(int32_t old_node_id, std::vector<int32_t>* new_stack_tops) {
-    auto old_rule_position = tree_[old_node_id];
+    const auto& old_rule_position = tree_[old_node_id];
     // For char_class*, the old rule position itself is also the next position
     if (old_rule_position.char_class_id != -1) {
       new_stack_tops->push_back(tree_.NewNode(old_rule_position));

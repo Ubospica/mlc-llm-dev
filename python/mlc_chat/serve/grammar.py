@@ -106,7 +106,7 @@ class BNFGrammar(Object):
         )
 
     @staticmethod
-    def get_json_grammar() -> "BNFGrammar":
+    def get_grammar_of_json() -> "BNFGrammar":
         """Get the grammar of standard JSON.
 
         Returns
@@ -114,7 +114,7 @@ class BNFGrammar(Object):
         grammar : BNFGrammar
             The JSON grammar.
         """
-        return _ffi_api.BNFGrammarGetJSONGrammar()  # type: ignore  # pylint: disable=no-member
+        return _ffi_api.BNFGrammarGetGrammarOfJSON()  # type: ignore  # pylint: disable=no-member
 
 
 @tvm._ffi.register_object("mlc.serve.GrammarStateMatcher")  # pylint: disable=protected-access

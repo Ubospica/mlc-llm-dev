@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#include "../../support/dynamic_bitset.h"
 #include "../../support/encoding.h"
 #include "grammar.h"
+#include "support.h"
 
 namespace mlc {
 namespace llm {
