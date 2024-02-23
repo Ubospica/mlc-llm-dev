@@ -413,43 +413,10 @@ IntTuple GetRejectedTokenIds(GrammarStateMatcher matcher) {
 
   auto bitset = BitsetManager(reinterpret_cast<uint32_t*>(dltensor.data), bitset_size);
   std::vector<long> rejected_ids;
-  std::vector<long> accepted_ids;
   for (int i = 0; i < vocab_size; i++) {
     if (bitset[i] == 0) {
       rejected_ids.push_back(i);
-    } else {
-      accepted_ids.push_back(i);
     }
-  }
-
-  if (rejected_ids.size() < 500) {
-    std::cout << "Rejected: ";
-    for (auto id : rejected_ids) {
-      std::cout << "<";
-      auto token = init_ctx->token_table[id];
-      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, "▁");
-      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
-      for (auto c : codepoints) {
-        std::cout << CodepointToPrintable(c);
-      }
-      std::cout << "> ";
-    }
-    std::cout << "\n";
-  }
-
-  if (accepted_ids.size() < 500) {
-    std::cout << "Accepted: ";
-    for (auto id : accepted_ids) {
-      std::cout << "<";
-      auto token = init_ctx->token_table[id];
-      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, "▁");
-      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
-      for (auto c : codepoints) {
-        std::cout << CodepointToPrintable(c);
-      }
-      std::cout << "> ";
-    }
-    std::cout << "\n";
   }
 
   dltensor_manager->deleter(dltensor_manager);
