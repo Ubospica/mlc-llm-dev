@@ -33,9 +33,9 @@ class GrammarStateMatcherBase {
 
   bool CanReachEnd() const;
 
-  void RollbackSteps(int rollback_codepoint_cnt);
+  void RollbackCodepoints(int rollback_codepoint_cnt);
 
-  void DiscardEarliestSteps(int discard_codepoint_cnt);
+  void DiscardEarliestCodepoints(int discard_codepoint_cnt);
 
   std::string PrintStackState(int steps_behind_latest = 0) const;
 
@@ -119,21 +119,21 @@ inline bool GrammarStateMatcherBase::CanReachEnd() const {
                      [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
 }
 
-inline void GrammarStateMatcherBase::RollbackSteps(int rollback_codepoint_cnt) {
+inline void GrammarStateMatcherBase::RollbackCodepoints(int rollback_codepoint_cnt) {
   stack_tops_history_.Rollback(rollback_codepoint_cnt);
 }
 
-inline void GrammarStateMatcherBase::DiscardEarliestSteps(int discard_codepoint_cnt) {
+inline void GrammarStateMatcherBase::DiscardEarliestCodepoints(int discard_codepoint_cnt) {
   stack_tops_history_.DiscardEarliest(discard_codepoint_cnt);
 }
 
-inline std::string GrammarStateMatcherBase::PrintStackState(int steps_behind_latest ) const {
+inline std::string GrammarStateMatcherBase::PrintStackState(int steps_behind_latest) const {
   return stack_tops_history_.PrintHistory(steps_behind_latest);
 }
 
 // Init the stack state according to the given rule position.
 // If init_rule_position is {-1, -1, -1, -1}, init the stack with the main rule.
-inline void GrammarStateMatcherBase::InitStackState(RulePosition init_rule_position ) {
+inline void GrammarStateMatcherBase::InitStackState(RulePosition init_rule_position) {
   if (init_rule_position == kInvalidRulePosition) {
     // Initialize the stack with the main rule.
     auto main_rule = grammar_->GetRule(0);
@@ -152,7 +152,7 @@ inline void GrammarStateMatcherBase::InitStackState(RulePosition init_rule_posit
 
 // Update the old stack top to the next position, and push the new stack tops to new_stack_tops.
 inline void GrammarStateMatcherBase::UpdateNewStackTops(int32_t old_node_id,
-                                                 std::vector<int32_t>* new_stack_tops) {
+                                                        std::vector<int32_t>* new_stack_tops) {
   const auto& old_rule_position = tree_[old_node_id];
   // For char_class*, the old rule position itself is also the next position
   if (old_rule_position.char_class_id != -1) {

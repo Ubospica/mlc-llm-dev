@@ -1,5 +1,5 @@
 """Classes handling the grammar guided generation of MLC LLM serving"""
-from typing import List, Optional
+from typing import List, Optional, Union
 import tvm._ffi
 from tvm.runtime import Object
 
@@ -142,38 +142,28 @@ class GrammarStateMatcher(Object):
     def __init__(
         self,
         grammar: BNFGrammar,
-        tokenizer: Optional[Tokenizer] = None,
+        tokenizer: Union[None, Tokenizer, List[str]] = None,
         max_rollback_steps: int = 0,
     ):
-        self.__init_handle_by_constructor__(
-            _ffi_api.GrammarStateMatcher,  # type: ignore  # pylint: disable=no-member
-            grammar,
-            tokenizer,
-            max_rollback_steps,
-        )
+        if isinstance(tokenizer, list):
+            self.__init_handle_by_constructor__(
+                _ffi_api.GrammarStateMatcherWithTokenTable,  # type: ignore  # pylint: disable=no-member
+                grammar,
+                *tokenizer,
+                max_rollback_steps,
+            )
+        else:
+            self.__init_handle_by_constructor__(
+                _ffi_api.GrammarStateMatcherWithTokenizer,  # type: ignore  # pylint: disable=no-member
+                grammar,
+                tokenizer,
+                max_rollback_steps,
+            )
 
-    def accept_char(self, codepoint: int) -> bool:
-        """Accept one unicode character to the current state.
+    def accept_token(self, token_id: int) -> bool:
+        return _ffi_api.GrammarStateMatcherAcceptToken(self, token_id)  # type: ignore  # pylint: disable=no-member
 
-        Parameters
-        ----------
-        codepoint : int
-            The unicode codepoint of the character to be accepted.
-
-        drop_old : bool
-            If true, the old state will be dropped after accepting the new character when the number
-            of states exceeds the limit of saved history.
-        """
-        return _ffi_api.GrammarStateMatcherAcceptCodepoint(  # type: ignore  # pylint: disable=no-member
-            self, codepoint
-        )
-
-    def match_complete_string(self, string: str) -> bool:
-        """Check if a matcher can accept the complete string, and then reach the end of the
-        grammar."""
-        return _ffi_api.GrammarStateMatcherMatchCompleteString(self, string)  # type: ignore  # pylint: disable=no-member
-
-    def get_rejected_token_ids(self) -> List[int]:
+    def find_next_rejected_tokens(self) -> List[int]:
         """Find the rejected tokens among all tokens in the tokenizer for the specified
         GrammarStateMatcher.
 
@@ -190,4 +180,34 @@ class GrammarStateMatcher(Object):
             A list of rejected token ids.
         """
 
-        return _ffi_api.GrammarStateMatcherGetRejectedTokenIds(self)  # type: ignore  # pylint: disable=no-member
+        return _ffi_api.GrammarStateMatcherFindNextRejectedTokens(self)  # type: ignore  # pylint: disable=no-member
+
+    def rollback(self, num_tokens: int) -> None:
+        _ffi_api.GrammarStateMatcherRollback(self, num_tokens)
+
+    def max_rollback_steps(self) -> int:
+        return _ffi_api.GrammarStateMatcherMaxRollbackSteps(self)
+
+    def reset_state(self) -> None:
+        _ffi_api.GrammarStateMatcherResetState(self)
+
+    def debug_accept_char(self, codepoint: int) -> bool:
+        """Accept one unicode character to the current state.
+
+        Parameters
+        ----------
+        codepoint : int
+            The unicode codepoint of the character to be accepted.
+
+        drop_old : bool
+            If true, the old state will be dropped after accepting the new character when the number
+            of states exceeds the limit of saved history.
+        """
+        return _ffi_api.GrammarStateMatcherDebugAcceptCodepoint(  # type: ignore  # pylint: disable=no-member
+            self, codepoint
+        )
+
+    def debug_match_complete_string(self, string: str) -> bool:
+        """Check if a matcher can accept the complete string, and then reach the end of the
+        grammar."""
+        return _ffi_api.GrammarStateMatcherDebugMatchCompleteString(self, string)  # type: ignore  # pylint: disable=no-member

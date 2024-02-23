@@ -106,6 +106,11 @@ class RulePositionBuffer {
   RulePosition& operator[](int32_t id) { return buffer_[id]; }
   const RulePosition& operator[](int32_t id) const { return buffer_[id]; }
 
+  void Reset() {
+    buffer_.clear();
+    free_nodes_.clear();
+  }
+
   friend class RulePositionTree;
 
  private:
@@ -183,8 +188,10 @@ class RulePositionTree {
 
   /*! \brief Print the node with the given id to a string. */
   std::string PrintNode(int32_t id) const;
+
   /*! \brief Print the stack with the given top id to a string. */
   std::string PrintStackByTopId(int32_t top_id) const;
+
   /*!
    * \brief Check the well-formedness of the tree and the associated buffer. For debug purpose.
    * \details This function checks the following properties:
@@ -194,6 +201,8 @@ class RulePositionTree {
    * 4. If a node in the buffer is free, it should be equal to kInvalidRulePosition.
    */
   void CheckWellFormed(const std::vector<int32_t>& outside_pointers) const;
+
+  void Reset() { node_buffer_.Reset(); }
 
  private:
   /*! \brief The grammar associated with this RulePositionTree. */
@@ -277,6 +286,11 @@ class StackTopsHistory {
   /*! \brief Check the well-formedness of the tree and the associated buffer. */
   void CheckWellFormed() const;
 
+  void Reset() {
+    stack_tops_history_.clear();
+    tree_->Reset();
+  }
+
  private:
   /*! \brief Pop the oldest history record. Possibly frees node that do not exist in any stack any
    * more. */
@@ -300,8 +314,6 @@ class StackTopsHistory {
 
   /*! \brief Modifiable pointer to the RulePositionTree. */
   RulePositionTree* tree_;
-  /*! \brief The maximum number of rollback steps to be supported. */
-  int max_rollback_steps_;
   /*! \brief The history of stack tops. */
   std::deque<std::vector<int32_t>> stack_tops_history_;
 };

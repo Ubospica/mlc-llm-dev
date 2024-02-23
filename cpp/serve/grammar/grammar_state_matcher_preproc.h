@@ -189,7 +189,7 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
           break;
         }
       }
-      RollbackSteps(prev_matched_size - prev_useful_size);
+      RollbackCodepoints(prev_matched_size - prev_useful_size);
       tmp_can_see_end_stack_.erase(
           tmp_can_see_end_stack_.end() - (prev_matched_size - prev_useful_size),
           tmp_can_see_end_stack_.end());
@@ -220,7 +220,7 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
       tmp_rejected_indices_.push_back(i);
     }
   }
-  RollbackSteps(prev_matched_size);
+  RollbackCodepoints(prev_matched_size);
   return CatagorizedTokens(std::move(tmp_accepted_indices_), std::move(tmp_rejected_indices_),
                            std::move(tmp_uncertain_indices_));
 }

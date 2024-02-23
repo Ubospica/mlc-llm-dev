@@ -1,5 +1,6 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring
 # pylint: disable=redefined-outer-name,unbalanced-tuple-unpacking
+from typing import List
 import pytest
 import tvm
 import tvm.testing
@@ -8,14 +9,14 @@ from mlc_chat.serve import BNFGrammar, GrammarStateMatcher
 from mlc_chat.tokenizer import Tokenizer
 
 
-# @pytest.fixture(scope="function")
+@pytest.fixture(scope="function")
 def json_grammar():
     return BNFGrammar.get_grammar_of_json()
 
 
-(json_inputs_accepted,) = tvm.testing.parameters(
+(json_input_accepted,) = tvm.testing.parameters(
     ('{"name": "John"}',),
-    ('{ "name" : "John" } \n\r',),
+    ('{ "name" : "John" } \n',),
     ("{}",),
     ("[]",),
     ('{"name": "Alice", "age": 30, "city": "New York"}',),
@@ -48,14 +49,14 @@ def json_grammar():
 )
 
 
-def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
-    assert GrammarStateMatcher(json_grammar).match_complete_string(json_inputs_accepted)
+def test_json_accept(json_grammar: BNFGrammar, json_input_accepted: str):
+    assert GrammarStateMatcher(json_grammar).debug_match_complete_string(json_input_accepted)
 
 
 # test_json_accept(json_grammar(), '{"name": "John"}')
 # exit()
 
-(json_inputs_refused,) = tvm.testing.parameters(
+(json_input_refused,) = tvm.testing.parameters(
     (r'{ name: "John" }',),
     (r'{ "name": "John", "age": 30, }',),  # x
     (r'{ "name": "John", "address": { "street": "123 Main St", "city": "New York" }',),
@@ -75,11 +76,11 @@ def test_json_accept(json_grammar: BNFGrammar, json_inputs_accepted: str):
 )
 
 
-def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
-    assert not GrammarStateMatcher(json_grammar).match_complete_string(json_inputs_refused)
+def test_json_refuse(json_grammar: BNFGrammar, json_input_refused):
+    assert not GrammarStateMatcher(json_grammar).debug_match_complete_string(json_input_refused)
 
 
-(json_inputs_pressure,) = tvm.testing.parameters(
+(json_input_pressure,) = tvm.testing.parameters(
     # Extra long string: 1k chars
     (
         '["Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent '
@@ -206,49 +207,24 @@ def test_json_refuse(json_grammar: BNFGrammar, json_inputs_refused):
 )
 
 
-def test_json_pressure(json_grammar: BNFGrammar, json_inputs_pressure):
-    assert GrammarStateMatcher(json_grammar).match_complete_string(json_inputs_pressure)
+def test_json_pressure(json_grammar: BNFGrammar, json_input_pressure):
+    assert GrammarStateMatcher(json_grammar).debug_match_complete_string(json_input_pressure)
 
 
-def test_get_rejected_token_ids_short(json_grammar: BNFGrammar):
-    tokenizer_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
-    tokenizer = Tokenizer(tokenizer_path)
-    grammar_state_matcher = GrammarStateMatcher(json_grammar, tokenizer)
-
-    test_input_str = """{"id": 1,"name": "Example"} """
-
-    # fmt: off
-    expected_sizes = [
-        31991, 31912, 406, 406, 406, 31977, 31861, 31861, 31966, 31914, 406, 406, 406, 406, 406,
-        31977, 31861, 31861, 399, 399, 399, 399, 399, 399, 399, 399, 31979, 31983, 31983
-    ]
-    # fmt: on
-
-    real_sizes = []
-    for c in test_input_str:
-        rejected_token_ids = grammar_state_matcher.get_rejected_token_ids()
-        real_sizes.append(len(rejected_token_ids))
-        print("len(rejected_token_ids):", len(rejected_token_ids))
-        grammar_state_matcher.accept_char(ord(c))
-        print("accepting:", c)
-    rejected_token_ids = grammar_state_matcher.get_rejected_token_ids()
-    real_sizes.append(len(rejected_token_ids))
-    print("len(rejected_token_ids):", len(rejected_token_ids))
-    print(real_sizes)
-    print(expected_sizes)
-    assert real_sizes == expected_sizes
-
-
-test_get_rejected_token_ids_short(json_grammar())
-exit()
-
-
-def test_get_rejected_token_ids_long(json_grammar: BNFGrammar):
-    tokenizer_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
-    tokenizer = Tokenizer(tokenizer_path)
-    grammar_state_matcher = GrammarStateMatcher(json_grammar, tokenizer)
-
-    test_input_str = """{
+(input_find_rejected_tokens, expected_rejected_sizes) = tvm.testing.parameters(
+    (
+        # short test
+        '{"id": 1,"name": "Example"} ',
+        [
+            # fmt: off
+            31991, 31912, 406, 406, 406, 31977, 31861, 31861, 31966, 31914, 406, 406, 406, 406, 406,
+            31977, 31861, 31861, 399, 399, 399, 399, 399, 399, 399, 399, 31979, 31983, 31983
+            # pfmt: on
+        ],
+    ),
+    (
+        # long test
+        """{
 "id": 1,
 "na": "ex",
 "ac": True,
@@ -256,29 +232,155 @@ def test_get_rejected_token_ids_long(json_grammar: BNFGrammar):
 "ne": {"lv2": {"val": "dp"}, "arr": [1, 2, 3]},
 "res": "res"
 }
-"""
+""",
+        [
+            # fmt: off
+            31991, 31912, 31912, 406, 406, 406, 31977, 31861, 31861, 31966, 31914, 31914, 406, 406,
+            406, 31977, 31861, 31861, 399, 399, 399, 31979, 31914, 31914, 406, 406, 406, 31977,
+            31861, 31861, 31861, 31861, 31861, 31861, 31861, 31861, 399, 399, 31979, 31979, 31979,
+            31979, 31979, 31979, 31979, 31979, 31914, 31914, 406, 406, 406, 31977, 31977, 31977,
+            31977, 31977, 31977, 31977, 31977, 31861, 31861, 31908, 406, 406, 406, 406, 31977,
+            31861, 31861, 31906, 406, 406, 406, 406, 31977, 31861, 31861, 398, 398, 398, 31973,
+            31975, 31914, 31914, 406, 406, 406, 406, 31977, 31861, 31861, 31856, 31961, 31861,
+            31861, 31961, 31861, 31861, 31961, 31975, 31979, 31914, 31914, 406, 406, 406, 406,
+            31977, 31861, 31861, 399, 399, 399, 399, 31979, 31979, 31983, 31983
+            # fmt: on
+        ],
+    ),
+)
 
-    # fmt: off
-    expected_sizes = [
-        31730, 31648, 31648, 145, 145, 145, 31715, 31597, 31597, 31701, 31652, 31652, 145, 145,
-        145, 31715, 31597, 31597, 137, 137, 137, 31714, 31652, 31652, 145, 145, 145, 31715, 31597,
-        31597, 31597, 31597, 31597, 31597, 31597, 31597, 137, 137, 31714, 31714, 31714, 31714,
-        31714, 31714, 31714, 31714, 31652, 31652, 145, 145, 145, 31715, 31715, 31715, 31715,
-        31715, 31715, 31715, 31715, 31597, 31597, 31644, 145, 145, 145, 145, 31715, 31597, 31597,
-        31642, 145, 145, 145, 145, 31715, 31597, 31597, 136, 136, 136, 31708, 31710, 31652, 31652,
-        145, 145, 145, 145, 31715, 31597, 31597, 31592, 31698, 31597, 31597, 31698, 31597, 31597,
-        31698, 31710, 31714, 31652, 31652, 145, 145, 145, 145, 31715, 31597, 31597, 137, 137, 137,
-        137, 31714, 31714, 31722
-    ]
-    # fmt: on
+
+def test_find_rejected_tokens(
+    json_grammar: BNFGrammar, input_find_rejected_tokens: str, expected_rejected_sizes: List[int]
+):
+    tokenizer_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
+    tokenizer = Tokenizer(tokenizer_path)
+    grammar_state_matcher = GrammarStateMatcher(json_grammar, tokenizer)
 
     real_sizes = []
-    for c in test_input_str:
-        rejected_token_ids = grammar_state_matcher.get_rejected_token_ids()
+    for c in input_find_rejected_tokens:
+        rejected_token_ids = grammar_state_matcher.find_next_rejected_tokens()
         real_sizes.append(len(rejected_token_ids))
-        grammar_state_matcher.accept_char(ord(c))
-    assert real_sizes == expected_sizes
+        print("Accepting char:", c)
+        grammar_state_matcher.debug_accept_char(ord(c))
+    rejected_token_ids = grammar_state_matcher.find_next_rejected_tokens()
+    real_sizes.append(len(rejected_token_ids))
+    assert real_sizes == expected_rejected_sizes
+
+
+def test_accept_token(json_grammar: BNFGrammar):
+    token_table = [
+        # fmt: off
+        "<s>", "</s>", "a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " ", '"a":true',
+        # fmt: on
+    ]
+    input_splitted = ["{", '"', "abc", 'b"', ":", "6", ", ", " ", '"a":true', "}", "\n"]
+    input_ids = [token_table.index(t) for t in input_splitted]
+
+    grammar_state_matcher = GrammarStateMatcher(json_grammar, token_table)
+
+    result = []
+
+    expected = [
+        ["{"],
+        ['"', "}", "\n", " ", '"a":true'],
+        ["a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " "],
+        ["a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " "],
+        [":", "\n", " ", ':"'],
+        ['"', "{", "6", "\n", " "],
+        ["}", ", ", "6", "\n", " "],
+        [" ", "\n", '"', '"a":true'],
+        [" ", "\n", '"', '"a":true'],
+        ["}", ", ", "\n", " "],
+        ["</s>", "\n", " "],
+        ["</s>", "\n", " "],
+    ]
+
+    for id in input_ids:
+        rejected = grammar_state_matcher.find_next_rejected_tokens()
+        accepted = list(set(range(len(token_table))) - set(rejected))
+        accepted_tokens = [token_table[i] for i in accepted]
+        result.append(accepted_tokens)
+        assert id in accepted
+        grammar_state_matcher.accept_token(id)
+
+    rejected = grammar_state_matcher.find_next_rejected_tokens()
+    accepted = list(set(range(len(token_table))) - set(rejected))
+    accepted_tokens = [token_table[i] for i in accepted]
+    result.append(accepted_tokens)
+
+    assert result == expected
+
+
+def test_rollback(json_grammar: BNFGrammar):
+    token_table = [
+        # fmt: off
+        "<s>", "</s>", "a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " ", '"a":true',
+        # fmt: on
+    ]
+    input_splitted = ["{", '"', "abc", 'b"', ":", "6", ", ", " ", '"a":true', " ", "}", "\n"]
+    input_ids = [token_table.index(t) for t in input_splitted]
+
+    grammar_state_matcher = GrammarStateMatcher(json_grammar, token_table, 5)
+
+    assert grammar_state_matcher.max_rollback_steps() == 5
+
+    input_ids_splitted = [input_ids[i : i + 2] for i in range(0, len(input_ids), 2)]
+
+    for i_1, i_2 in input_ids_splitted:
+        orig_result = []
+        orig_result.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i_1)
+        orig_result.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i_2)
+        grammar_state_matcher.rollback(2)
+        result_after_rollback = []
+        result_after_rollback.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i_1)
+        result_after_rollback.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i_2)
+        assert orig_result == result_after_rollback
+
+
+def test_reset(json_grammar: BNFGrammar):
+    token_table = [
+        # fmt: off
+        "<s>", "</s>", "a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " ", '"a":true',
+        # fmt: on
+    ]
+    input_splitted = ["{", '"', "abc", 'b"', ":", "6", ", ", " ", '"a":true', " ", "}", "\n"]
+    input_ids = [token_table.index(t) for t in input_splitted]
+
+    grammar_state_matcher = GrammarStateMatcher(json_grammar, token_table)
+
+    orig_result = []
+
+    for i in input_ids:
+        orig_result.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i)
+
+    grammar_state_matcher.reset_state()
+
+    result_after_reset = []
+
+    for i in input_ids:
+        result_after_reset.append(grammar_state_matcher.find_next_rejected_tokens())
+        grammar_state_matcher.accept_token(i)
+
+    assert orig_result == result_after_reset
 
 
 if __name__ == "__main__":
+    # Run a benchmark to show the performance before running tests
+    test_find_rejected_tokens(
+        BNFGrammar.get_grammar_of_json(),
+        '{"id": 1,"name": "Example"} ',
+        [
+            # fmt: off
+            31991, 31912, 406, 406, 406, 31977, 31861, 31861, 31966, 31914, 406, 406, 406, 406, 406,
+            31977, 31861, 31861, 399, 399, 399, 399, 399, 399, 399, 399, 31979, 31983, 31983
+            # fmt: on
+        ],
+    )
+
     tvm.testing.main()

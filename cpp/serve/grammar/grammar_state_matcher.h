@@ -65,6 +65,12 @@ class GrammarStateMatcherNode : public Object {
    */
   virtual void Rollback(int num_tokens) = 0;
 
+  // maximum number of rollback supported
+  virtual int MaxRollbackSteps() = 0;
+
+  // reset state to initial stage of generation
+  virtual void ResetState() = 0;
+
   static constexpr const char* _type_key = "mlc.serve.GrammarStateMatcher";
   static constexpr const bool _type_has_method_sequal_reduce = false;
   static constexpr const bool _type_has_method_shash_reduce = false;
@@ -76,7 +82,7 @@ class GrammarStateInitContext;
 class GrammarStateMatcher : public ObjectRef {
  public:
   GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext> init_ctx,
-                      int max_rollback_tokens = 0);
+                      int max_rollback_steps = 0);
 
   /*! \brief Construct a GrammarStateInitContext from a tokenizer and a grammar. The grammar should
    * be the same as the grammar used to construct the GrammarStateMatcher. */
