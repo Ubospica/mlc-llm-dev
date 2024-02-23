@@ -21,13 +21,12 @@ class DynamicBitSet {
 
   bool operator[](int index) const { return (data_[index / 32] >> (index % 32)) & 1; }
 
-  template <bool value = false>
-  void Reset(int size = -1) {
+  void Reset(int size = -1, bool value = false) {
     if (size != -1) {
       size_ = size;
       internal_size_ = (size + 31) / 32;
     }
-    if constexpr (value) {
+    if (value) {
       data_.assign(internal_size_, 0xFFFFFFFF);
     } else {
       data_.assign(internal_size_, 0);
@@ -37,16 +36,6 @@ class DynamicBitSet {
   void Set(int index, bool value = true) {
     DCHECK(index < size_);
     if (value) {
-      data_[index / 32] |= 1 << (index % 32);
-    } else {
-      data_[index / 32] &= ~(1 << (index % 32));
-    }
-  }
-
-  template <bool value = true>
-  void SetConst(int index) {
-    DCHECK(index < size_);
-    if constexpr (value) {
       data_[index / 32] |= 1 << (index % 32);
     } else {
       data_[index / 32] &= ~(1 << (index % 32));

@@ -106,32 +106,28 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
 
  public:
   GrammarStateMatcherNodeImpl(std::shared_ptr<GrammarStateInitContext> init_ctx,
-                              int max_rollback_steps = 0)
+                              int max_rollback_tokens = 0)
       : GrammarStateMatcherBase(init_ctx->grammar),
         init_ctx_(init_ctx),
-        max_history_size_(max_rollback_steps + 1) {}
+        max_history_size_(max_rollback_tokens + 1) {}
 
-  bool AcceptCodepoint(TCodepoint codepoint, bool drop_old = true, bool verbose = false) final {
-    if (!GrammarStateMatcherBase::AcceptCodepoint(codepoint, verbose)) {
-      return false;
+  bool AcceptToken(int32_t token_id) final {
+    CHECK(init_ctx_->codepoint_tokens_lookup.count(token_id) > 0);
+    const auto& token = init_ctx_->codepoint_tokens_lookup[token_id].token;
+    for (auto codepoint : token) {
+      if (!AcceptCodepoint(codepoint, false)) {
+        return false;
+      }
     }
-    ++history_size_;
-    if (drop_old && history_size_ > max_history_size_) {
-      DiscardEarliestSteps(history_size_ - max_history_size_);
-      history_size_ = max_history_size_;
+    token_size_history_.push_back(token.size());
+    if (token_size_history_.size() > max_history_size_) {
+      DiscardEarliestSteps(token_size_history_.front());
+      token_size_history_.pop_front();
     }
-    return true;
   }
 
-  bool CanReachEnd() const final { return GrammarStateMatcherBase::CanReachEnd(); }
-
-  void RollbackSteps(int rollback_codepoint_cnt) final {
-    GrammarStateMatcherBase::RollbackSteps(rollback_codepoint_cnt);
-    history_size_ -= rollback_codepoint_cnt;
-  }
-
-  void FindRejectedTokens(DynamicBitSet* rejected_ids) final {
-    const auto& sorted_token_and_ids = init_ctx_->sorted_token_and_ids;
+  void FindNextTokenBitmask(NDArray* next_token_bitmask) {
+    const auto& tokens_sorted_by_codepoint = init_ctx_->tokens_sorted_by_codepoint;
     const auto& catagorized_tokens_for_grammar = init_ctx_->catagorized_tokens_for_grammar;
     const auto& latest_stack_tops = stack_tops_history_.GetLatest();
 
@@ -140,7 +136,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     // stack.
 
     // Per stack temporary data.
-    // Note here indices store the indices in sorted_token_and_ids, instead of the token ids.
+    // Note here indices store the indices in tokens_sorted_by_codepoint, instead of the token ids.
     std::vector<int32_t> accepted_indices;
     // {-1} means the universal set, i.e. all tokens
     std::vector<int32_t> rejected_indices{-1};
@@ -189,12 +185,12 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
 
       if (!is_uncertain_saved) {
         // unc_tokens = all_tokens - accepted_tokens - rejected_tokens
-        unc_tokens.Reset<true>(sorted_token_and_ids.size());
+        unc_tokens.Reset(tokens_sorted_by_codepoint.size(), true);
         for (auto idx : catagorized_tokens.accepted_indices) {
-          unc_tokens.SetConst<false>(idx);
+          unc_tokens.Set(idx, false);
         }
         for (auto idx : catagorized_tokens.rejected_indices) {
-          unc_tokens.SetConst<false>(idx);
+          unc_tokens.Set(idx, false);
         }
       }
 
@@ -205,7 +201,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
         if (idx == -1) {
           break;
         }
-        const auto& cur_token = sorted_token_and_ids[idx].token;
+        const auto& cur_token = tokens_sorted_by_codepoint[idx].token;
 
         // Step 2.2. Find the longest common prefix with the accepted part of the previous token.
         // We can reuse the previous matched size to avoid unnecessary matching.
@@ -226,7 +222,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
         prev_matched_size = prev_useful_size;
 
         for (int j = prev_useful_size; j < cur_token.size(); ++j) {
-          if (!AcceptCodepoint(cur_token[j], false, false)) {
+          if (!AcceptCodepoint(cur_token[j], false)) {
             accepted = false;
             break;
           }
@@ -265,23 +261,33 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
     int idx_acc = 0;
     if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
       // When rejected_indices = all_tokens, we can just set rejected_ids = all_tokens - accepted
-      SetRejectIdsWithComplement(rejected_ids, accepted_indices, sorted_token_and_ids);
+      SetRejectIdsWithComplement(rejected_ids, accepted_indices, tokens_sorted_by_codepoint);
     } else {
       // Otherwise, rejected_ids = rejected_indices - accepted_indices
       DifferenceWith(&rejected_indices, accepted_indices);
       for (int idx : rejected_indices) {
-        rejected_ids->SetConst(sorted_token_and_ids[idx].id);
+        rejected_ids->Set(tokens_sorted_by_codepoint[idx].id);
       }
     }
   }
 
+  void Rollback(int num_tokens) {
+    CHECK(num_tokens < token_size_history_.size());
+    while (num_tokens > 0) {
+      int steps = token_size_history_.back();
+      RollbackSteps(steps);
+      token_size_history_.pop_back();
+      --num_tokens;
+    }
+  }
+
  private:
-  // Set the tokens in sorted_token_and_ids that not in accepted_indices to rejected_ids.
+  // Set the tokens in tokens_sorted_by_codepoint that not in accepted_indices to rejected_ids.
   void SetRejectIdsWithComplement(DynamicBitSet* rejected_ids,
                                   const std::vector<int32_t>& accepted_indices,
-                                  const std::vector<TokenAndId>& sorted_token_and_ids) {
+                                  const std::vector<TokenAndId>& tokens_sorted_by_codepoint) {
     auto it_acc = accepted_indices.begin();
-    for (int i = 0; i < static_cast<int>(sorted_token_and_ids.size()); ++i) {
+    for (int i = 0; i < static_cast<int>(tokens_sorted_by_codepoint.size()); ++i) {
       while (it_acc != accepted_indices.end() && *it_acc < i) {
         ++it_acc;
       }
@@ -289,7 +295,7 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
         ++it_acc;
         continue;
       }
-      rejected_ids->SetConst(sorted_token_and_ids[i].id);
+      rejected_ids->Set(tokens_sorted_by_codepoint[i].id);
     }
   }
 
@@ -318,8 +324,8 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
   }
 
   std::shared_ptr<GrammarStateInitContext> init_ctx_;
-  int max_history_size_ = 0;
-  int history_size_ = 0;
+  int max_history_size_;
+  std::deque<int> token_size_history_;
 };
 
 GrammarStateMatcher::GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext> init_ctx,

@@ -26,13 +26,6 @@ namespace serve {
 using namespace tvm::runtime;
 
 /*!
- * \brief Refers to a specific position in the grammar. Used to specify the initial position of
- * the grammar state matcher.
- * \sa mlc::llm::serve::GrammarStateMatcher::GrammarStateMatcher
- */
-class GrammarStateInitContext;
-
-/*!
  * \brief Match character or string or tokens to the given BNF grammar. This class is the core logic
  * of the grammar-guided generation.
  * \details This class implements the non-deterministic pushdown automaton (NPDA) matching algorithm
@@ -53,15 +46,7 @@ class GrammarStateMatcherNode : public Object {
    * \param verbose If true, the function will print the previous state, the new state and the
    * matching status of the new character. Mainly for debugging purpose.
    */
-  virtual bool AcceptCodepoint(TCodepoint codepoint, bool drop_old = true,
-                               bool verbose = false) = 0;
-
-  /*!
-   * \brief Returns true if the matcher already reached the end of the grammar.
-   * \note Since the matcher maintains a non-deterministic state internally, even though the matcher
-   * reaches the end, it may still have other paths that can continue to accept new characters.
-   */
-  virtual bool CanReachEnd() const = 0;
+  virtual bool AcceptToken(int32_t token_id) = 0;
 
   /*!
    * \brief Given a tokenizer config, find the tokens that are rejected at the current position.
@@ -71,20 +56,22 @@ class GrammarStateMatcherNode : public Object {
    * of the tokenizer, the positions of rejected tokens to 1, and other positions to 0.
    * \sa mlc::llm::serve::Sampler.
    */
-  virtual void FindRejectedTokens(DynamicBitSet* rejected_ids) = 0;
+  virtual void FindNextTokenBitmask(NDArray* next_token_bitmask) = 0;
 
   /*!
-   * \brief RollbackCodepoint the matcher to a previous state.
+   * \brief Rollback the matcher to a previous state.
    * \param rollback_steps The number of steps to rollback. Should not be greater than the number of
    * steps in the current history.
    */
-  virtual void RollbackSteps(int rollback_steps) = 0;
+  virtual void Rollback(int num_tokens) = 0;
 
   static constexpr const char* _type_key = "mlc.serve.GrammarStateMatcher";
   static constexpr const bool _type_has_method_sequal_reduce = false;
   static constexpr const bool _type_has_method_shash_reduce = false;
   TVM_DECLARE_BASE_OBJECT_INFO(GrammarStateMatcherNode, Object);
 };
+
+class GrammarStateInitContext;
 
 class GrammarStateMatcher : public ObjectRef {
  public:
@@ -93,7 +80,7 @@ class GrammarStateMatcher : public ObjectRef {
   static std::shared_ptr<GrammarStateInitContext> CreateInitContext(
       const BNFGrammar& grammar, const std::vector<std::string>& token_table);
   GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext> init_ctx,
-                      int max_rollback_steps = 0);
+                      int max_rollback_tokens = 0);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(GrammarStateMatcher, ObjectRef, GrammarStateMatcherNode);
 };
