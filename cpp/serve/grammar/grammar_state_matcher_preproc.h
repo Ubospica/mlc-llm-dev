@@ -27,12 +27,7 @@ struct TokenAndId {
 
 /*!
  * \brief Preprocessed information, for a given specific rule and position, divides the token set
- * into three categories:
- * - accepted_indices: If a token is accepted by this rule
- * - rejected_indices: If a token is rejected by this rule
- * - uncertain_indices: If a prefix of a token is accepted by this rule and comes to the end
- * of the rule. In real matching process, it still can be accepted or rejected by some parent rule.
- * So it is uncertain.
+ * into three categories: accepted, rejected, and uncertain.
  * \note Since the union of these three sets is the whole token set, we only need to store the
  * smaller two sets. The unsaved set is specified by not_saved_index.
  * \note These indices are the indices of tokens_sorted_by_codepoint in the GrammarStateInitContext
@@ -56,17 +51,16 @@ struct CatagorizedTokens {
  * \brief All information that we need to match tokens in the tokenizer to the specified grammar.
  * It is the result of preprocessing.
  * \sa mlc::llm::serve::GrammarStateMatcher
- * \sa mlc::llm::serve::Sampler
  */
 class GrammarStateInitContext {
  public:
-  std::vector<std::string> token_table;
   BNFGrammar grammar;
   /*! \brief The vocabulary size of the tokenizer. */
   size_t vocab_size;
   /*! \brief The sorted token and its id. Tokens are sorted to reuse the common prefix during
    * matching. */
   std::vector<TokenAndId> tokens_sorted_by_codepoint;
+  /*! \brief The mapping from token id to token represented by codepoints. */
   std::unordered_map<int32_t, TokenAndId> codepoint_tokens_lookup;
   /*! \brief The stop tokens. They can be accepted iff GramamrMatcher can reach the end of the
    * grammar. */
@@ -112,6 +106,8 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
  private:
   using RuleExpr = BNFGrammarNode::RuleExpr;
   using RuleExprType = BNFGrammarNode::RuleExprType;
+
+  // Temporary data for GetCatagorizedTokens.
   std::vector<int32_t> tmp_accepted_indices_;
   std::vector<int32_t> tmp_rejected_indices_;
   std::vector<int32_t> tmp_uncertain_indices_;
@@ -161,17 +157,15 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
   // - accepted_indices: If a token is accepted by current rule
   // - rejected_indices: If a token is rejected by current rule
   // - uncertain_indices: If a prefix of a token is accepted by current rule and comes to the end
-  // of the rule. In real matching process, it still can be accepted or rejected by a parent rule.
-  // So it is uncertain.
+  // of the rule.
 
   // Note many tokens may contain the same prefix, so we will avoid unnecessary matching
-
-  // For every character in the current token, stores whether it is possible to reach the end of
-  // the rule when matching until this character. Useful for rollback.
 
   tmp_accepted_indices_.clear();
   tmp_rejected_indices_.clear();
   tmp_uncertain_indices_.clear();
+  // For every character in the current token, stores whether it is possible to reach the end of
+  // the rule when matching until this character. Useful for rollback.
   tmp_can_see_end_stack_.assign({CanReachEnd()});
 
   int prev_matched_size = 0;
@@ -246,7 +240,6 @@ inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
   using RuleExprType = BNFGrammarNode::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
 
-  ptr->token_table = token_table;
   ptr->grammar = grammar;
   ptr->vocab_size = token_table.size();
 

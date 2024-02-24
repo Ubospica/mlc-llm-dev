@@ -17,31 +17,44 @@ namespace serve {
 
 using namespace tvm::runtime;
 
-/* \brief The concrete implementation of GrammarStateMatcherNode. */
+/*! \brief The base class of GrammarStateMatcher. It implements a character-based matching
+ * automata, and supports accepting a character, rolling back by character, etc.
+ */
 class GrammarStateMatcherBase {
  protected:
   using RuleExpr = BNFGrammarNode::RuleExpr;
   using RuleExprType = BNFGrammarNode::RuleExprType;
 
  public:
+  /*!
+   * \brief Construct a GrammarStateMatcherBase with the given grammar and initial rule position.
+   * \param grammar The grammar to match.
+   * \param init_rule_position The initial rule position. If not specified, the main rule will be
+   * used.
+   */
   GrammarStateMatcherBase(const BNFGrammar& grammar, RulePosition init_rule_position = {})
       : grammar_(grammar), tree_(grammar), stack_tops_history_(&tree_) {
     InitStackState(init_rule_position);
   }
 
+  /*! \brief Accept one codepoint. */
   bool AcceptCodepoint(TCodepoint codepoint, bool verbose = false);
 
+  /*! \brief Check if the end of the main rule is reached. If so, the stop token can be accepted. */
   bool CanReachEnd() const;
 
+  /*! \brief Rollback the matcher to a previous state. */
   void RollbackCodepoints(int rollback_codepoint_cnt);
 
+  /*! \brief Discard the earliest history. */
   void DiscardEarliestCodepoints(int discard_codepoint_cnt);
 
+  /*! \brief Print the stack state. */
   std::string PrintStackState(int steps_behind_latest = 0) const;
 
  protected:
   // Init the stack state according to the given rule position.
-  // If init_rule_position is {-1, -1, -1, -1}, init the stack with the main rule.
+  // If init_rule_position is {}, init the stack with the main rule.
   void InitStackState(RulePosition init_rule_position = {});
 
   // Update the old stack top to the next position, and push the new stack tops to new_stack_tops.
@@ -51,6 +64,7 @@ class GrammarStateMatcherBase {
   RulePositionTree tree_;
   StackTopsHistory stack_tops_history_;
 
+  // Temporary data for AcceptCodepoint.
   std::vector<int32_t> tmp_new_stack_tops_;
 };
 
@@ -131,8 +145,6 @@ inline std::string GrammarStateMatcherBase::PrintStackState(int steps_behind_lat
   return stack_tops_history_.PrintHistory(steps_behind_latest);
 }
 
-// Init the stack state according to the given rule position.
-// If init_rule_position is {-1, -1, -1, -1}, init the stack with the main rule.
 inline void GrammarStateMatcherBase::InitStackState(RulePosition init_rule_position) {
   if (init_rule_position == kInvalidRulePosition) {
     // Initialize the stack with the main rule.
@@ -150,7 +162,6 @@ inline void GrammarStateMatcherBase::InitStackState(RulePosition init_rule_posit
   }
 }
 
-// Update the old stack top to the next position, and push the new stack tops to new_stack_tops.
 inline void GrammarStateMatcherBase::UpdateNewStackTops(int32_t old_node_id,
                                                         std::vector<int32_t>* new_stack_tops) {
   const auto& old_rule_position = tree_[old_node_id];

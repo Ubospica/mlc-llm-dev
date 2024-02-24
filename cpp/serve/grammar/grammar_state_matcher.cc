@@ -31,13 +31,13 @@ namespace serve {
  * several stacks, each of which represents a possible path in the NPDA, and update the stacks
  * during matching.
  *
- * ## Stack Structure
+ * ## Stack Structure (see grammar_state_matcher_state.h)
  * The element of every stack is a RulePosition object, referring a position in the grammar. If a
  * RulePosition is a RuleRef element (referring to another rule), the next element of the stack will
  * be a position in this rule. If a RulePosition is a CharacterClass element, it will be the last
  * in the stack, meaning *the next* character to match.
  *
- * ## Matching Process
+ * ## Matching Process (see grammar_state_matcher_base.h)
  * When accepting a new character and it is accepted by a stack, the last element of the stack will
  * be advanced to the next position in the grammar. If it gets to the end of the rule, several
  * elements at the end may be popped out, and the last element of the stack will be advanced.
@@ -46,7 +46,7 @@ namespace serve {
  * stacks with different top elements will be added. When ome stack cannot accept the new character,
  * it will be removed from the stacks.
  *
- * ## Storage of Stacks
+ * ## Storage of Stacks (see grammar_state_matcher_state.h)
  * Note these stacks form a tree structure as when splitting, the new stacks share the same prefix.
  * We store all RulePositions as a tree, where every path from tree root to a node represents a
  * stack. To represent stack tops, we attach additional pointers pointing the stack top nodes.
@@ -95,6 +95,26 @@ namespace serve {
  * I: (rule T, choice 0, element 0)
  * << means the stack top pointers in the current step.
  * The stacks in the current step is: (A, B, F), (A, H, I), (G,)
+ *
+ * ## Preprocess (see grammar_state_matcher_preproc.h)
+ * We will store all information about tokens that needed in matching in a GrammarStateInitContext
+ * object. Tokens are sorted by codepoint, allowing us to reuse the repeated prefixes between
+ * different tokens.
+ *
+ * For a given position in a rule, if we only consider this rule and its sub-rules during matching,
+ * without considering its parent rules (in actual matching, we also need to consider its parent
+ * rules), we can already determine that some tokens are acceptable while others are definitely
+ * rejected. Therefore, for a position in a rule, we can divide the token set into three categories:
+ * - accepted_indices: If a token is accepted by this rule
+ * - rejected_indices: If a token is rejected by this rule
+ * - uncertain_indices: Whether it can be accepted depends on the information from the parent
+ * level during actual matching. To be specific, If this token has a prefix that has not been
+ * rejected and has reached the end of this rule, then it is possible for it to be further accepted
+ * by the parent rule.
+ *
+ * During actual matching, we will directly accept or reject the tokens in accepted_indices and
+ * rejected_indices, and only consider the tokens in uncertain_indices. That speeds up the matching
+ * process.
  */
 
 using namespace tvm::runtime;
@@ -129,15 +149,20 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
   }
 
  private:
-  // If is_uncertain_saved is true, find the next token in uncertain_indices with iterator it_unc.
-  // Otherwise, find the next token in unc_tokens with iterative index idx.
-  // Return the index of the next token, or -1 if no more token.
+  /*!
+   * \brief If is_uncertain_saved is true, find the next token in uncertain_indices. Otherwise,
+   * find the next token that is set to true in uncertain_tokens_bitset.
+   * \param iterator_uncertain The helper iterator to iterate over uncertain_indices or
+   * uncertain_tokens_bitset.
+   * \returns The index of the next token, or -1 if no more token.
+   */
   int GetNextUncertainToken(bool is_uncertain_saved, int* iterator_uncertain,
                             const std::vector<int>& uncertain_indices,
                             const std::vector<bool>& uncertain_tokens_bitset);
 
-  void FindNextTokenBitMask(DLTensor* next_token_bitmask, std::vector<int32_t>& accepted_indices,
-                            std::vector<int32_t>& rejected_indices, bool can_reach_end);
+  /*! \brief Set the acceptable next token in next_token_bitmask. */
+  void SetTokenBitmask(DLTensor* next_token_bitmask, std::vector<int32_t>& accepted_indices,
+                       std::vector<int32_t>& rejected_indices, bool can_reach_end);
 
   friend IntTuple FindNextRejectedTokens(GrammarStateMatcher matcher);
 
@@ -145,10 +170,8 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
   int max_rollback_steps_;
   std::deque<int> token_size_history_;
 
-  // Per stack temporary data.
-  // Note here indices store the indices in tokens_sorted_by_codepoint, instead of the token ids.
+  // Temporary data for FindNextTokenBitmask. They are stored here to avoid repeated allocation.
   std::vector<int32_t> tmp_accepted_indices_;
-  // {-1} means the universal set, i.e. all tokens
   std::vector<int32_t> tmp_rejected_indices_;
   std::vector<int32_t> tmp_accepted_indices_delta_;
   std::vector<int32_t> tmp_rejected_indices_delta_;
@@ -176,10 +199,14 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
   const auto& catagorized_tokens_for_grammar = init_ctx_->catagorized_tokens_for_grammar;
   const auto& latest_stack_tops = stack_tops_history_.GetLatest();
 
-  // For every stack, we will either find all tokens it accepts, or all tokens it rejects.
-  // The final rejected tokens should be not accepted by any stack, and also rejected by every
-  // stack.
+  // We check all the stacks one by one, and find the accepted token set or the rejected token set
+  // for each stack. We will try to find the small one of the two sets.
+  // The final accepted token set is the union of the accepted token sets of all stacks.
+  // The final rejected token set is the intersection of the rejected token sets of all stacks.
+
+  // Note these indices store the indices in tokens_sorted_by_codepoint, instead of the token ids.
   tmp_accepted_indices_.clear();
+  // {-1} means the universal set, i.e. all tokens initially
   tmp_rejected_indices_.assign({-1});
 
   for (auto top : latest_stack_tops) {
@@ -196,7 +223,6 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
 
     // For each stack, we will check every uncertain token and put them into the accepted or
     // rejected list.
-    // For effeciency, we will only find the accepted tokens or the rejected tokens.
     // If the accepted tokens are saved, it means it is likely to be smaller than the rejected
     // tokens, so we will just find the accepted tokens, and vice versa.
     bool is_find_accept_mode =
@@ -296,8 +322,7 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
 
   // Finally update the rejected_ids bitset
   bool can_reach_end = CanReachEnd();
-  FindNextTokenBitMask(next_token_bitmask, tmp_accepted_indices_, tmp_rejected_indices_,
-                       can_reach_end);
+  SetTokenBitmask(next_token_bitmask, tmp_accepted_indices_, tmp_rejected_indices_, can_reach_end);
 }
 
 void GrammarStateMatcherNodeImpl::Rollback(int num_tokens) {
@@ -310,10 +335,10 @@ void GrammarStateMatcherNodeImpl::Rollback(int num_tokens) {
   }
 }
 
-void GrammarStateMatcherNodeImpl::FindNextTokenBitMask(DLTensor* next_token_bitmask,
-                                                       std::vector<int32_t>& accepted_indices,
-                                                       std::vector<int32_t>& rejected_indices,
-                                                       bool can_reach_end) {
+void GrammarStateMatcherNodeImpl::SetTokenBitmask(DLTensor* next_token_bitmask,
+                                                  std::vector<int32_t>& accepted_indices,
+                                                  std::vector<int32_t>& rejected_indices,
+                                                  bool can_reach_end) {
   // accepted_ids = Union(accepted_indices, all_tokens - rejected_indices)
   // rejected_ids = Intersect(all_tokens - accepted_indices, rejected_indices)
   DCHECK(next_token_bitmask->dtype.code == kDLUInt && next_token_bitmask->dtype.bits == 32 &&
@@ -323,18 +348,21 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitMask(DLTensor* next_token_bitm
                                   next_token_bitmask->shape[0]);
 
   if (rejected_indices.size() == 1 && rejected_indices[0] == -1) {
+    // If rejected_indices is the universal set, the final accepted token set is just
+    // accepted_indices
     next_token_bitset.Reset(init_ctx_->vocab_size, false);
     for (int idx : accepted_indices) {
       next_token_bitset.Set(init_ctx_->tokens_sorted_by_codepoint[idx].id, true);
     }
 
     if (can_reach_end) {
+      // add end tokens
       for (int idx : init_ctx_->stop_token_ids) {
         next_token_bitset.Set(idx, true);
       }
     }
   } else {
-    // Otherwise, rejected_ids = rejected_indices - accepted_indices
+    // Otherwise, the final rejected token set is (rejected_indices \ accepted_indices)
     next_token_bitset.Reset(init_ctx_->vocab_size, true);
 
     auto it_acc = accepted_indices.begin();
@@ -358,9 +386,6 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitMask(DLTensor* next_token_bitm
   }
 }
 
-// If is_uncertain_saved is true, find the next token in uncertain_indices with iterator it_unc.
-// Otherwise, find the next token in unc_tokens with iterative index idx.
-// Return the index of the next token, or -1 if no more token.
 int GrammarStateMatcherNodeImpl::GetNextUncertainToken(
     bool is_uncertain_saved, int* iterator_uncertain, const std::vector<int>& uncertain_indices,
     const std::vector<bool>& uncertain_tokens_bitset) {
@@ -387,14 +412,14 @@ GrammarStateMatcher::GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext
                                          int max_rollback_steps)
     : ObjectRef(make_object<GrammarStateMatcherNodeImpl>(init_ctx, max_rollback_steps)) {}
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherWithTokenizer")
+TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherFromTokenizer")
     .set_body_typed([](BNFGrammar grammar, Optional<Tokenizer> tokenizer, int max_rollback_steps) {
       auto init_ctx = CreateInitContext(
           grammar, tokenizer ? tokenizer.value()->token_table : std::vector<std::string>());
       return GrammarStateMatcher(init_ctx, max_rollback_steps);
     });
 
-TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherWithTokenTable")
+TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherFromTokenTable")
     .set_body([](TVMArgs args, TVMRetValue* rv) {
       BNFGrammar grammar = args[0];
       std::vector<std::string> token_table;
@@ -412,13 +437,6 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherDebugAcceptCodepoint")
           const_cast<GrammarStateMatcherNodeImpl*>(matcher.as<GrammarStateMatcherNodeImpl>());
       return mutable_node->AcceptCodepoint(codepoint);
     });
-
-// Create binding for
-//   virtual bool AcceptToken(int32_t token_id) = 0;
-//   virtual void FindNextTokenBitmask(DLTensor* next_token_bitmask) = 0;
-//   virtual void Rollback(int num_tokens) = 0;
-//   virtual int MaxRollbackSteps() = 0;
-//   virtual void ResetState() = 0;
 
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherAcceptToken")
     .set_body_typed([](GrammarStateMatcher matcher, int32_t token_id) {
@@ -459,11 +477,7 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherDebugMatchCompleteString")
     });
 
 /*!
- * \brief Find the rejected tokens among all tokens in the tokenizer for the specified
- * GrammarStateMatcher. For test purpose.
- * \param matcher The GrammarStateMatcher to be used.
- * \param grammar The grammar associated to the matcher.
- * \param tokenizer The specified tokenizer.
+ * \brief Find the ids of the rejected tokens for the next step.
  * \returns A tuple of rejected token ids.
  */
 IntTuple FindNextRejectedTokens(GrammarStateMatcher matcher) {

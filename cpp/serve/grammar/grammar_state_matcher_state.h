@@ -17,7 +17,7 @@ namespace serve {
 
 using namespace tvm::runtime;
 
-/*! \brief A RulePosition object with additional structural information. */
+/*! \brief Specifies a position in a rule. */
 struct RulePosition {
   /*! \brief The rule's id. */
   int32_t rule_id = -1;
@@ -29,7 +29,6 @@ struct RulePosition {
    * \brief If the element refers to another rule, and another rule is a star quantifier of
    * a character class, this field will be set to the id of the character class.
    * This is part of the special support of star quantifiers of character classes.
-   * \sa mlc::llm::serve::BNFGrammarNode.
    */
   int32_t char_class_id = -1;
   /*! \brief The id of the parent node in the RulePositionTree. */
@@ -41,9 +40,7 @@ struct RulePosition {
   /*! \brief A parent_id value of kNoParent means this RulePosition is the root of the tree. */
   static constexpr int32_t kNoParent = -1;
 
-  /*! \brief Default constructor. */
   constexpr RulePosition() = default;
-  /*! \brief Construct a RulePosition with the given values. */
   constexpr RulePosition(int32_t rule_id, int32_t sequence_id, int32_t element_id,
                          int32_t parent_id = kNoParent, int32_t char_class_id = -1)
       : rule_id(rule_id),
@@ -155,7 +152,6 @@ class RulePositionTree {
    */
   RulePosition GetNextPosition(RulePosition rule_position) const;
 
-  /*! \brief See GetNextPosition. */
   bool IsEndPosition(const RulePosition& rule_position) const;
 
   /*! \brief Attach an additional reference to the node with the given id. */
@@ -202,6 +198,7 @@ class RulePositionTree {
    */
   void CheckWellFormed(const std::vector<int32_t>& outside_pointers) const;
 
+  /*! \brief Reset the tree and the associated buffer. */
   void Reset() { node_buffer_.Reset(); }
 
  private:
@@ -242,11 +239,8 @@ class StackTopsHistory {
     }
   }
 
-  /*!
-   * \brief Roll back to several previous steps. Possibly frees node that do not exist in any stack
-   * any more.
-   * \param rollback_steps The number of steps to be rolled back.
-   */
+  /*! \brief Roll back to several previous steps. Possibly frees node that do not exist in any stack
+   * any more. */
   void Rollback(int rollback_steps) {
     DCHECK(rollback_steps < stack_tops_history_.size())
         << "The number of requested rollback steps is greater than or equal to the current "
@@ -257,6 +251,8 @@ class StackTopsHistory {
     }
   }
 
+  /*! \brief Discard the earliest several steps. Possibly frees node that do not exist in any stack
+   * any more. */
   void DiscardEarliest(int discard_steps) {
     DCHECK(discard_steps < stack_tops_history_.size())
         << "The number of requested discard steps is greater than or equal to the current "
@@ -267,10 +263,7 @@ class StackTopsHistory {
     }
   }
 
-  /*!
-   * \brief Get the latest stack tops.
-   * \returns The latest stack tops.
-   */
+  /*! \brief Get the latest stack tops. */
   const std::vector<int32_t>& GetLatest() const { return stack_tops_history_.back(); }
 
   /*!
@@ -286,6 +279,7 @@ class StackTopsHistory {
   /*! \brief Check the well-formedness of the tree and the associated buffer. */
   void CheckWellFormed() const;
 
+  /*! \brief Reset the history and the associated node tree. */
   void Reset() {
     stack_tops_history_.clear();
     tree_->Reset();
@@ -432,7 +426,6 @@ inline std::string StackTopsHistory::PrintHistory(int history_position_to_latest
   return ss.str();
 }
 
-/*! \brief Check the well-formedness of the tree and the associated buffer. */
 inline void StackTopsHistory::CheckWellFormed() const {
   std::vector<int32_t> outside_pointers;
   for (const auto& stack_tops : stack_tops_history_) {
