@@ -1,5 +1,6 @@
 """Classes handling the grammar guided generation of MLC LLM serving"""
-from typing import List, Optional, Union
+from typing import List, Union
+
 import tvm._ffi
 from tvm.runtime import Object
 
@@ -119,21 +120,27 @@ class BNFGrammar(Object):
 
 @tvm._ffi.register_object("mlc.serve.GrammarStateMatcher")  # pylint: disable=protected-access
 class GrammarStateMatcher(Object):
-    """Match character or string or tokens to the given BNF grammar. This class is the core logic
+    """A stateful matcher to match tokens to the specified BNF grammar. This class is the core logic
     of the grammar-guided generation.
 
     This class implements the non-deterministic pushdown automaton (NPDA) matching algorithm to
-    match a string to a BNF grammar. It keep track of the current state of the matching process by
-    maintaining several stacks internally as possible paths in the NPDA. Therefore, it supports
-    continuous matching of characters and backtracking.
+    match characters to a BNF grammar. It keep track of the current state of the matching process by
+    maintaining several stacks internally as possible paths in the NPDA. It also supports
+    backtracking.
 
-    It also supports detecting the rejected tokens at the current position, which helps the
-    grammar-guided generation.
+    It is particularly capable of finding the set of tokens that are acceptable for the next step
+    and storing them in a bitmask. This aids in grammar-guided generation.
 
     Parameters
     ----------
     grammar : BNFGrammar
         The BNF grammar to match.
+
+    tokenizer : Union[None, Tokenizer, List[str]]
+        The tokenizer to use, or the list of tokens.
+
+        (For debug purpose) If None, the matcher will use an empty token set, and can only accept
+        and match characters. Default: None.
 
     max_rollback_steps : int
         The maximum number of steps to rollback when backtracking. Default: 0.
@@ -161,18 +168,22 @@ class GrammarStateMatcher(Object):
             )
 
     def accept_token(self, token_id: int) -> bool:
-        return _ffi_api.GrammarStateMatcherAcceptToken(self, token_id)  # type: ignore  # pylint: disable=no-member
-
-    def find_next_rejected_tokens(self) -> List[int]:
-        """Find the rejected tokens among all tokens in the tokenizer for the specified
-        GrammarStateMatcher.
+        """Accept one token and update the state of the matcher.
 
         Parameters
         ----------
-        grammar : BNFGrammar
-            The grammar associated to the matcher.
-        tokenizer : Tokenizer
-            The specified tokenizer.
+        token_id : int
+            The id of the token to accept.
+
+        Returns
+        -------
+        accepted : bool
+            Whether the token is accepted.
+        """
+        return _ffi_api.GrammarStateMatcherAcceptToken(self, token_id)  # type: ignore  # pylint: disable=no-member
+
+    def find_next_rejected_tokens(self) -> List[int]:
+        """Find the ids of the rejected tokens for the next step.
 
         Returns
         -------
@@ -183,25 +194,37 @@ class GrammarStateMatcher(Object):
         return _ffi_api.GrammarStateMatcherFindNextRejectedTokens(self)  # type: ignore  # pylint: disable=no-member
 
     def rollback(self, num_tokens: int) -> None:
-        _ffi_api.GrammarStateMatcherRollback(self, num_tokens)
+        """Rollback the matcher to a previous state.
+
+        Parameters
+        ----------
+        num_tokens : int
+            The number of tokens to rollback. It cannot exceed the current number of steps, nor can
+            it exceed the specified maximum number of rollback steps.
+        """
+        _ffi_api.GrammarStateMatcherRollback(self, num_tokens)  # type: ignore  # pylint: disable=no-member
 
     def max_rollback_steps(self) -> int:
-        return _ffi_api.GrammarStateMatcherMaxRollbackSteps(self)
+        """Get the maximum number of rollback steps allowed.
+
+        Returns
+        -------
+        max_rollback_steps : int
+            The maximum number of rollback steps.
+        """
+        return _ffi_api.GrammarStateMatcherMaxRollbackSteps(self)  # type: ignore  # pylint: disable=no-member
 
     def reset_state(self) -> None:
-        _ffi_api.GrammarStateMatcherResetState(self)
+        """Reset the matcher to the initial state."""
+        _ffi_api.GrammarStateMatcherResetState(self)  # type: ignore  # pylint: disable=no-member
 
     def debug_accept_char(self, codepoint: int) -> bool:
-        """Accept one unicode character to the current state.
+        """Accept one unicode codepoint to the current state.
 
         Parameters
         ----------
         codepoint : int
             The unicode codepoint of the character to be accepted.
-
-        drop_old : bool
-            If true, the old state will be dropped after accepting the new character when the number
-            of states exceeds the limit of saved history.
         """
         return _ffi_api.GrammarStateMatcherDebugAcceptCodepoint(  # type: ignore  # pylint: disable=no-member
             self, codepoint
@@ -209,5 +232,11 @@ class GrammarStateMatcher(Object):
 
     def debug_match_complete_string(self, string: str) -> bool:
         """Check if a matcher can accept the complete string, and then reach the end of the
-        grammar."""
+        grammar.
+
+        Parameters
+        ----------
+        string : str
+            The string to be matched.
+        """
         return _ffi_api.GrammarStateMatcherDebugMatchCompleteString(self, string)  # type: ignore  # pylint: disable=no-member

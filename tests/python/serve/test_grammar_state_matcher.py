@@ -1,6 +1,7 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring
 # pylint: disable=redefined-outer-name,unbalanced-tuple-unpacking
 from typing import List
+
 import pytest
 import tvm
 import tvm.testing
@@ -219,7 +220,7 @@ def test_json_pressure(json_grammar: BNFGrammar, json_input_pressure):
             # fmt: off
             31991, 31912, 406, 406, 406, 31977, 31861, 31861, 31966, 31914, 406, 406, 406, 406, 406,
             31977, 31861, 31861, 399, 399, 399, 399, 399, 399, 399, 399, 31979, 31983, 31983
-            # pfmt: on
+            # fmt: on
         ],
     ),
     (
