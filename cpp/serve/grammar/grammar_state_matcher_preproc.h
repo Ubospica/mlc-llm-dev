@@ -54,6 +54,7 @@ struct CatagorizedTokens {
  */
 class GrammarStateInitContext {
  public:
+  std::vector<std::string> token_table;
   BNFGrammar grammar;
   /*! \brief The vocabulary size of the tokenizer. */
   size_t vocab_size;
@@ -88,10 +89,6 @@ class GrammarStateInitContext {
   /*! \brief Mapping from sequence id and its position to the catagorized tokens. */
   std::unordered_map<SequenceIdAndPosition, CatagorizedTokens, SequenceIdAndPositionHash>
       catagorized_tokens_for_grammar;
-
-  /*! \brief Tokenizer will replace space with a special underscore. We will replace it back to
-   * space. */
-  static constexpr const char* kSpecialUnderscore = "▁";
 };
 
 /* \brief The concrete implementation of GrammarStateMatcherNode. */
@@ -240,6 +237,7 @@ inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
   using RuleExprType = BNFGrammarNode::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
 
+  ptr->token_table = token_table;
   ptr->grammar = grammar;
   ptr->vocab_size = token_table.size();
 
@@ -253,13 +251,13 @@ inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
       ptr->special_token_ids.push_back(i);
     } else if (token == "</s>") {
       ptr->stop_token_ids.push_back(i);
-    } else if (token[0] == '<' && token[token.size() - 1] == '>') {
-      // Currently we consider all <...> tokens as special tokens.
+    } else if (token.size() == 1 &&
+               (static_cast<unsigned char>(token[0]) >= 128 || token[0] == 0)) {
+      // Currently we consider all tokens with one character that >= 128 as special tokens.
       ptr->special_token_ids.push_back(i);
     } else {
       // First replace the special underscore with space.
-      auto token_underscore_replaced = ReplaceUnderscoreWithSpace(token, ptr->kSpecialUnderscore);
-      auto codepoints = Utf8StringToCodepoints(token_underscore_replaced.c_str());
+      auto codepoints = Utf8StringToCodepoints(token.c_str());
       DCHECK(!codepoints.empty() &&
              codepoints[0] != static_cast<TCodepoint>(CharHandlingError::kInvalidUtf8))
           << "Invalid token: " << token;

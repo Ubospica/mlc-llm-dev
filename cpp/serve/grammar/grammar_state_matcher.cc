@@ -415,7 +415,7 @@ GrammarStateMatcher::GrammarStateMatcher(std::shared_ptr<GrammarStateInitContext
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherFromTokenizer")
     .set_body_typed([](BNFGrammar grammar, Optional<Tokenizer> tokenizer, int max_rollback_steps) {
       auto init_ctx = CreateInitContext(
-          grammar, tokenizer ? tokenizer.value()->token_table : std::vector<std::string>());
+          grammar, tokenizer ? tokenizer.value()->TokenTable() : std::vector<std::string>());
       return GrammarStateMatcher(init_ctx, max_rollback_steps);
     });
 
@@ -497,12 +497,14 @@ IntTuple FindNextRejectedTokens(GrammarStateMatcher matcher) {
 
   auto bitset = BitsetManager(reinterpret_cast<uint32_t*>(dltensor.data), bitset_size);
   std::vector<long> rejected_ids;
+  std::vector<long> accepted_ids;
   for (int i = 0; i < vocab_size; i++) {
     if (bitset[i] == 0) {
       rejected_ids.push_back(i);
+    } else {
+      accepted_ids.push_back(i);
     }
   }
-
   std::cout << ", found accepted: " << vocab_size - rejected_ids.size()
             << ", rejected: " << rejected_ids.size() << std::endl;
 

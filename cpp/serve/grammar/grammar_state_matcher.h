@@ -36,6 +36,21 @@ using namespace tvm::runtime;
  *
  * It is particularly capable of finding the set of tokens that are acceptable for the next step
  * and storing them in a bitmask. This aids in grammar-guided generation.
+ *
+ * \example
+ * \code
+ * Tokenizer tokenizer = ...;
+ * auto init_ctx = GrammarStateMatcher::CreateInitContext(grammar, tokenizer->TokenTable());
+ * GrammarStateMatcher matcher(init_ctx, 10);
+ * matcher->AcceptToken(67);
+ *
+ * // Construct a DLTensor with shape (tokenizer.GetVocabSize() + 31) / 32, and dtype uint32.
+ * DLTensor next_token_bitmask = ...;
+ * matcher->FindNextTokenBitmask(&next_token_bitmask);
+ *
+ * // Rollback is supported
+ * matcher->Rollback(1);
+ * \endcode
  */
 class GrammarStateMatcherNode : public Object {
  public:

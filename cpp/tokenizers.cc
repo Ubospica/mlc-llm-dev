@@ -23,9 +23,6 @@ TVM_REGISTER_OBJECT_TYPE(TokenizerObj);
 Tokenizer::Tokenizer(std::unique_ptr<tokenizers::Tokenizer> tokenizer) {
   ObjectPtr<TokenizerObj> n = make_object<TokenizerObj>();
   n->tokenizer = std::move(tokenizer);
-  for (int32_t token_id = 0; token_id < n->tokenizer->GetVocabSize(); ++token_id) {
-    n->token_table.push_back(n->tokenizer->IdToToken(token_id));
-  }
   data_ = std::move(n);
 }
 
