@@ -497,14 +497,12 @@ IntTuple FindNextRejectedTokens(GrammarStateMatcher matcher) {
 
   auto bitset = BitsetManager(reinterpret_cast<uint32_t*>(dltensor.data), bitset_size);
   std::vector<long> rejected_ids;
-  std::vector<long> accepted_ids;
   for (int i = 0; i < vocab_size; i++) {
     if (bitset[i] == 0) {
       rejected_ids.push_back(i);
-    } else {
-      accepted_ids.push_back(i);
     }
   }
+
   std::cout << ", found accepted: " << vocab_size - rejected_ids.size()
             << ", rejected: " << rejected_ids.size() << std::endl;
 
