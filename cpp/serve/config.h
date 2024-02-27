@@ -34,6 +34,8 @@ class GenerationConfigNode : public Object {
   int max_tokens = 128;
   Array<String> stop_strs;
   std::vector<int> stop_token_ids;
+  bool json_mode;
+  Optional<String> output_grammar;
 
   String AsJSONString() const;
 

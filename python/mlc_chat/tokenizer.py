@@ -53,3 +53,18 @@ class Tokenizer(Object):
         return _ffi_api.TokenizerDecode(  # type: ignore  # pylint: disable=no-member
             self, tvm.runtime.ShapeTuple(token_ids)
         )
+
+    def id_to_token(self, token_id: int) -> str:
+        """Get the token string from token id.
+
+        Parameters
+        ----------
+        token_id : int
+            The token id.
+
+        Returns
+        -------
+        token : str
+            The token string.
+        """
+        return _ffi_api.TokenizerIdToToken(self, token_id)

@@ -148,5 +148,10 @@ TVM_REGISTER_GLOBAL("mlc.TokenizerDecode")
       return tokenizer->Decode({token_ids->data, token_ids->data + token_ids->size});
     });
 
+TVM_REGISTER_GLOBAL("mlc.TokenizerIdToToken")
+    .set_body_typed([](const Tokenizer& tokenizer, int32_t token_id) {
+      return tokenizer->IdToToken(token_id);
+    });
+
 }  // namespace llm
 }  // namespace mlc

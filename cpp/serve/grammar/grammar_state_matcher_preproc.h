@@ -55,7 +55,10 @@ struct CatagorizedTokens {
  */
 class GrammarStateInitContext {
  public:
-  BNFGrammar grammar;
+  /******************* Information about the tokenizer *******************/
+
+  std::vector<std::string> token_table;
+
   /*! \brief The vocabulary size of the tokenizer. */
   size_t vocab_size;
   /*! \brief The sorted token and its id. Tokens are sorted to reuse the common prefix during
@@ -69,6 +72,12 @@ class GrammarStateInitContext {
   /*! \brief The special tokens. Currently we will ignore these tokens during grammar-guided
    * matching. */
   std::vector<int32_t> special_token_ids;
+
+  /******************* Information about the grammar *******************/
+
+  BNFGrammar grammar;
+
+  /******************* Grammar-specific tokenizer information *******************/
 
   /*! \brief A sequence id and its position. */
   struct SequenceIdAndPosition {
@@ -232,10 +241,12 @@ inline std::string ReplaceUnderscoreWithSpace(const std::string& str,
   return res;
 }
 
-inline std::shared_ptr<GrammarStateInitContext> CreateInitContext(
+inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitContext(
     const BNFGrammar& grammar, const std::vector<std::string>& token_table) {
   using RuleExprType = BNFGrammarNode::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
+
+  ptr->token_table = token_table;
 
   ptr->grammar = grammar;
   ptr->vocab_size = token_table.size();

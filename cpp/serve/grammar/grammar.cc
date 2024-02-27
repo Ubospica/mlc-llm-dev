@@ -43,8 +43,8 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromJSON").set_body_typed([](String jso
 
 const std::string kJSONGrammarString = R"(
 main ::= (
-    "{" ws members_or_embrace ws |
-    "[" ws elements_or_embrace ws
+    "{" ws members_or_embrace |
+    "[" ws elements_or_embrace
 )
 value ::= (
     "{" ws members_or_embrace |

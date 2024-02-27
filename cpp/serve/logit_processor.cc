@@ -44,7 +44,7 @@ class LogitProcessorImpl : public LogitProcessorObj {
     token_cnt_host_ = NDArray::Empty({max_num_token * vocab_size}, dtype_i32_, device_cpu);
     token_logit_bias_host_ = NDArray::Empty({max_num_token * vocab_size}, dtype_f32_, device_cpu);
     penalties_host_ = NDArray::Empty({max_num_token, 3}, dtype_f32_, device_cpu);
-    bitmask_host_ = NDArray::Empty({max_num_token, bitmask_size_}, dtype_i32_, device_cpu);
+    bitmask_host_ = NDArray::Empty({max_num_token, bitmask_size_}, dtype_u32_, device_cpu);
     temperature_host_ = NDArray::Empty({max_num_token}, dtype_f32_, device_cpu);
     // Initialize auxiliary arrays on GPU.
     seq_ids_device_ = NDArray::Empty({max_num_token}, dtype_i32_, device);
@@ -305,8 +305,8 @@ class LogitProcessorImpl : public LogitProcessorObj {
     // Construct:
     // - seq_ids (max_num_token,) int32
     // - bitmask (max_num_token, ceildiv(vocab_size, 32)), int32
-    int* p_seq_ids = static_cast<int*>(seq_ids_host_->data);
-    int* p_bitmask = static_cast<int*>(bitmask_host_->data);
+    int32_t* p_seq_ids = static_cast<int32_t*>(seq_ids_host_->data);
+    uint32_t* p_bitmask = static_cast<uint32_t*>(bitmask_host_->data);
 
     // - Set arrays.
     int num_token_for_mask = 0;
@@ -316,13 +316,16 @@ class LogitProcessorImpl : public LogitProcessorObj {
       int token_offset = cum_num_token == nullptr ? i : cum_num_token->at(i);
       CHECK(num_token_to_process == 1 || mstates[i]->draft_output_tokens.empty());
       for (int j = 0; j < num_token_to_process; ++j) {
-        std::vector<int> bitmask = mstates[i]->GetTokenBitmask(vocab_size_);
-        if (!bitmask.empty()) {
+        if (mstates[i]->RequireNextTokenBitmask()) {
+          // Find a slice of bitmask_host_: bitmask_host_[num_token_for_mask, :]
+          auto bitmask_dltensor = *bitmask_host_.operator->();
+          int64_t bitmask_shape[] = {bitmask_size_};
+          bitmask_dltensor.data = p_bitmask + num_token_for_mask * bitmask_size_;
+          bitmask_dltensor.shape = bitmask_shape;
+          bitmask_dltensor.ndim = 1;
+
+          mstates[i]->FindNextTokenBitmask(&bitmask_dltensor);
           p_seq_ids[num_token_for_mask] = token_offset + j;
-          ICHECK_EQ(bitmask.size(), bitmask_size_);
-          for (int p = 0; p < bitmask_size_; ++p) {
-            p_bitmask[num_token_for_mask * bitmask_size_ + p] = bitmask[p];
-          }
           ++num_token_for_mask;
         }
         if (j > 0) {
@@ -362,6 +365,7 @@ class LogitProcessorImpl : public LogitProcessorObj {
   const int vocab_size_;
   const int bitmask_size_;
   const DLDataType dtype_i32_ = DataType::Int(32);
+  const DLDataType dtype_u32_ = DataType::UInt(32);
   const DLDataType dtype_f32_ = DataType::Float(32);
   // Packed functions.
   Device device_;

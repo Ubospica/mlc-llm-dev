@@ -144,7 +144,7 @@ def _apply_bitmask_inplace(
     num_seq = T.int32(is_size_var=True)
     logits = T.match_buffer(var_logits, (batch_size, vocab_size), "float32")
     seq_ids = T.match_buffer(var_seq_ids, (num_seq,), "int32")
-    bitmask = T.match_buffer(var_bitmask, (num_seq, (vocab_size + 31 // 32)), "int32")
+    bitmask = T.match_buffer(var_bitmask, (num_seq, (vocab_size + 31) // 32), "int32")
 
     for fused_s_v_0 in T.thread_binding(0, (num_seq * vocab_size + 1023) // 1024, "blockIdx.x"):
         for fused_s_v_1 in T.thread_binding(0, 1024, "threadIdx.x"):
