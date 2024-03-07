@@ -193,7 +193,7 @@ inline void GrammarStateMatcherBase::UpdateNewStackTops(int32_t old_node_id,
       auto new_rule_id = element[0];
       auto new_rule = grammar_->GetRule(new_rule_id);
       auto new_rule_expr = grammar_->GetRuleExpr(new_rule.body_expr_id);
-      if (new_rule_expr.type == RuleExprType::kStarQuantifier) {
+      if (new_rule_expr.type == RuleExprType::kCharacterClassStar) {
         cur_rule_position.char_class_id = new_rule_expr[0];
         new_stack_tops->push_back(tree_.NewNode(cur_rule_position));
       } else {

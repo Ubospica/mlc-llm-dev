@@ -65,7 +65,7 @@ class NestedRuleUnwrapperImpl : public BNFGrammarMutator<int32_t, BNFGrammar> {
   }
 
  private:
-  /*! \brief Visit a RuleExpr as the rule body. */
+  /*! \brief Visit a RuleExpr as a rule body. */
   int32_t VisitRuleBody(const RuleExpr& rule_expr) {
     switch (rule_expr.type) {
       case RuleExprType::kSequence:
@@ -78,8 +78,8 @@ class NestedRuleUnwrapperImpl : public BNFGrammarMutator<int32_t, BNFGrammar> {
       case RuleExprType::kNegCharacterClass:
       case RuleExprType::kRuleRef:
         return builder_.AddChoices({builder_.AddSequence({builder_.AddRuleExpr(rule_expr)})});
-      case RuleExprType::kStarQuantifier:
-        return builder_.AddStarQuantifier(VisitExpr(grammar_->GetRuleExpr(rule_expr[0])));
+      case RuleExprType::kCharacterClassStar:
+        return builder_.AddCharacterClassStar(VisitExpr(grammar_->GetRuleExpr(rule_expr[0])));
       default:
         LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
