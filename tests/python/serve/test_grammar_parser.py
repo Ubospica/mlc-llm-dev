@@ -46,13 +46,18 @@ def test_star_quantifier():
 b ::= [b]*
 c ::= "b"*
 d ::= ([b] [c] [d] | ([p] [q]))*
+e ::= [e]* [f]* | [g]*
 """
     expected = """main ::= ((b c d))
 b ::= [b]*
 c ::= ((c_1))
 d ::= ((d_1))
+e ::= ((e_star e_star_1) | (e_star_2))
 c_1 ::= ("" | ([b] c_1))
 d_1 ::= ("" | (d_1_choice d_1))
+e_star ::= [e]*
+e_star_1 ::= [f]*
+e_star_2 ::= [g]*
 d_1_choice ::= (([b] [c] [d]) | ([p] [q]))
 """
     bnf_grammar = BNFGrammar.from_ebnf_string(before, True, False)

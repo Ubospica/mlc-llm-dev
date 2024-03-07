@@ -263,11 +263,12 @@ int32_t EBNFParserImpl::ParseElement() {
 }
 
 int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {
-  // a*  -->  rule ::= a rule | ""
-  // Create the new rule
   if (builder_.GetRuleExpr(rule_expr_id).type == BNFGrammarBuilder::RuleExprType::kCharacterClass) {
+    // We have special handling for character class star, e.g. [a-z]*
     return builder_.AddCharacterClassStar(rule_expr_id);
   } else {
+    // For other star quantifiers, we transform it into a rule:
+    // a*  -->  rule ::= a rule | ""
     auto new_rule_name = builder_.GetNewRuleName(cur_rule_name_);
     auto new_rule_id = builder_.AddEmptyRule(new_rule_name);
     auto ref_to_new_rule = builder_.AddRuleRef(new_rule_id);
@@ -282,7 +283,6 @@ int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {
 
 int32_t EBNFParserImpl::HandlePlusQuantifier(int32_t rule_expr_id) {
   // a+  -->  rule ::= a rule | a
-  // Create the new rule
   auto new_rule_name = builder_.GetNewRuleName(cur_rule_name_);
   auto new_rule_id = builder_.AddEmptyRule(new_rule_name);
   auto ref_to_new_rule = builder_.AddRuleRef(new_rule_id);
