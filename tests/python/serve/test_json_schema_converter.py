@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 import tvm.testing
 from pydantic import BaseModel, Field, TypeAdapter
 
-from mlc_llm.serve import BNFGrammar, GrammarStateMatcher, json_schema_to_ebnf
+from mlc_llm.serve import BNFGrammar, GrammarStateMatcher
 
 
 def check_schema_with_grammar(
@@ -16,26 +16,25 @@ def check_schema_with_grammar(
     strict_mode: bool = True,
 ):
     schema_str = json.dumps(schema, indent=2)
-    grammar = json_schema_to_ebnf(
+    grammar = BNFGrammar.debug_json_schema_to_ebnf(
         schema_str, indent=indent, separators=separators, strict_mode=strict_mode
     )
+    print(grammar)
+    print(expected_grammar)
     assert grammar == expected_grammar
 
 
 def check_schema_with_json(
     schema: Dict[str, Any],
     json_str: str,
-    check_accepted=True,
+    check_accepted: bool = True,
     indent: Optional[int] = None,
     separators: Optional[Tuple[str, str]] = None,
     strict_mode: bool = True,
 ):
-    schema_str = json.dumps(schema, indent=2)
-
-    ebnf_grammar_str = json_schema_to_ebnf(
-        schema_str, indent=indent, separators=separators, strict_mode=strict_mode
+    ebnf_grammar = BNFGrammar.from_schema(
+        json.dumps(schema, indent=2), indent=indent, separators=separators, strict_mode=strict_mode
     )
-    ebnf_grammar = BNFGrammar.from_ebnf_string(ebnf_grammar_str)
     matcher = GrammarStateMatcher(ebnf_grammar)
 
     if check_accepted:
@@ -47,7 +46,7 @@ def check_schema_with_json(
 def check_schema_with_instance(
     schema: Dict[str, Any],
     instance: BaseModel,
-    check_accepted=True,
+    check_accepted: bool = True,
     indent: Optional[int] = None,
     separators: Optional[Tuple[str, str]] = None,
     strict_mode: bool = True,
@@ -116,6 +115,10 @@ main ::= "{" "" "\"integer_field\"" ": " basic_integer ", " "\"number_field\"" "
 
     schema = MainModel.model_json_schema()
     check_schema_with_instance(schema, instance_empty)
+
+
+test_basic()
+exit()
 
 
 def test_indent():

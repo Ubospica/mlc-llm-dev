@@ -183,15 +183,16 @@ class BNFGrammar : public ObjectRef {
    * \param simplify Whether to simplify the grammar to make matching more efficient. Default: true.
    * Not implemented yet.
    */
-  static BNFGrammar FromEBNFString(const String& ebnf_string, const String& main_rule = "main",
-                                   bool normalize = true, bool simplify = true);
+  static BNFGrammar FromEBNFString(const std::string& ebnf_string,
+                                   const std::string& main_rule = "main", bool normalize = true,
+                                   bool simplify = true);
 
   /*!
    * \brief Construct a BNF grammar from the dumped JSON string.
    * \param json_string The JSON-formatted string. This string should have the same format as
    * the result of BNFGrammarJSONSerializer::ToString.
    */
-  static BNFGrammar FromJSON(const String& json_string);
+  static BNFGrammar FromJSON(const std::string& json_string);
 
   /*!
    * \brief Construct a BNF grammar from the json schema string. The schema string should be in the
@@ -207,9 +208,10 @@ class BNFGrammar : public ObjectRef {
    * This helps LLM to generate accurate output in the grammar-guided generation with JSON
    * schema. Default: true.
    */
-  static BNFGrammar FromSchema(const String& schema, int indent = -1,
-                               Optional<Array<String>> separators = NullOpt,
-                               bool strict_mode = true);
+  static BNFGrammar FromSchema(
+      const std::string& schema, std::optional<int> indent = std::nullopt,
+      std::optional<std::pair<std::string, std::string>> separators = std::nullopt,
+      bool strict_mode = true);
 
   /*!
    * \brief Get the grammar of standard JSON format. We have built-in support for JSON.

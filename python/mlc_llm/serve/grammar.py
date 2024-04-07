@@ -150,9 +150,8 @@ class BNFGrammar(Object):
         grammar : BNFGrammar
             The generated BNF grammar.
         """
-        indent_converted = -1 if indent is None else indent
         return _ffi_api.BNFGrammarFromSchema(  # type: ignore  # pylint: disable=no-member
-            schema, indent_converted, separators, strict_mode
+            schema, indent, separators, strict_mode
         )
 
     @staticmethod
@@ -165,6 +164,18 @@ class BNFGrammar(Object):
             The JSON grammar.
         """
         return _ffi_api.BNFGrammarGetGrammarOfJSON()  # type: ignore  # pylint: disable=no-member
+
+    @staticmethod
+    def debug_json_schema_to_ebnf(
+        schema: str,
+        *,
+        indent: Optional[int] = None,
+        separators: Optional[Tuple[str, str]] = None,
+        strict_mode: bool = True
+    ) -> str:
+        return _ffi_api.DebugJSONSchemaToEBNF(  # type: ignore  # pylint: disable=no-member
+            schema, indent, separators, strict_mode
+        )
 
 
 @tvm._ffi.register_object("mlc.serve.GrammarStateMatcher")  # pylint: disable=protected-access
