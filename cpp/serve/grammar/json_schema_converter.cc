@@ -44,8 +44,6 @@ class IndentManager {
 
   std::string NextSeparator(bool is_end = false) {
     std::string res = "";
-    std::cout << "require sep: info " << is_first_.back() << " " << is_end
-              << " res: " << (!is_first_.back() && !is_end) << std::endl;
     if (!is_first_.back() && !is_end) {
       res += separator_;
     }
@@ -462,8 +460,8 @@ class JSONSchemaToEBNFConverter {
       const auto& prefix_items = schema.at("prefixItems").get<picojson::array>();
       for (int i = 0; i < prefix_items.size(); ++i) {
         ICHECK(prefix_items[i].is<picojson::object>());
-        result += " " + NextSeparator() + " " +
-                  CreateRuleFromSchema(prefix_items[i], rule_name + "_" + std::to_string(i));
+        result += " " + NextSeparator() + " ";
+        result += CreateRuleFromSchema(prefix_items[i], rule_name + "_" + std::to_string(i));
       }
     }
 
@@ -494,14 +492,13 @@ class JSONSchemaToEBNFConverter {
     } else {
       std::string additional_pattern =
           CreateRuleFromSchema(additional_item, rule_name + "_" + additional_suffix);
-      std::cout << "additional_pattern: " << additional_pattern << std::endl;
       if (schema.count("prefixItems")) {
-        result += " (" + NextSeparator() + " " + additional_pattern + ")* " + NextSeparator(true);
+        result += " (" + NextSeparator() + " " + additional_pattern + ")* ";
+        result += NextSeparator(true);
       } else {
-        std::cout << "prev result: " << result << std::endl;
-        result += " " + NextSeparator() + " " + additional_pattern + " (" + NextSeparator() + " " +
-                  additional_pattern + ")* " + NextSeparator(true);
-        std::cout << "updated result: " << result << std::endl;
+        result += " " + NextSeparator() + " " + additional_pattern + " (";
+        result += NextSeparator() + " " + additional_pattern + ")* ";
+        result += NextSeparator(true);
         could_be_empty = true;
       }
     }
@@ -516,6 +513,7 @@ class JSONSchemaToEBNFConverter {
 
     return result;
   }
+
   std::string GetPropertyPattern(const std::string& prop_name, const picojson::value& prop_schema,
                                  const std::string& rule_name) {
     std::string key = "\"\\\"" + prop_name + "\\\"\"";
@@ -708,8 +706,9 @@ class JSONSchemaToEBNFConverter {
       // 3.3 Case 3: no properties are defined and additional properties are allowed
       std::string other_property_pattern =
           GetOtherPropertyPattern(kBasicString, additional_property, rule_name, additional_suffix);
-      result += " " + NextSeparator() + " " + other_property_pattern + " (" + NextSeparator() +
-                " " + other_property_pattern + ")* " + NextSeparator(true);
+      result += " " + NextSeparator() + " " + other_property_pattern + " (";
+      result += NextSeparator() + " " + other_property_pattern + ")* ";
+      result += NextSeparator(true);
       could_be_empty = true;
     }
 
