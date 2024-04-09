@@ -15,7 +15,9 @@
 // Forward declare picojson's value, object and array
 namespace picojson {
 class value;
-using object = std::unordered_map<std::string, value>;
+template <typename Key, typename T>
+class ordered_hashmap;
+using object = ordered_hashmap<std::string, value>;
 using array = std::vector<value>;
 }  // namespace picojson
 

@@ -19,8 +19,6 @@ def check_schema_with_grammar(
     grammar = BNFGrammar.debug_json_schema_to_ebnf(
         schema_str, indent=indent, separators=separators, strict_mode=strict_mode
     )
-    print(grammar)
-    print(expected_grammar)
     assert grammar == expected_grammar
 
 

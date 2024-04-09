@@ -712,10 +712,13 @@ class JSONSchemaToEBNFConverter {
       could_be_empty = true;
     }
 
+    indentManager_->EndIndent();
+
     result += " \"}\"";
     if (could_be_empty) {
       result = "(" + result + ") | \"{}\"";
     }
+
     return result;
   };
 };
