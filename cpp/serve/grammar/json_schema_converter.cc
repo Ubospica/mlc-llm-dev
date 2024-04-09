@@ -355,7 +355,7 @@ class JSONSchemaToEBNFConverter {
       if (idx != 0) {
         result += " | ";
       }
-      result += CreateRuleFromSchema(anyof_schema, rule_name + "_" + std::to_string(idx));
+      result += CreateRuleFromSchema(anyof_schema, rule_name + "_case_" + std::to_string(idx));
       ++idx;
     }
     return result;
@@ -437,7 +437,7 @@ class JSONSchemaToEBNFConverter {
       for (int i = 0; i < prefix_items.size(); ++i) {
         ICHECK(prefix_items[i].is<picojson::object>());
         result += " " + NextSeparator() + " ";
-        result += CreateRuleFromSchema(prefix_items[i], rule_name + "_" + std::to_string(i));
+        result += CreateRuleFromSchema(prefix_items[i], rule_name + "_item_" + std::to_string(i));
       }
     }
 
@@ -448,7 +448,7 @@ class JSONSchemaToEBNFConverter {
     if (schema.count("items") &&
         (!schema.at("items").is<bool>() || schema.at("items").get<bool>())) {
       additional_item = schema.at("items");
-      additional_suffix = "item";
+      additional_suffix = "items";
     }
 
     if (schema.count("items") == 0) {
@@ -535,7 +535,7 @@ class JSONSchemaToEBNFConverter {
       additional_prop_pattern =
           GetOtherPropertyPattern(kBasicString, additional, rule_name, additional_suffix);
       std::string last_rule_body = "(" + mid_sep + " " + additional_prop_pattern + ")*";
-      std::string last_rule_name = rule_name + "_sub_" + std::to_string(properties.size() - 1);
+      std::string last_rule_name = rule_name + "_part_" + std::to_string(properties.size() - 1);
       rules_.push_back(std::make_pair(last_rule_name, last_rule_body));
       rule_names.back() = last_rule_name;
     } else {
@@ -548,7 +548,7 @@ class JSONSchemaToEBNFConverter {
       const std::string& last_rule_name = rule_names[i + 1];
       std::string cur_rule_body =
           last_rule_name + " | " + mid_sep + " " + prop_pattern + " " + last_rule_name;
-      std::string cur_rule_name = rule_name + "_sub_" + std::to_string(i);
+      std::string cur_rule_name = rule_name + "_part_" + std::to_string(i);
       rules_.push_back(std::make_pair(cur_rule_name, cur_rule_body));
       rule_names[i] = cur_rule_name;
     }
