@@ -1,4 +1,5 @@
 import json
+import sys
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
@@ -19,6 +20,8 @@ def check_schema_with_grammar(
     grammar = BNFGrammar.debug_json_schema_to_ebnf(
         schema_str, indent=indent, separators=separators, strict_mode=strict_mode
     )
+    print(grammar, file=sys.stderr)
+    print(expected_grammar, file=sys.stderr)
     assert grammar == expected_grammar
 
 
@@ -80,8 +83,8 @@ main_array_field ::= ("[" "" basic_string (", " basic_string)* "" "]") | "[]"
 main_tuple_field_2 ::= ("[" "" basic_string (", " basic_string)* "" "]") | "[]"
 main_tuple_field ::= "[" "" basic_string ", " basic_integer ", " main_tuple_field_2 "" "]"
 main_object_field ::= ("{" "" basic_string ": " basic_integer (", " basic_string ": " basic_integer)* "" "}") | "{}"
-main_nested_object_field_add ::= ("{" "" basic_string ": " basic_integer (", " basic_string ": " basic_integer)* "" "}") | "{}"
-main_nested_object_field ::= ("{" "" basic_string ": " main_nested_object_field_add (", " basic_string ": " main_nested_object_field_add)* "" "}") | "{}"
+main_nested_object_field_addl ::= ("{" "" basic_string ": " basic_integer (", " basic_string ": " basic_integer)* "" "}") | "{}"
+main_nested_object_field ::= ("{" "" basic_string ": " main_nested_object_field_addl (", " basic_string ": " main_nested_object_field_addl)* "" "}") | "{}"
 main ::= "{" "" "\"integer_field\"" ": " basic_integer ", " "\"number_field\"" ": " basic_number ", " "\"boolean_field\"" ": " basic_boolean ", " "\"any_array_field\"" ": " main_any_array_field ", " "\"array_field\"" ": " main_array_field ", " "\"tuple_field\"" ": " main_tuple_field ", " "\"object_field\"" ": " main_object_field ", " "\"nested_object_field\"" ": " main_nested_object_field "" "}"
 """
 
@@ -113,10 +116,6 @@ main ::= "{" "" "\"integer_field\"" ": " basic_integer ", " "\"number_field\"" "
 
     schema = MainModel.model_json_schema()
     check_schema_with_instance(schema, instance_empty)
-
-
-test_basic()
-exit()
 
 
 def test_indent():
@@ -450,6 +449,31 @@ main ::= "{" "" "\"name\"" ": " basic_string "" "}"
 
     instance_str = json.dumps(instance.model_dump(mode="json", round_trip=True, by_alias=True))
     check_schema_with_json(MainModel.model_json_schema(by_alias=True), instance_str)
+
+    class MainModelSpace(BaseModel):
+        test: Literal["abc"] = Field(..., alias="name 1")
+
+    ebnf_grammar_space = r"""basic_escape ::= ["\\/bfnrt] | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
+basic_string_sub ::= "" | [^"\\\r\n] basic_string_sub | "\\" basic_escape basic_string_sub
+basic_any ::= basic_number | basic_string | basic_boolean | basic_null | basic_array | basic_object
+basic_integer ::= ("0" | "-"? [1-9] [0-9]*) ".0"?
+basic_number ::= ("0" | "-"? [1-9] [0-9]*) ("." [0-9]+)? ([eE] [+-]? [0-9]+)?
+basic_string ::= ["] basic_string_sub ["]
+basic_boolean ::= "true" | "false"
+basic_null ::= "null"
+basic_array ::= ("[" "" basic_any (", " basic_any)* "" "]") | "[]"
+basic_object ::= ("{" "" basic_string ": " basic_any (", " basic_string ": " basic_any)* "" "}") | "{}"
+main_prop_0 ::= "\"abc\""
+main ::= "{" "" "\"name 1\"" ": " main_prop_0 "" "}"
+"""
+
+    check_schema_with_grammar(MainModelSpace.model_json_schema(), ebnf_grammar_space)
+
+    instance_space = MainModelSpace(**{"name 1": "abc"})
+    instance_space_str = json.dumps(
+        instance_space.model_dump(mode="json", round_trip=True, by_alias=True)
+    )
+    check_schema_with_json(MainModelSpace.model_json_schema(by_alias=True), instance_space_str)
 
 
 if __name__ == "__main__":

@@ -197,30 +197,6 @@ class JSONSchemaToEBNFConverter {
     return rule_name_hint;
   }
 
-  static picojson::value RemoveSkippedKeysRecursive(const picojson::value& obj) {
-    static const std::unordered_set<std::string> kSkippedKeys = {
-        "title",    "default",   "description", "examples", "deprecated",
-        "readOnly", "writeOnly", "$comment",    "$schema",
-    };
-    if (obj.is<picojson::object>()) {
-      picojson::object result;
-      for (const auto& kv : obj.get<picojson::object>()) {
-        if (kSkippedKeys.count(kv.first) == 0) {
-          result[kv.first] = RemoveSkippedKeysRecursive(kv.second);
-        }
-      }
-      return picojson::value(result);
-    } else if (obj.is<picojson::array>()) {
-      picojson::array result;
-      for (const auto& item : obj.get<picojson::array>()) {
-        result.push_back(RemoveSkippedKeysRecursive(item));
-      }
-      return picojson::value(result);
-    }
-    // If the object is neither an array nor an object, return it directly
-    return obj;
-  }
-
   std::string GetSchemaCacheIndex(const picojson::value& schema) {
     static const std::unordered_set<std::string> kSkippedKeys = {
         "title",    "default",   "description", "examples", "deprecated",
@@ -358,8 +334,8 @@ class JSONSchemaToEBNFConverter {
   }
 
   std::string JSONStrToPrintableStr(const std::string& json_str) {
-    static const std::unordered_map<std::string, std::string> kReplaceMapping = {{"\\", "\\\\"},
-                                                                                 {"\"", "\\\""}};
+    static const std::vector<std::pair<std::string, std::string>> kReplaceMapping = {
+        {"\\", "\\\\"}, {"\"", "\\\""}};
     std::string result = json_str;
     for (const auto& [k, v] : kReplaceMapping) {
       size_t pos = 0;
@@ -379,8 +355,8 @@ class JSONSchemaToEBNFConverter {
       if (idx != 0) {
         result += " | ";
       }
-      ++idx;
       result += CreateRuleFromSchema(anyof_schema, rule_name + "_" + std::to_string(idx));
+      ++idx;
     }
     return result;
   }
@@ -515,10 +491,11 @@ class JSONSchemaToEBNFConverter {
   }
 
   std::string GetPropertyPattern(const std::string& prop_name, const picojson::value& prop_schema,
-                                 const std::string& rule_name) {
+                                 const std::string& rule_name, int idx) {
     std::string key = "\"\\\"" + prop_name + "\\\"\"";
     std::string colon = "\"" + colon_ + "\"";
-    std::string value = CreateRuleFromSchema(prop_schema, rule_name + "_" + prop_name);
+    std::string value =
+        CreateRuleFromSchema(prop_schema, rule_name + "_prop_" + std::to_string(idx));
     return key + " " + colon + " " + value;
   }
 
@@ -544,8 +521,10 @@ class JSONSchemaToEBNFConverter {
     std::string res = "";
 
     std::vector<std::string> prop_patterns;
+    int idx = 0;
     for (const auto& [prop_name, prop_schema] : properties) {
-      prop_patterns.push_back(GetPropertyPattern(prop_name, prop_schema, rule_name));
+      prop_patterns.push_back(GetPropertyPattern(prop_name, prop_schema, rule_name, idx));
+      ++idx;
     }
 
     std::vector<std::string> rule_names(properties.size(), "");
@@ -610,20 +589,21 @@ class JSONSchemaToEBNFConverter {
     for (int i = 0; i < first_required_idx; ++i) {
       const auto& [prop_name, prop_schema] = properties[i];
       ICHECK(!prop_schema.is<bool>() || prop_schema.get<bool>());
-      std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name);
+      std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name, i);
       res += " (" + property_pattern + " " + NextSeparator() + ")?";
     }
 
     // Handle the first required property
     const auto& [prop_name, prop_schema] = properties[first_required_idx];
-    std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name);
+    std::string property_pattern =
+        GetPropertyPattern(prop_name, prop_schema, rule_name, first_required_idx);
     res += " " + property_pattern;
 
     // Handle the properties after the first required property
     for (int i = first_required_idx + 1; i < properties.size(); ++i) {
       const auto& [prop_name, prop_schema] = properties[i];
       ICHECK(!prop_schema.is<bool>() || prop_schema.get<bool>());
-      std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name);
+      std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name, i);
       if (required.count(prop_name)) {
         res += " " + NextSeparator() + " " + property_pattern;
       } else {
@@ -649,27 +629,7 @@ class JSONSchemaToEBNFConverter {
 
     indentManager_->StartIndent();
 
-    // 1. Find additional properties
-    picojson::value additional_property = picojson::value(false);
-    std::string additional_suffix = "";
-
-    if (schema.count("additionalProperties") && (!schema.at("additionalProperties").is<bool>() ||
-                                                 schema.at("additionalProperties").get<bool>())) {
-      additional_property = schema.at("additionalProperties");
-      additional_suffix = "add";
-    }
-
-    if (schema.count("additionalProperties") == 0) {
-      picojson::value unevaluated = schema.count("unevaluatedProperties")
-                                        ? schema.at("unevaluatedProperties")
-                                        : picojson::value(!strict_mode_);
-      if (!unevaluated.is<bool>() || unevaluated.get<bool>()) {
-        additional_property = unevaluated;
-        additional_suffix = "uneval";
-      }
-    }
-
-    // 2. Handle properties
+    // 1. Handle properties
     std::vector<std::pair<std::string, picojson::value>> properties;
     if (schema.count("properties")) {
       for (const auto& [prop_name, prop_schema] : schema.at("properties").get<picojson::object>()) {
@@ -681,6 +641,26 @@ class JSONSchemaToEBNFConverter {
     if (schema.count("required")) {
       for (const auto& required_prop : schema.at("required").get<picojson::array>()) {
         required.insert(required_prop.get<std::string>());
+      }
+    }
+
+    // 2. Find additional properties
+    picojson::value additional_property = picojson::value(false);
+    std::string additional_suffix = "";
+
+    if (schema.count("additionalProperties") && (!schema.at("additionalProperties").is<bool>() ||
+                                                 schema.at("additionalProperties").get<bool>())) {
+      additional_property = schema.at("additionalProperties");
+      additional_suffix = "addl";
+    }
+
+    if (schema.count("additionalProperties") == 0) {
+      picojson::value unevaluated = schema.count("unevaluatedProperties")
+                                        ? schema.at("unevaluatedProperties")
+                                        : picojson::value(!strict_mode_);
+      if (!unevaluated.is<bool>() || unevaluated.get<bool>()) {
+        additional_property = unevaluated;
+        additional_suffix = "uneval";
       }
     }
 
