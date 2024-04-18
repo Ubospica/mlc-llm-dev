@@ -138,6 +138,7 @@ class EngineConfigNode : public Object {
   SpeculativeMode speculative_mode;
   /*! \brief The number of tokens to generate in speculative proposal (draft). */
   int spec_draft_length = 4;
+  bool debug_disable_jump_forward;
 
   String AsJSONString() const;
 
@@ -154,7 +155,8 @@ class EngineConfig : public ObjectRef {
                         int kv_cache_page_size, int max_num_sequence, int max_total_sequence_length,
                         int max_single_sequence_length, int prefill_chunk_size,
                         int max_history_size, KVStateKind kv_state_kind,
-                        SpeculativeMode speculative_mode, int spec_draft_length);
+                        SpeculativeMode speculative_mode, int spec_draft_length,
+                        bool debug_disable_jump_forward);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(EngineConfig, ObjectRef, EngineConfigNode);
 };

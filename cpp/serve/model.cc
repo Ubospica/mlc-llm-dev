@@ -85,6 +85,8 @@ class ModelImpl : public ModelObj {
     // Copy input token ids to device.
     DLDataType dtype(DataType::Int(32));
     NDArray token_ids_nd;
+
+    ICHECK((TVMSynchronize(2, 0, nullptr) == 0));
     {
       NVTXScopedRange nvtx_scope("Allocate token_ids at offset");
       token_ids_nd = token_ids_storage_->AllocNDArray(offset * 4, {num_tokens}, dtype);
@@ -93,14 +95,21 @@ class ModelImpl : public ModelObj {
         p_token_ids[i] = token_ids[i];
       }
     }
+
+    ICHECK((TVMSynchronize(2, 0, nullptr) == 0));
     ICHECK_EQ(token_ids_nd->ndim, 1);
     ICHECK_EQ(token_ids_nd->shape[0], num_tokens);
     auto token_ids_dref_or_nd = ft_.CopyToWorker0(token_ids_nd, "token_ids", {prefill_chunk_size_});
 
+    ICHECK((TVMSynchronize(2, 0, nullptr) == 0));
     ObjectRef embeddings = ft_.embed_func_(token_ids_dref_or_nd, params_);
+
+    ICHECK((TVMSynchronize(2, 0, nullptr) == 0));
     if (dst != nullptr) {
       CHECK(dst->defined());
       ft_.nd_copy_embedding_to_offset_func_(embeddings, *dst, offset);
+
+      ICHECK((TVMSynchronize(2, 0, nullptr) == 0));
       return *dst;
     } else {
       CHECK_EQ(offset, 0);
@@ -424,7 +433,7 @@ class ModelImpl : public ModelObj {
       logits = Downcast<Array<NDArray>>(ret)[0];
     }
     if (trace_enabled_) {
-      TVMSynchronize(device_.device_type, device_.device_id, nullptr);
+      ICHECK((TVMSynchronize(device_.device_type, device_.device_id, nullptr) == 0));
     }
     ft_.kv_cache_end_forward_func_(kv_cache_);
 
@@ -552,7 +561,7 @@ class ModelImpl : public ModelObj {
       logits = Downcast<Array<NDArray>>(ret)[0];
     }
     if (trace_enabled_) {
-      TVMSynchronize(device_.device_type, device_.device_id, nullptr);
+      ICHECK((TVMSynchronize(device_.device_type, device_.device_id, nullptr) == 0));
     }
     ft_.kv_cache_end_forward_func_(kv_cache_);
 

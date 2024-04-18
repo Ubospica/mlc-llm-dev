@@ -18,6 +18,8 @@ prompts = [
     "Where is the southernmost place in United States? Please elaborate in detail.",
     "Do you know AlphaGo? What capabilities does it have, and what achievements has it got? Please elaborate in detail.",
 ]
+model_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
+model_lib_path = "dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so"
 
 test_models = [
     (
@@ -53,7 +55,11 @@ def create_engine(model: str, model_lib_path: str):
 def test_engine_generate(model: str, model_lib_path: str):
     engine = create_engine(model, model_lib_path)
 
-    num_requests = 10
+    num_requests = 1
+    prompt = (
+        "Generate a json containing three fields: an integer field named size, a "
+        "boolean field named is_accepted, and a float field named num:"
+    )
     max_tokens = 256
     generation_cfg = GenerationConfig(max_tokens=max_tokens, n=7)
 
@@ -62,7 +68,7 @@ def test_engine_generate(model: str, model_lib_path: str):
     ]
     for rid in range(num_requests):
         print(f"generating for request {rid}")
-        for delta_outputs in engine._generate(prompts[rid], generation_cfg, request_id=str(rid)):
+        for delta_outputs in engine._generate(prompt, generation_cfg, request_id=str(rid)):
             assert len(delta_outputs) == generation_cfg.n
             for i, delta_output in enumerate(delta_outputs):
                 output_texts[rid][i] += delta_output.delta_text
@@ -70,7 +76,7 @@ def test_engine_generate(model: str, model_lib_path: str):
     # Print output.
     print("All finished")
     for req_id, outputs in enumerate(output_texts):
-        print(f"Prompt {req_id}: {prompts[req_id]}")
+        print(f"Prompt {req_id}: {prompt}")
         if len(outputs) == 1:
             print(f"Output {req_id}:{outputs[0]}\n")
         else:
@@ -86,15 +92,19 @@ def test_chat_completion(model: str, model_lib_path: str):
     # Create engine
     engine = create_engine(model, model_lib_path)
 
-    num_requests = 2
+    num_requests = 1
+    prompt = (
+        "Generate a json containing three fields: an integer field named size, a "
+        "boolean field named is_accepted, and a float field named num:"
+    )
     max_tokens = 64
-    n = 2
+    n = 7
     output_texts: List[List[str]] = [["" for _ in range(n)] for _ in range(num_requests)]
 
     for rid in range(num_requests):
         print(f"chat completion for request {rid}")
         for response in engine.chat.completions.create(
-            messages=[{"role": "user", "content": prompts[rid]}],
+            messages=[{"role": "user", "content": prompt}],
             model=model,
             max_tokens=max_tokens,
             n=n,
@@ -108,7 +118,7 @@ def test_chat_completion(model: str, model_lib_path: str):
     # Print output.
     print("Chat completion all finished")
     for req_id, outputs in enumerate(output_texts):
-        print(f"Prompt {req_id}: {prompts[req_id]}")
+        print(f"Prompt {req_id}: {prompt}")
         if len(outputs) == 1:
             print(f"Output {req_id}:{outputs[0]}\n")
         else:
@@ -159,7 +169,7 @@ def test_chat_completion_non_stream(model: str, model_lib_path: str):
 def test_completion(model: str, model_lib_path: str):
     engine = create_engine(model, model_lib_path)
 
-    num_requests = 2
+    num_requests = 1
     max_tokens = 128
     n = 1
     output_texts: List[List[str]] = [["" for _ in range(n)] for _ in range(num_requests)]
@@ -167,7 +177,7 @@ def test_completion(model: str, model_lib_path: str):
     for rid in range(num_requests):
         print(f"completion for request {rid}")
         for response in engine.completions.create(
-            prompt=prompts[rid],
+            prompt=prompt,
             model=model,
             max_tokens=max_tokens,
             n=n,
@@ -181,7 +191,7 @@ def test_completion(model: str, model_lib_path: str):
     # Print output.
     print("Completion all finished")
     for req_id, outputs in enumerate(output_texts):
-        print(f"Prompt {req_id}: {prompts[req_id]}")
+        print(f"Prompt {req_id}: {prompt}")
         if len(outputs) == 1:
             print(f"Output {req_id}:{outputs[0]}\n")
         else:

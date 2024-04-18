@@ -98,8 +98,10 @@ void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Mo
     int n = request->generation_cfg->n;
     RequestState rstate = estate->GetRequestState(request);
     Array<IntTuple> group_delta_token_ids;
+    std::vector<int64_t> group_num_delta_tokens;
     Array<Array<String>> group_delta_logprob_json_strs;
     Array<Optional<String>> group_finish_reason;
+    Array<String> group_additional_prefix_string;
     group_delta_token_ids.reserve(n);
     group_delta_logprob_json_strs.reserve(n);
     group_finish_reason.reserve(n);
@@ -111,24 +113,28 @@ void ActionStepPostProcess(Array<Request> requests, EngineState estate, Array<Mo
           rsentry->GetReturnTokenIds(tokenizer, max_single_sequence_length);
       group_delta_token_ids.push_back(IntTuple{delta_request_ret.delta_token_ids.begin(),
                                                delta_request_ret.delta_token_ids.end()});
+      group_num_delta_tokens.push_back(delta_request_ret.delta_token_ids.size() +
+                                       delta_request_ret.additional_num_delta_tokens);
       group_delta_logprob_json_strs.push_back(delta_request_ret.delta_logprob_json_strs);
       group_finish_reason.push_back(delta_request_ret.finish_reason);
+      group_additional_prefix_string.push_back(delta_request_ret.additional_prefix_string);
       if (delta_request_ret.finish_reason.defined()) {
         invoke_callback = true;
         finished_rsentries.push_back(rsentry);
       }
 
-      if (!delta_request_ret.delta_token_ids.empty()) {
+      if (!delta_request_ret.delta_token_ids.empty() ||
+          !delta_request_ret.additional_prefix_string.empty()) {
         invoke_callback = true;
       }
     }
 
     if (invoke_callback) {
       callback_delta_outputs.push_back(RequestStreamOutput(
-          request->id, std::move(group_delta_token_ids),
+          request->id, std::move(group_delta_token_ids), std::move(group_num_delta_tokens),
           request->generation_cfg->logprobs > 0 ? std::move(group_delta_logprob_json_strs)
                                                 : Optional<Array<Array<String>>>(),
-          std::move(group_finish_reason)));
+          std::move(group_finish_reason), std::move(group_additional_prefix_string)));
     }
   }
 

@@ -238,6 +238,9 @@ class NewRequestPrefillActionObj : public EngineActionObj {
     auto tnow = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < static_cast<int>(rsentries_for_sample.size()); ++i) {
       for (const RequestModelState& mstate : rsentries_for_sample[i]->mstates) {
+        // std::cout << "request " << mstate->request->id
+        //           << ", prefill token: " << sample_results[i].sampled_token_id.first <<
+        //           std::endl;
         mstate->CommitToken(sample_results[i]);
         if (!rsentry_activated[i]) {
           // When the child rsentry is not activated,

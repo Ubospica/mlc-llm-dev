@@ -45,7 +45,7 @@ class GrammarStateMatcherBase {
   bool CanReachEnd() const;
 
   /*! \brief Rollback the matcher to a previous state. */
-  void RollbackCodepoints(int rollback_codepoint_cnt);
+  void RollbackByCodepoint(int codepoint_cnt);
 
   /*! \brief Discard the earliest history. */
   void DiscardEarliestCodepoints(int discard_codepoint_cnt);
@@ -111,7 +111,7 @@ inline bool CharacterClassContains(const BNFGrammarNode::RuleExpr& rule_expr,
   DCHECK(rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterClass ||
          rule_expr.type == BNFGrammarNode::RuleExprType::kNegCharacterClass);
   for (int i = 0; i < rule_expr.size(); i += 2) {
-    if (rule_expr.data[i] <= codepoint && codepoint <= rule_expr.data[i + 1]) {
+    if (rule_expr[i] <= codepoint && codepoint <= rule_expr[i + 1]) {
       return rule_expr.type == BNFGrammarNode::RuleExprType::kCharacterClass;
     }
   }
@@ -179,8 +179,8 @@ inline bool GrammarStateMatcherBase::CanReachEnd() const {
                      [&](int32_t id) { return tree_.IsEndPosition(tree_[id]); });
 }
 
-inline void GrammarStateMatcherBase::RollbackCodepoints(int rollback_codepoint_cnt) {
-  stack_tops_history_.Rollback(rollback_codepoint_cnt);
+inline void GrammarStateMatcherBase::RollbackByCodepoint(int codepoint_cnt) {
+  stack_tops_history_.Rollback(codepoint_cnt);
 }
 
 inline void GrammarStateMatcherBase::DiscardEarliestCodepoints(int discard_codepoint_cnt) {

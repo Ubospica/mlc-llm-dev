@@ -157,8 +157,10 @@ class SingleRequestStreamOutput:
     """
 
     delta_token_ids: List[int]
+    num_delta_tokens: int
     delta_logprob_json_strs: Optional[List[str]]
     finish_reason: Optional[str]
+    additional_prefix_string: str
 
 
 @tvm._ffi.register_object("mlc.serve.RequestStreamOutput")  # pylint: disable=protected-access
@@ -193,17 +195,24 @@ class RequestStreamOutput(Object):
         fields = _ffi_api.RequestStreamOutputUnpack(self)  # type: ignore  # pylint: disable=no-member
         request_id = str(fields[0])
         stream_outputs = []
-        for i, (delta_token_ids, finish_reason) in enumerate(zip(fields[1], fields[3])):
+        for i, (
+            delta_token_ids,
+            num_delta_tokens,
+            finish_reason,
+            additional_prefix_string,
+        ) in enumerate(zip(fields[1], fields[2], fields[4], fields[5])):
             delta_logprob_json_strs = (
-                [str(logprob_json_str) for logprob_json_str in fields[2][i]]
-                if fields[2] is not None
+                [str(logprob_json_str) for logprob_json_str in fields[3][i]]
+                if fields[3] is not None
                 else None
             )
             stream_outputs.append(
                 SingleRequestStreamOutput(
                     delta_token_ids=list(delta_token_ids),
+                    num_delta_tokens=int(num_delta_tokens),
                     delta_logprob_json_strs=delta_logprob_json_strs,
                     finish_reason=str(finish_reason) if finish_reason is not None else None,
+                    additional_prefix_string=str(additional_prefix_string),
                 )
             )
         return request_id, stream_outputs

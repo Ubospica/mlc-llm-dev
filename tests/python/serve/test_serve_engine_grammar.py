@@ -2,92 +2,107 @@
 # pylint: disable=too-many-arguments,too-many-locals,unused-argument,unused-variable
 import asyncio
 import json
-from typing import List
+from typing import Dict, List, Literal
 
 import pytest
 from pydantic import BaseModel
 
-from mlc_llm.serve import AsyncMLCEngine, GenerationConfig
+from mlc_llm.protocol.openai_api_protocol import ChatCompletionResponse
+from mlc_llm.serve import AsyncMLCEngine, EngineConfig, GenerationConfig, MLCEngine
 from mlc_llm.serve.config import ResponseFormat
-from mlc_llm.serve.sync_engine import SyncMLCEngine
 
 prompts_list = [
     "Generate a JSON string containing 20 objects:",
     "Generate a JSON containing a list:",
     "Generate a JSON with 5 elements:",
 ]
+# use a model finetuned for chat or json output
 model_path = "dist/Llama-2-7b-chat-hf-q4f16_1-MLC"
 model_lib_path = "dist/libs/Llama-2-7b-chat-hf-q4f16_1-cuda.so"
 
 
 def test_batch_generation_with_grammar():
     # Create engine
-    engine = SyncMLCEngine(model=model_path, model_lib_path=model_lib_path, mode="server")
+    engine = MLCEngine(
+        model=model_path,
+        model_lib_path=model_lib_path,
+        mode="server",
+        max_total_sequence_length=4096,
+        engine_config=EngineConfig(debug_disable_jump_forward=True),
+    )
 
-    prompt_len = len(prompts_list)
-    prompts = prompts_list * 3
-
+    responses: List[ChatCompletionResponse] = []
     temperature = 1
-    repetition_penalty = 1
     max_tokens = 512
-    generation_config_no_json = GenerationConfig(
-        temperature=temperature,
-        repetition_penalty=repetition_penalty,
-        max_tokens=max_tokens,
-        stop_token_ids=[2],
-        response_format=ResponseFormat(type="text"),
-    )
-    generation_config_json = GenerationConfig(
-        temperature=temperature,
-        repetition_penalty=repetition_penalty,
-        max_tokens=max_tokens,
-        stop_token_ids=[2],
-        response_format=ResponseFormat(type="json_object"),
-    )
-    generation_config_json_no_stop_token = GenerationConfig(
-        temperature=temperature,
-        repetition_penalty=repetition_penalty,
-        max_tokens=max_tokens,
-        response_format=ResponseFormat(type="json_object"),
-    )
-    all_generation_configs = (
-        [generation_config_no_json] * prompt_len
-        + [generation_config_json] * prompt_len
-        + [generation_config_json_no_stop_token] * prompt_len
-    )
+
+    # non-json output
+    for p in prompts_list:
+        responses.append(
+            engine.chat.completions.create(
+                messages=[{"role": "user", "content": p}],
+                model=model_path,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                response_format={"type": "text"},
+            )
+        )
+
+    # json output
+    for p in prompts_list:
+        responses.append(
+            engine.chat.completions.create(
+                messages=[{"role": "user", "content": p}],
+                model=model_path,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                response_format={"type": "json_object"},
+            )
+        )
 
     # Generate output.
-    output_texts, _ = engine.generate(prompts, all_generation_configs)
-    for req_id, outputs in enumerate(output_texts):
-        print(f"Prompt {req_id}: {prompts[req_id]}")
-        if len(outputs) == 1:
-            print(f"Output {req_id}:{outputs[0]}\n")
-        else:
-            for i, output in enumerate(outputs):
-                print(f"Output {req_id}({i}):{output}\n")
+    for req_id, response in enumerate(responses):
+        prompt = prompts_list[req_id % 3]
+        output = response.choices[0].message.content
+        print(f"Prompt {req_id}: {prompt}")
+        print(f"Output {req_id}: {output}\n")
+
+    engine.terminate()
 
 
 def test_batch_generation_with_schema():
     # Create engine
-    engine = SyncMLCEngine(model=model_path, model_lib_path=model_lib_path, mode="server")
+    engine = MLCEngine(
+        model=model_path,
+        model_lib_path=model_lib_path,
+        mode="server",
+        max_total_sequence_length=4096,
+        engine_config=EngineConfig(debug_disable_jump_forward=True),
+    )
 
     prompt = (
         "Generate a json containing three fields: an integer field named size, a "
         "boolean field named is_accepted, and a float field named num:"
     )
     repeat_cnt = 3
-    prompts = [prompt] * repeat_cnt * 2
 
+    responses: List[ChatCompletionResponse] = []
     temperature = 1
-    repetition_penalty = 1
     max_tokens = 512
-    generation_config_no_json = GenerationConfig(
-        temperature=temperature,
-        repetition_penalty=repetition_penalty,
-        max_tokens=max_tokens,
-        stop_token_ids=[2],
-        response_format=ResponseFormat(type="text"),
-    )
+
+    # without schema
+    for _ in range(repeat_cnt):
+        responses.append(
+            engine.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=model_path,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                response_format={"type": "text"},
+            )
+        )
 
     class Schema(BaseModel):
         size: int
@@ -96,27 +111,98 @@ def test_batch_generation_with_schema():
 
     schema_str = json.dumps(Schema.model_json_schema())
 
-    generation_config_json = GenerationConfig(
-        temperature=temperature,
-        repetition_penalty=repetition_penalty,
-        max_tokens=max_tokens,
-        stop_token_ids=[2],
-        response_format=ResponseFormat(type="json_object", schema=schema_str),
+    # with schema
+    for _ in range(repeat_cnt):
+        responses.append(
+            engine.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=model_path,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                response_format={"type": "json_object", "schema": schema_str},
+            )
+        )
+
+    for req_id, response in enumerate(responses):
+        output = response.choices[0].message.content
+        print(f"Prompt {req_id}: {prompt}")
+        print(f"Output {req_id}: {output}\n")
+
+    engine.terminate()
+
+
+def test_batch_generation_jump_forward():
+    # Create engine
+    engine = MLCEngine(
+        model=model_path,
+        model_lib_path=model_lib_path,
+        mode="server",
+        max_total_sequence_length=4096,
+        engine_config=EngineConfig(debug_disable_jump_forward=False),
     )
 
-    all_generation_configs = [generation_config_no_json] * repeat_cnt + [
-        generation_config_json
-    ] * repeat_cnt
+    prompt = (
+        'Generate a json string that includes seven fields: "size" which is an integer, '
+        '"is_accepted" which is a boolean, "num" which is a floating-point number, '
+        '"is_correct" which must be true, "message" which is a string that can only be '
+        '"aaaaaaaaa" or "bbbbbbbbb" or "ccccccccc", "array_field" which is an array of '
+        'strings, and "object_field" which is an object with keys as strings and values'
+        " as integers:"
+    )
+    repeat_cnt = 20
 
-    # Generate output.
-    output_texts, _ = engine.generate(prompts, all_generation_configs)
-    for req_id, outputs in enumerate(output_texts):
-        print(f"Prompt {req_id}: {prompts[req_id]}")
-        if len(outputs) == 1:
-            print(f"Output {req_id}: {outputs[0]}\n")
-        else:
-            for i, output in enumerate(outputs):
-                print(f"Output {req_id}({i}): {output}\n")
+    responses: List[ChatCompletionResponse] = []
+    temperature = 1
+    max_tokens = 512
+
+    class Schema(BaseModel):
+        size: int
+        is_accepted: bool
+        num: float
+        is_correct: Literal[True]
+        message: Literal["aaaaaaaaa", "bbbbbbbbb", "ccccccccc"]
+        array_field: List[str]
+        object_field: Dict[str, int]
+
+    schema_str = json.dumps(Schema.model_json_schema())
+
+    for _ in range(repeat_cnt):
+        responses.append(
+            engine.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=model_path,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                response_format={"type": "json_object", "schema": schema_str},
+            )
+        )
+
+    for req_id, response in enumerate(responses):
+        output = response.choices[0].message.content
+        print(f"Prompt {req_id}: {prompt}")
+        print(f"Output {req_id}: {output}\n")
+
+    engine.terminate()
+
+
+class Schema(BaseModel):
+    size: int
+    is_accepted: bool
+    num: float
+    is_correct: Literal[True]
+    message: Literal["aaaaaaaaa", "bbbbbbbbb", "ccccccccc"]
+    array_field: List[str]
+    object_field: Dict[str, int]
+
+
+schema_str = json.dumps(Schema.model_json_schema())
+print(schema_str.replace('"', '\\"'))
+exit()
+
+test_batch_generation_jump_forward()
+exit()
 
 
 async def run_async_engine():
@@ -127,11 +213,9 @@ async def run_async_engine():
 
     max_tokens = 256
     temperature = 1
-    repetition_penalty = 1
     max_tokens = 512
     generation_config = GenerationConfig(
         temperature=temperature,
-        repetition_penalty=repetition_penalty,
         max_tokens=max_tokens,
         stop_token_ids=[2],
         response_format=ResponseFormat(type="json_object"),

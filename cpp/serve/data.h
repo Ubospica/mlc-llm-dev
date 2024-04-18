@@ -163,6 +163,7 @@ class RequestStreamOutputObj : public Object {
    * for the input request.
    */
   Array<IntTuple> group_delta_token_ids;
+  IntTuple group_num_delta_tokens;
   /*! \brief The logprobs JSON strings of the new generated tokens since last invocation. */
   Optional<Array<Array<String>>> group_delta_logprob_json_strs;
   /*!
@@ -170,6 +171,7 @@ class RequestStreamOutputObj : public Object {
    * of None if the request has not finished yet.
    */
   Array<Optional<String>> group_finish_reason;
+  Array<String> group_additional_prefix_string;
 
   static constexpr const char* _type_key = "mlc.serve.RequestStreamOutput";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -184,8 +186,10 @@ class RequestStreamOutputObj : public Object {
 class RequestStreamOutput : public ObjectRef {
  public:
   explicit RequestStreamOutput(String request_id, Array<IntTuple> group_delta_token_ids,
+                                IntTuple group_num_delta_tokens,
                                Optional<Array<Array<String>>> group_delta_logprob_json_strs,
-                               Array<Optional<String>> finish_reason);
+                               Array<Optional<String>> finish_reason,
+                               Array<String> group_additional_prefix_string);
 
   TVM_DEFINE_OBJECT_REF_METHODS(RequestStreamOutput, ObjectRef, RequestStreamOutputObj);
 };

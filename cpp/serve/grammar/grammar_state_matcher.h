@@ -64,7 +64,9 @@ class GrammarStateMatcherNode : public Object {
    * FindNextTokenMask operations can be performed. The termination state can be canceled
    * using Rollback().
    */
-  virtual bool AcceptToken(int32_t token_id) = 0;
+  virtual bool AcceptToken(int32_t token_id, bool verbose = false) = 0;
+
+  // virtual bool AcceptString(std::string token_string) = 0;
 
   /*!
    * \brief Find the set of tokens that are acceptable for the next step and store them in a
@@ -73,6 +75,8 @@ class GrammarStateMatcherNode : public Object {
    * and its shape needs to be (ceil(vocab_size, 32),), with a dtype of uint32.
    */
   virtual void FindNextTokenBitmask(DLTensor* next_token_bitmask) = 0;
+
+  virtual std::string FindJumpForwardString(bool update_state_with_result = false) = 0;
 
   /*!
    * \brief Rollback the matcher to a previous state.

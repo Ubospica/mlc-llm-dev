@@ -131,9 +131,11 @@ class GrammarStateMatcherNodeImpl : public GrammarStateMatcherNode, public Gramm
         init_ctx_(init_ctx),
         max_rollback_steps_(max_rollback_steps) {}
 
-  bool AcceptToken(int32_t token_id) final;
+  bool AcceptToken(int32_t token_id, bool verbose = false) final;
 
   void FindNextTokenBitmask(DLTensor* next_token_bitmask) final;
+
+  std::string FindJumpForwardString(bool update_state_with_result = false) final;
 
   void Rollback(int num_tokens) final;
 
@@ -198,29 +200,47 @@ bool GrammarStateMatcherNodeImpl::AcceptStopToken() {
   return true;
 }
 
-bool GrammarStateMatcherNodeImpl::AcceptToken(int32_t token_id) {
+bool GrammarStateMatcherNodeImpl::AcceptToken(int32_t token_id, bool verbose) {
   CHECK(!IsTerminated())
       << "GrammarStateMatcher has terminated after accepting the stop token, but is trying to "
          "accept another token id "
       << token_id;
 
+  if (verbose) {
+    LOG(INFO) << "Accepting token id " << token_id << ", string: \""
+              << init_ctx_->token_table[token_id] << "\", state state:\n"
+              << PrintStackState();
+  }
+
   // Handle the stop token
   if (IsStopToken(token_id)) {
-    return AcceptStopToken();
+    bool accepted = AcceptStopToken();
+    if (verbose) {
+      LOG(INFO) << "The token is an end token. Accepted: " << accepted;
+    }
+    return accepted;
   }
 
   CHECK(init_ctx_->id_to_token_codepoints.count(token_id) > 0)
       << "Token id " << token_id << " is not supported in generation";
   const auto& token = init_ctx_->id_to_token_codepoints[token_id].token;
+  int pos = 0;
   for (auto codepoint : token) {
     if (!AcceptCodepoint(codepoint, false)) {
+      if (verbose) {
+        LOG(INFO) << "The token is rejected at position " << pos << ", codepoint " << codepoint;
+      }
       return false;
     }
+    ++pos;
   }
   token_size_history_.push_back(token.size());
   if (token_size_history_.size() > max_rollback_steps_) {
     DiscardEarliestCodepoints(token_size_history_.front());
     token_size_history_.pop_front();
+  }
+  if (verbose) {
+    LOG(INFO) << "The token is accepted. State after accepting:\n" << PrintStackState();
   }
   return true;
 }
@@ -258,7 +278,8 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
     // For each stack, we will check every uncertain token and put them into the accepted or
     // rejected list.
     // If the accepted tokens are saved, it means it is likely to be smaller than the rejected
-    // tokens, so we will just find the accepted tokens, and vice versa.
+    // tokens, so we will just find the accepted tokens. Otherwise, we will try to find the
+    // rejected token set.
     bool is_find_accept_mode =
         catagorized_tokens.not_saved_index != CatagorizedTokens::NotSavedIndex::kAccepted;
 
@@ -269,13 +290,6 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
 
     // Step 2. Update the accepted tokens in accepted_indices_delta, or the rejected tokens in
     // rejected_indices_delta.
-
-    // Examine only the current one stack
-    stack_tops_history_.PushHistory({tree_.NewNode(cur_rule_position)});
-
-    const std::vector<TCodepoint>* prev_token = nullptr;
-    int prev_matched_size = 0;
-
     tmp_accepted_indices_delta_.clear();
     tmp_rejected_indices_delta_.clear();
 
@@ -290,16 +304,20 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
       }
     }
 
+    const std::vector<TCodepoint>* prev_token = nullptr;
+    int prev_matched_size = 0;
     int iterator_uncertain = -1;
 
-    while (true) {
+    // Examine only the current one stack
+    stack_tops_history_.PushHistory({tree_.NewNode(cur_rule_position)});
+
+    for (int idx = GetNextUncertainToken(is_uncertain_saved, &iterator_uncertain,
+                                         catagorized_tokens.uncertain_indices,
+                                         tmp_uncertain_tokens_bitset_);
+         idx != -1; idx = GetNextUncertainToken(is_uncertain_saved, &iterator_uncertain,
+                                                catagorized_tokens.uncertain_indices,
+                                                tmp_uncertain_tokens_bitset_)) {
       // Step 2.1. Find the current token.
-      auto idx =
-          GetNextUncertainToken(is_uncertain_saved, &iterator_uncertain,
-                                catagorized_tokens.uncertain_indices, tmp_uncertain_tokens_bitset_);
-      if (idx == -1) {
-        break;
-      }
       const auto& cur_token = sorted_token_codepoints[idx].token;
 
       // Step 2.2. Find the longest common prefix with the accepted part of the previous token.
@@ -313,7 +331,7 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
             break;
           }
         }
-        RollbackCodepoints(prev_matched_size - prev_useful_size);
+        RollbackByCodepoint(prev_matched_size - prev_useful_size);
       }
 
       // Step 2.3. Find if the current token is accepted or rejected.
@@ -338,7 +356,7 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
       prev_token = &cur_token;
     }
 
-    RollbackCodepoints(prev_matched_size + 1);
+    RollbackByCodepoint(prev_matched_size + 1);
 
     // Step 3. Update the accepted_indices and rejected_indices
     if (is_find_accept_mode) {
@@ -359,13 +377,87 @@ void GrammarStateMatcherNodeImpl::FindNextTokenBitmask(DLTensor* next_token_bitm
   SetTokenBitmask(next_token_bitmask, tmp_accepted_indices_, tmp_rejected_indices_, can_reach_end);
 }
 
+std::string GrammarStateMatcherNodeImpl::FindJumpForwardString(bool update_state_with_result) {
+  // auto start = std::chrono::high_resolution_clock::now();
+  CHECK(!IsTerminated())
+      << "GrammarStateMatcher has terminated after accepting the stop token, but is trying to "
+         "get the jump forward string";
+  std::string result;
+
+  int steps = 0;
+
+  while (true) {
+    const auto& stack_tops = stack_tops_history_.GetLatest();
+    TCodepoint codepoint = -1;
+    bool fail = false;
+    for (auto stack_top : stack_tops) {
+      auto rule_position = tree_[stack_top];
+      auto cur_sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
+      if (rule_position.parent_id == RulePosition::kNoParent &&
+          rule_position.element_id == cur_sequence.size()) {
+        fail = true;
+        break;
+      }
+
+      auto cur_char_class = rule_position.char_class_star_id != -1
+                                ? grammar_->GetRuleExpr(rule_position.char_class_star_id)
+                                : grammar_->GetRuleExpr(cur_sequence[rule_position.element_id]);
+
+      DCHECK(cur_char_class.type == RuleExprType::kCharacterClass ||
+             cur_char_class.type == RuleExprType::kNegCharacterClass);
+
+      if (cur_char_class.size() != 2 || cur_char_class[0] != cur_char_class[1]) {
+        fail = true;
+        break;
+      }
+
+      if (codepoint == -1) {
+        codepoint = cur_char_class[0];
+      } else if (codepoint != cur_char_class[0]) {
+        fail = true;
+        break;
+      }
+    }
+
+    if (fail || codepoint == -1) {
+      break;
+    }
+
+    result += CodepointToUtf8(codepoint);
+
+    std::vector<int32_t> next_stack_tops;
+    for (auto stack_top : stack_tops) {
+      auto cur_rule_position = tree_[stack_top];
+      if (cur_rule_position.char_class_star_id == -1) {
+        auto next_rule_position = IterateToNextPosition(cur_rule_position, true);
+        DCHECK(next_rule_position != kInvalidRulePosition);
+        ExpandRulePosition(next_rule_position, &next_stack_tops, true);
+      } else {
+        ExpandRulePosition(cur_rule_position, &next_stack_tops, true, stack_top);
+      }
+    }
+    stack_tops_history_.PushHistory(next_stack_tops);
+    ++steps;
+  }
+
+  if (!update_state_with_result) {
+    RollbackByCodepoint(steps);
+  }
+
+  // auto end = std::chrono::high_resolution_clock::now();
+  // std::cout << "FindJumpForwardString takes "
+  //           << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us"
+  //           << std::endl;
+  return result;
+}
+
 void GrammarStateMatcherNodeImpl::Rollback(int num_tokens) {
   CHECK(num_tokens <= token_size_history_.size())
       << "Intended to rollback " << num_tokens << " tokens, but only the last "
       << token_size_history_.size() << " steps of history are saved";
   while (num_tokens > 0) {
     int steps = token_size_history_.back();
-    RollbackCodepoints(steps);
+    RollbackByCodepoint(steps);
     token_size_history_.pop_back();
     --num_tokens;
   }
@@ -487,8 +579,13 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherDebugAcceptCodepoint")
     });
 
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherAcceptToken")
-    .set_body_typed([](GrammarStateMatcher matcher, int32_t token_id) {
-      return matcher->AcceptToken(token_id);
+    .set_body_typed([](GrammarStateMatcher matcher, int32_t token_id, bool verbose) {
+      return matcher->AcceptToken(token_id, verbose);
+    });
+
+TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherFindJumpForwardString")
+    .set_body_typed([](GrammarStateMatcher matcher, bool update_state_with_result) {
+      return matcher->FindJumpForwardString(update_state_with_result);
     });
 
 TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherRollback")
@@ -514,13 +611,13 @@ bool MatchCompleteString(GrammarStateMatcher matcher, String str) {
   int accepted_cnt = 0;
   for (auto codepoint : codepoints) {
     if (!mutable_node->AcceptCodepoint(codepoint, false)) {
-      mutable_node->RollbackCodepoints(accepted_cnt);
+      mutable_node->RollbackByCodepoint(accepted_cnt);
       return false;
     }
     ++accepted_cnt;
   }
   auto accepted = mutable_node->CanReachEnd();
-  mutable_node->RollbackCodepoints(accepted_cnt);
+  mutable_node->RollbackByCodepoint(accepted_cnt);
   return accepted;
 }
 

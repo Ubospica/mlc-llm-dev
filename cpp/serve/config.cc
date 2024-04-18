@@ -240,7 +240,8 @@ EngineConfig::EngineConfig(String model, String model_lib_path, Array<String> ad
                            int kv_cache_page_size, int max_num_sequence,
                            int max_total_sequence_length, int max_single_sequence_length,
                            int prefill_chunk_size, int max_history_size, KVStateKind kv_state_kind,
-                           SpeculativeMode speculative_mode, int spec_draft_length) {
+                           SpeculativeMode speculative_mode, int spec_draft_length,
+                           bool debug_disable_jump_forward) {
   ObjectPtr<EngineConfigNode> n = make_object<EngineConfigNode>();
   n->model = std::move(model);
   n->model_lib_path = std::move(model_lib_path);
@@ -256,6 +257,7 @@ EngineConfig::EngineConfig(String model, String model_lib_path, Array<String> ad
   n->kv_state_kind = kv_state_kind;
   n->spec_draft_length = spec_draft_length;
   n->speculative_mode = speculative_mode;
+  n->debug_disable_jump_forward = debug_disable_jump_forward;
   data_ = std::move(n);
 }
 
@@ -264,12 +266,14 @@ TVM_REGISTER_GLOBAL("mlc.serve.EngineConfig")
                        Array<String> additional_model_lib_paths, DLDevice device,
                        int kv_cache_page_size, int max_num_sequence, int max_total_sequence_length,
                        int max_single_sequence_length, int prefill_chunk_size, int max_history_size,
-                       int kv_state_kind, int speculative_mode, int spec_draft_length) {
+                       int kv_state_kind, int speculative_mode, int spec_draft_length,
+                       bool debug_disable_jump_forward) {
       return EngineConfig(std::move(model), std::move(model_lib_path), std::move(additional_models),
                           std::move(additional_model_lib_paths), device, kv_cache_page_size,
                           max_num_sequence, max_total_sequence_length, max_single_sequence_length,
                           prefill_chunk_size, max_history_size, KVStateKind(kv_state_kind),
-                          SpeculativeMode(speculative_mode), spec_draft_length);
+                          SpeculativeMode(speculative_mode), spec_draft_length,
+                          debug_disable_jump_forward);
     });
 
 }  // namespace serve

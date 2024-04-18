@@ -920,7 +920,7 @@ class EngineState:
             outputs = []
             for stream_output, text_streamer in zip(stream_outputs, text_streamers):
                 self.record_event(request_id, event="start detokenization")
-                delta_text = (
+                delta_text = stream_output.additional_prefix_string + (
                     text_streamer.put(stream_output.delta_token_ids)
                     if len(stream_output.delta_token_ids) > 0
                     else ""
@@ -932,7 +932,7 @@ class EngineState:
                 outputs.append(
                     CallbackStreamOutput(
                         delta_text=delta_text,
-                        num_delta_tokens=len(stream_output.delta_token_ids),
+                        num_delta_tokens=stream_output.num_delta_tokens,
                         delta_logprob_json_strs=stream_output.delta_logprob_json_strs,
                         finish_reason=stream_output.finish_reason,
                     )
@@ -1291,8 +1291,8 @@ def process_chat_completion_stream_output(  # pylint: disable=too-many-arguments
             )
         )
 
-    if len(choices) == 0 and num_new_completion_tokens == 0:
-        # Skip return when there is no delta output and no number of completion tokens.
+    if len(choices) == 0:
+        # Skip return when there is no delta output.
         return None, num_completion_tokens
     num_completion_tokens += num_new_completion_tokens
     response = openai_api_protocol.ChatCompletionStreamResponse(

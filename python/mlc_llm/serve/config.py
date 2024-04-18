@@ -195,6 +195,10 @@ class EngineConfig(tvm.runtime.Object):
 
     spec_draft_length : int
         The number of tokens to generate in speculative proposal (draft).
+
+        # bool debug_disable_jump_forward
+    debug_disable_jump_forward : bool
+
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -213,6 +217,7 @@ class EngineConfig(tvm.runtime.Object):
         kv_state_kind: KVStateKind,
         speculative_mode: SpeculativeMode,
         spec_draft_length: int,
+        debug_disable_jump_forward: bool = False,
     ) -> None:
         self.__init_handle_by_constructor__(
             _ffi_api.EngineConfig,  # type: ignore  # pylint: disable=no-member
@@ -230,4 +235,5 @@ class EngineConfig(tvm.runtime.Object):
             kv_state_kind,
             speculative_mode,
             spec_draft_length,
+            debug_disable_jump_forward,
         )

@@ -94,8 +94,9 @@ class EngineAction : public ObjectRef {
    * \param trace_recorder The event trace recorder for requests.
    * \return The created action object.
    */
-  static EngineAction BatchDecode(Array<Model> models, LogitProcessor logit_processor,
-                                  Sampler sampler, Optional<EventTraceRecorder> trace_recorder);
+  static EngineAction BatchDecode(Array<Model> models, Tokenizer tokenizer,
+                                  LogitProcessor logit_processor, Sampler sampler,
+                                  Optional<EventTraceRecorder> trace_recorder);
 
   /*!
    * \brief Create the action that runs one-step speculative draft proposal for
@@ -160,6 +161,10 @@ class EngineAction : public ObjectRef {
                                        Sampler sampler,
                                        std::vector<ModelWorkspace> model_workspaces,
                                        EngineConfig engine_config,
+                                       Optional<EventTraceRecorder> trace_recorder);
+
+  static EngineAction BatchJumpForward(Array<Model> models, Tokenizer tokenizer,
+                                       KVCacheConfig kv_cache_config,
                                        Optional<EventTraceRecorder> trace_recorder);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(EngineAction, ObjectRef, EngineActionObj);

@@ -17,6 +17,7 @@
 #include <unordered_set>
 
 #include "../tokenizers.h"
+#include "debug.h"
 #include "engine_actions/action.h"
 #include "engine_actions/action_commons.h"
 #include "engine_state.h"
@@ -128,6 +129,18 @@ class EngineImpl : public Engine {
                             EngineAction::BatchVerify(this->models_, logit_processor, sampler,
                                                       engine_config, this->trace_recorder_)};
       }
+    } else if (!engine_config_->debug_disable_jump_forward) {
+      this->actions_ = {
+          EngineAction::NewRequestPrefill(this->models_,            //
+                                          logit_processor,          //
+                                          sampler,                  //
+                                          this->model_workspaces_,  //
+                                          engine_config,            //
+                                          this->trace_recorder_),
+          EngineAction::BatchJumpForward(this->models_, this->tokenizer_, this->kv_cache_config_,
+                                         this->trace_recorder_),
+          EngineAction::BatchDecode(this->models_, this->tokenizer_, logit_processor, sampler,
+                                    this->trace_recorder_)};
     } else {
       this->actions_ = {EngineAction::NewRequestPrefill(this->models_,            //
                                                         logit_processor,          //
@@ -135,8 +148,8 @@ class EngineImpl : public Engine {
                                                         this->model_workspaces_,  //
                                                         engine_config,            //
                                                         this->trace_recorder_),
-                        EngineAction::BatchDecode(this->models_, logit_processor, sampler,
-                                                  this->trace_recorder_)};
+                        EngineAction::BatchDecode(this->models_, this->tokenizer_, logit_processor,
+                                                  sampler, this->trace_recorder_)};
     }
     // Step 4. Automatically set the threading backend max concurrency.
     this->engine_config_ = engine_config;
@@ -175,8 +188,9 @@ class EngineImpl : public Engine {
       // invoke callback and do not process the request.
       Array<RequestStreamOutput> output{RequestStreamOutput(
           request->id, std::vector<IntTuple>(request->generation_cfg->n),
-          Optional<Array<Array<String>>>(),
-          std::vector<Optional<String>>(request->generation_cfg->n, String("length")))};
+          std::vector<int64_t>(request->generation_cfg->n, 0), Optional<Array<Array<String>>>(),
+          std::vector<Optional<String>>(request->generation_cfg->n, String("length")),
+          std::vector<String>(request->generation_cfg->n))};
       request_stream_callback_.value()(std::move(output));
       return;
     }
@@ -187,7 +201,7 @@ class EngineImpl : public Engine {
     int n = request->generation_cfg->n;
     int rng_seed = request->generation_cfg->seed;
     auto grammar_state_init_ctx =
-        ResponseFormatToGrammarInitContext(request->generation_cfg->response_format);
+        GetGrammarInitCtxFromResponseFormat(request->generation_cfg->response_format);
 
     std::vector<RequestStateEntry> rsentries;
     // Create the request state entry for the input.
@@ -307,7 +321,7 @@ class EngineImpl : public Engine {
 
   /*! \brief Create a grammar init context according to the response format. If the response format
    * is not JSON, return std::nullopt. */
-  std::optional<std::shared_ptr<GrammarStateInitContext>> ResponseFormatToGrammarInitContext(
+  std::optional<std::shared_ptr<GrammarStateInitContext>> GetGrammarInitCtxFromResponseFormat(
       const ResponseFormat& response_format) {
     if (response_format.type != "json_object") {
       return std::nullopt;
