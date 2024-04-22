@@ -204,6 +204,8 @@ bool GrammarStateMatcherNodeImpl::AcceptToken(int32_t token_id) {
          "accept another token id "
       << token_id;
 
+  std::cout << "accepting: " << token_id << " <" << init_ctx_->token_table[token_id] << ">\n";
+
   // Handle the stop token
   if (IsStopToken(token_id)) {
     return AcceptStopToken();
@@ -214,6 +216,7 @@ bool GrammarStateMatcherNodeImpl::AcceptToken(int32_t token_id) {
   const auto& token = init_ctx_->id_to_token_codepoints[token_id].token;
   for (auto codepoint : token) {
     if (!AcceptCodepoint(codepoint, false)) {
+      std::cout << "Not accepted\n";
       return false;
     }
   }
@@ -222,6 +225,7 @@ bool GrammarStateMatcherNodeImpl::AcceptToken(int32_t token_id) {
     DiscardEarliestCodepoints(token_size_history_.front());
     token_size_history_.pop_front();
   }
+  std::cout << "Accepted\n";
   return true;
 }
 
