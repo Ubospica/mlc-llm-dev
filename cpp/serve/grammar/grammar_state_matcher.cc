@@ -455,7 +455,9 @@ TVM_REGISTER_GLOBAL("mlc.serve.GrammarStateMatcherFromTokenizer")
     .set_body_typed([](BNFGrammar grammar, Optional<Tokenizer> tokenizer, int max_rollback_steps) {
       auto preproc_start = std::chrono::high_resolution_clock::now();
       auto init_ctx = GrammarStateMatcher::CreateInitContext(
-          grammar, tokenizer ? tokenizer.value()->TokenTable() : std::vector<std::string>());
+          grammar, tokenizer ? Tokenizer::PostProcessTokenTable(tokenizer.value()->TokenTable(),
+                                                                "byte_fallback")
+                             : std::vector<std::string>());
       auto preproc_end = std::chrono::high_resolution_clock::now();
       std::cerr << "Preprocess takes "
                 << std::chrono::duration_cast<std::chrono::microseconds>(preproc_end -
@@ -618,6 +620,7 @@ IntTuple FindNextRejectedTokens(GrammarStateMatcher matcher, bool verbose = fals
               << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us"
               << ", found accepted: " << vocab_size - rejected_ids.size()
               << ", rejected: " << rejected_ids.size() << std::endl;
+    PrintAcceptedRejectedTokens(init_ctx, bitset);
   }
 
   auto ret = IntTuple(rejected_ids);

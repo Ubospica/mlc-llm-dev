@@ -13,7 +13,7 @@ from mlc_llm.serve import BNFGrammar, GrammarStateMatcher
 from mlc_llm.tokenizer import Tokenizer
 
 
-@pytest.fixture(scope="function")
+# @pytest.fixture(scope="function")
 def json_grammar():
     return BNFGrammar.get_grammar_of_json()
 
@@ -213,7 +213,8 @@ def test_json_pressure(json_grammar: BNFGrammar, json_input_pressure):
     assert GrammarStateMatcher(json_grammar).debug_match_complete_string(json_input_pressure)
 
 
-(input_find_rejected_tokens, expected_rejected_sizes) = tvm.testing.parameters(
+# (input_find_rejected_tokens, expected_rejected_sizes) = tvm.testing.parameters(
+tmp = (
     (
         # short test
         '{"id": 1,"name": "Example"}',
@@ -270,6 +271,10 @@ def test_find_next_rejected_tokens(
     real_sizes.append(len(rejected_token_ids))
     if expected_rejected_sizes is not None:
         assert real_sizes == expected_rejected_sizes
+
+
+test_find_next_rejected_tokens(json_grammar(), tmp[0][0])
+exit()
 
 
 def test_token_based_operations(json_grammar: BNFGrammar):
