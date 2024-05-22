@@ -70,7 +70,7 @@ TVM_REGISTER_GLOBAL("mlc.serve.BNFGrammarFromSchema").set_body([](TVMArgs args, 
   std::optional<std::pair<std::string, std::string>> separators;
   if (args[2].type_code() != kTVMNullptr) {
     Array<String> separators_arr = args[2];
-    CHECK(separators_arr.size() == 2);
+    ICHECK(separators_arr.size() == 2);
     separators = std::make_pair(separators_arr[0], separators_arr[1]);
   } else {
     separators = std::nullopt;
