@@ -59,6 +59,9 @@ class RequestModelStateNode : public Object {
   /*! \brief The number of tokens that is already prefilled from the inputs. */
   int64_t num_prefilled_tokens = 0;
 
+  int num_tokens_for_next_decode;
+  bool require_retokenization_in_next_decode;
+
   // NOTE: The following fields are reserved for future speculative inference
   // settings, and are produced by the speculative small models.
   /*!
@@ -94,6 +97,8 @@ class RequestModelStateNode : public Object {
   void FindNextTokenBitmask(DLTensor* bitmask);
   /*! \brief Commit a new token into committed_tokens. Update appeared_token_ids. */
   void CommitToken(SampleResult sampled_token);
+  void ClearTokensForNextDecode();
+  void RollbackTokens(int count);
   /*! \brief Add a draft token into draft_output_tokens. Update appeared_token_ids. */
   void AddDraftToken(SampleResult sampled_token, int draft_token_slot);
   /*! \brief Remove all draft tokens from draft_output_tokens. Update appeared_token_ids. */
@@ -122,6 +127,8 @@ struct DeltaRequestReturn {
   std::vector<int32_t> delta_token_ids;
   Array<String> delta_logprob_json_strs;
   Optional<String> finish_reason;
+  int additional_num_delta_tokens;
+  String additional_prefix_string = "";
 };
 
 /****************** Request States ******************/
@@ -193,6 +200,8 @@ class RequestStateEntryNode : public Object {
    * next request stream callback invocation.
    */
   int next_callback_token_pos;
+  int additional_num_delta_tokens;
+  std::string next_callback_prefix_string;
 
   /*! \brief The time of adding the request to engine. */
   std::chrono::high_resolution_clock::time_point tadd;

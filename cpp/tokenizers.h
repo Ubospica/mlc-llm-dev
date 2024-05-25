@@ -28,8 +28,10 @@ class TokenizerObj : public Object {
 
   /*! \brief Encode text into ids. */
   std::vector<int32_t> Encode(const std::string& text) const;
+  std::vector<int32_t> EncodeNoBOS(const std::string& text) const;
   /*! \brief Decode token ids into text. */
   std::string Decode(const std::vector<int32_t>& token_ids) const;
+  std::string DecodeNoBOS(const std::vector<int32_t>& token_ids) const;
   /*! \brief Return the token table of the tokenizer. Special tokens are included. */
   const std::vector<std::string>& TokenTable();
 

@@ -170,6 +170,8 @@ class RequestStreamOutputObj : public Object {
    * of None if the request has not finished yet.
    */
   Array<Optional<String>> group_finish_reason;
+  IntTuple group_num_delta_tokens;
+  Array<String> group_additional_prefix_string;
 
   static constexpr const char* _type_key = "mlc.serve.RequestStreamOutput";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -185,7 +187,9 @@ class RequestStreamOutput : public ObjectRef {
  public:
   explicit RequestStreamOutput(String request_id, Array<IntTuple> group_delta_token_ids,
                                Optional<Array<Array<String>>> group_delta_logprob_json_strs,
-                               Array<Optional<String>> finish_reason);
+                               Array<Optional<String>> finish_reason,
+                               IntTuple group_num_delta_tokens = {},
+                               Array<String> group_additional_prefix_string = {});
 
   TVM_DEFINE_OBJECT_REF_METHODS(RequestStreamOutput, ObjectRef, RequestStreamOutputObj);
 };

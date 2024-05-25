@@ -104,7 +104,7 @@ class BNFGrammar(Object):
     def from_schema(
         schema: str,
         *,
-        indent: Optional[int] = None,
+        indent: Optional[int] = 2,
         separators: Optional[Tuple[str, str]] = None,
         strict_mode: bool = True
     ) -> "BNFGrammar":
@@ -327,6 +327,9 @@ class GrammarStateMatcher(Object):
         """
 
         return _ffi_api.GrammarStateMatcherFindNextTokenBitmaskAsNDArray(self)  # type: ignore  # pylint: disable=no-member
+
+    def find_jump_forward_string(self) -> str:
+        return _ffi_api.GrammarStateMatcherFindJumpForwardString(self)  # type: ignore  # pylint: disable=no-member
 
     def rollback(self, num_tokens: int) -> None:
         """Rollback the matcher to a previous state.

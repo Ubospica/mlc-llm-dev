@@ -188,6 +188,7 @@ class EngineConfigNode : public Object {
   SpeculativeMode speculative_mode = SpeculativeMode::kDisable;
   /*! \brief The number of tokens to generate in speculative proposal (draft). */
   int spec_draft_length = 4;
+  bool debug_disable_jump_forward;
 
   /*************** Debug ***************/
   bool verbose = false;

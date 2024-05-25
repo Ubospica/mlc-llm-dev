@@ -247,6 +247,7 @@ class EngineConfig:  # pylint: disable=too-many-instance-attributes
     prefix_cache_max_num_seqs: Optional[int] = None
     speculative_mode: Literal["disable", "small_draft", "eagle", "medusa"] = "disable"
     spec_draft_length: int = 4
+    debug_disable_jump_forward : bool
     verbose: bool = True
 
     def asjson(self) -> str:
