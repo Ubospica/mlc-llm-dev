@@ -70,12 +70,37 @@ std::vector<int32_t> TokenizerObj::Encode(const std::string& text) const {
   return tokenizer->Encode(text);
 }
 
+// TODO(yixin): add check for retokenization
+std::vector<int32_t> TokenizerObj::EncodeNoPrependSpace(const std::string& text) const {
+  static const constexpr char* kPaddingPrefix = "\x01";
+  if (!info_->prepend_space_in_encode) {
+    return tokenizer->Encode(text);
+  }
+
+  auto result = tokenizer->Encode(kPaddingPrefix + text);
+  // remove the first two tokens: "▁" and "<0x01>"
+  result.erase(result.begin(), result.begin() + 2);
+  return result;
+}
+
 std::vector<std::vector<int32_t>> TokenizerObj::EncodeBatch(const Array<String>& texts) const {
   std::vector<std::string> texts_vec;
   for (const String& text : texts) {
     texts_vec.push_back(text);
   }
   return tokenizer->EncodeBatch(texts_vec);
+}
+
+std::string TokenizerObj::DecodeNoStripSpace(const std::vector<int32_t>& token_ids) const {
+  static constexpr int kPaddingId = 4;
+  if (!info_->strip_space_in_decode) {
+    return tokenizer->Decode(token_ids);
+  }
+  std::vector<int32_t> padded_token_ids{kPaddingId};
+  padded_token_ids.insert(padded_token_ids.end(), token_ids.begin(), token_ids.end());
+  auto result = tokenizer->Decode(padded_token_ids);
+  result.erase(0, 1);
+  return result;
 }
 
 std::string TokenizerObj::Decode(const std::vector<int32_t>& token_ids) const {

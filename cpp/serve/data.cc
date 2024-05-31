@@ -138,6 +138,8 @@ inline void TokenToLogProbJSON(const Tokenizer& tokenizer, const TokenProbPair& 
   (*os) << "]";
 }
 
+int32_t SampleResult::GetTokenId() const { return this->GetTokenId(); }
+
 std::string SampleResult::GetLogProbJSON(const Tokenizer& tokenizer, bool logprob) const {
   ICHECK(top_prob_tokens.empty() || logprob);
   if (!logprob) {
@@ -171,12 +173,15 @@ TVM_REGISTER_OBJECT_TYPE(RequestStreamOutputObj);
 RequestStreamOutput::RequestStreamOutput(
     String request_id, Array<IntTuple> group_delta_token_ids,
     Optional<Array<Array<String>>> group_delta_logprob_json_strs,
-    Array<Optional<String>> group_finish_reason) {
+    Array<Optional<String>> group_finish_reason, IntTuple group_delta_tokens_from_retokenize,
+    Array<String> group_delta_string_from_retokenize) {
   ObjectPtr<RequestStreamOutputObj> n = make_object<RequestStreamOutputObj>();
   n->request_id = std::move(request_id);
   n->group_delta_token_ids = std::move(group_delta_token_ids);
   n->group_delta_logprob_json_strs = std::move(group_delta_logprob_json_strs);
   n->group_finish_reason = std::move(group_finish_reason);
+  n->group_delta_tokens_from_retokenize = std::move(group_delta_tokens_from_retokenize);
+  n->group_delta_string_from_retokenize = std::move(group_delta_string_from_retokenize);
   data_ = std::move(n);
 }
 
@@ -190,9 +195,13 @@ RequestStreamOutput RequestStreamOutput::Usage(String request_id,
 
 TVM_REGISTER_GLOBAL("mlc.serve.RequestStreamOutputUnpack")
     .set_body_typed([](RequestStreamOutput output) {
-      return Array<ObjectRef>{output->request_id, output->group_delta_token_ids,
-                              output->group_delta_logprob_json_strs, output->group_finish_reason,
-                              output->request_final_usage_json_str};
+      return Array<ObjectRef>{output->request_id,
+                              output->group_delta_token_ids,
+                              output->group_delta_logprob_json_strs,
+                              output->group_finish_reason,
+                              output->request_final_usage_json_str,
+                              output->group_delta_tokens_from_retokenize,
+                              output->group_delta_string_from_retokenize};
     });
 
 }  // namespace serve

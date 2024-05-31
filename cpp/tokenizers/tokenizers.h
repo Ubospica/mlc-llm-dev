@@ -68,11 +68,15 @@ class TokenizerObj : public Object {
   /*! \brief Encode text into ids. */
   std::vector<int32_t> Encode(const std::string& text) const;
 
+  std::vector<int32_t> EncodeNoPrependSpace(const std::string& text) const;
+
   /*! \brief Encode texts into ids. */
   std::vector<std::vector<int32_t>> EncodeBatch(const Array<String>& texts) const;
 
   /*! \brief Decode token ids into text. */
   std::string Decode(const std::vector<int32_t>& token_ids) const;
+
+  std::string DecodeNoStripSpace(const std::vector<int32_t>& token_ids) const;
 
   /*! \brief Return the post-processed token table of the tokenizer. Special tokens are included. */
   const std::vector<std::string>& PostProcessedTokenTable();

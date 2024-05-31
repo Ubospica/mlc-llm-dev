@@ -138,6 +138,8 @@ struct SampleResult {
   /*! \brief The token id and probability of the tokens with top probabilities. */
   std::vector<TokenProbPair> top_prob_tokens;
 
+  int32_t GetTokenId() const;
+
   /*!
    * \brief Get the logprob JSON string of this token with regard
    * to OpenAI API at https://platform.openai.com/docs/api-reference/chat/object.
@@ -179,6 +181,9 @@ class RequestStreamOutputObj : public Object {
    * \brief The usage field of the response, this is global to all streams.
    */
   Optional<String> request_final_usage_json_str;
+  
+  IntTuple group_delta_tokens_from_retokenize;
+  Array<String> group_delta_string_from_retokenize;
 
   static constexpr const char* _type_key = "mlc.serve.RequestStreamOutput";
   static constexpr const bool _type_has_method_sequal_reduce = false;
@@ -194,7 +199,9 @@ class RequestStreamOutput : public ObjectRef {
  public:
   explicit RequestStreamOutput(String request_id, Array<IntTuple> group_delta_token_ids,
                                Optional<Array<Array<String>>> group_delta_logprob_json_strs,
-                               Array<Optional<String>> finish_reason);
+                               Array<Optional<String>> finish_reason,
+                               IntTuple group_delta_tokens_from_retokenize = {},
+                               Array<String> group_delta_string_from_retokenize = {});
 
   static RequestStreamOutput Usage(String request_id, String request_final_usage_json_str);
 

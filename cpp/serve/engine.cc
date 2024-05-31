@@ -22,6 +22,7 @@
 #include "../support/json_parser.h"
 #include "../support/result.h"
 #include "../tokenizers/tokenizers.h"
+#include "debug.h"
 #include "engine_actions/action.h"
 #include "engine_actions/action_commons.h"
 #include "engine_state.h"
@@ -197,6 +198,17 @@ class EngineImpl : public Engine {
                                         draft_token_workspace_manager, engine_config,
                                         n->trace_recorder_)};
       }
+    } else if (!engine_config->debug_disable_jump_forward) {
+      n->actions_ = {EngineAction::NewRequestPrefill(n->models_,            //
+                                                     logit_processor,       //
+                                                     sampler,               //
+                                                     n->model_workspaces_,  //
+                                                     engine_config,         //
+                                                     model_configs,         //
+                                                     n->trace_recorder_),
+                     EngineAction::BatchJumpForward(n->models_, n->tokenizer_, n->trace_recorder_),
+                     EngineAction::BatchDecode(n->models_, n->tokenizer_, logit_processor, sampler,
+                                               engine_config, n->trace_recorder_)};
     } else {
       n->actions_ = {EngineAction::NewRequestPrefill(n->models_,            //
                                                      logit_processor,       //
@@ -205,8 +217,8 @@ class EngineImpl : public Engine {
                                                      engine_config,         //
                                                      model_configs,         //
                                                      n->trace_recorder_),
-                     EngineAction::BatchDecode(n->models_, logit_processor, sampler, engine_config,
-                                               n->trace_recorder_)};
+                     EngineAction::BatchDecode(n->models_, n->tokenizer_, logit_processor, sampler,
+                                               engine_config, n->trace_recorder_)};
     }
     // - Automatically set the threading backend max concurrency.
     n->engine_config_ = engine_config;
@@ -270,9 +282,11 @@ class EngineImpl : public Engine {
       // If the request input length exceeds the maximum allowed single sequence length,
       // invoke callback and do not process the request.
       Array<RequestStreamOutput> output{RequestStreamOutput(
-          request->id, std::vector<IntTuple>(request->generation_cfg->n),
+          request->id, std::vector<int64_t>(request->generation_cfg->n, 0),
           Optional<Array<Array<String>>>(),
-          std::vector<Optional<String>>(request->generation_cfg->n, String("length")))};
+          std::vector<Optional<String>>(request->generation_cfg->n, String("length")),
+          std::vector<IntTuple>(request->generation_cfg->n),
+          std::vector<String>(request->generation_cfg->n))};
       request_stream_callback_(output);
       return;
     }
@@ -283,7 +297,7 @@ class EngineImpl : public Engine {
     int n = request->generation_cfg->n;
     int rng_seed = request->generation_cfg->seed;
     auto grammar_state_init_ctx =
-        ResponseFormatToGrammarInitContext(request->generation_cfg->response_format);
+        GetGrammarInitCtxFromResponseFormat(request->generation_cfg->response_format);
 
     std::vector<RequestStateEntry> rsentries;
     // Create the request state entry for the input.
@@ -528,7 +542,7 @@ class EngineImpl : public Engine {
 
   /*! \brief Create a grammar init context according to the response format. If the response format
    * is not JSON, return std::nullopt. */
-  std::optional<std::shared_ptr<GrammarStateInitContext>> ResponseFormatToGrammarInitContext(
+  std::optional<std::shared_ptr<GrammarStateInitContext>> GetGrammarInitCtxFromResponseFormat(
       const ResponseFormat& response_format) {
     if (response_format.type != "json_object") {
       return std::nullopt;

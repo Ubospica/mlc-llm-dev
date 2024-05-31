@@ -114,6 +114,7 @@ class EngineConfig:  # pylint: disable=too-many-instance-attributes
     spec_draft_length: int = 4
     prefix_cache_mode: Literal["disable", "radix"] = "radix"
     prefix_cache_max_num_recycling_seqs: Optional[int] = None
+    debug_disable_jump_forward : bool
     verbose: bool = True
 
     def asjson(self) -> str:

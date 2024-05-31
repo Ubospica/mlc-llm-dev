@@ -38,7 +38,7 @@ class BNFGrammarBuilder {
    */
   BNFGrammar Get(const std::string& main_rule = "main") {
     int32_t main_rule_id = GetRuleId(main_rule);
-    CHECK(main_rule_id != -1) << "The in rule with name \"" << main_rule << "\" is not found.";
+    CHECK(main_rule_id != -1) << "The main rule with name \"" << main_rule << "\" is not found.";
     grammar_->main_rule_id_ = main_rule_id;
 
     return BNFGrammar(grammar_);

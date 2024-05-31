@@ -309,6 +309,8 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
 
   for (int i = 0; i < token_table.size(); ++i) {
     const auto& token = token_table[i];
+    // TODO(yixin): Now we detect stop tokens from the token string. We should be able to pass
+    // the stop token set in.
     // LLaMA2: </s>
     // LLaMA3: <|end_of_text|>, <|eot_id|>
     // Phi-2: <|endoftext|>

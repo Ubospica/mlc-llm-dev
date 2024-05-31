@@ -60,6 +60,9 @@ class RequestModelStateNode : public Object {
   /*! \brief The number of tokens that is already prefilled from the inputs. */
   int64_t num_prefilled_tokens = 0;
 
+  int num_pending_kv_cache_tokens;
+  bool require_retokenization_in_next_decode;
+
   // NOTE: The following fields are reserved for future speculative inference
   // settings, and are produced by the speculative small models.
   /*!
@@ -95,6 +98,8 @@ class RequestModelStateNode : public Object {
   void FindNextTokenBitmask(DLTensor* bitmask);
   /*! \brief Commit a new token into committed_tokens. Update appeared_token_ids. */
   void CommitToken(SampleResult sampled_token);
+  void RollbackTokens(int count);
+
   /*! \brief Add a draft token into draft_output_tokens. Update appeared_token_ids. */
   void AddDraftToken(SampleResult sampled_token, int draft_token_slot);
   /*! \brief Remove all draft tokens from draft_output_tokens. Update appeared_token_ids. */
@@ -123,6 +128,8 @@ struct DeltaRequestReturn {
   std::vector<int32_t> delta_token_ids;
   Array<String> delta_logprob_json_strs;
   Optional<String> finish_reason;
+  int delta_tokens_from_retokenize;
+  String delta_string_from_retokenize = "";
 };
 
 /****************** Request States ******************/
@@ -198,6 +205,9 @@ class RequestStateEntryNode : public Object {
    */
   int next_callback_token_pos;
 
+  int delta_tokens_from_retokenize;
+  std::string delta_string_from_retokenize;
+
   /*!
    * \brief Back reference to the request state.
    * Use ObjectRef to avoid circulate reference.
@@ -213,8 +223,8 @@ class RequestStateEntryNode : public Object {
    * \return The delta token ids to return, the logprob JSON strings of each delta token id, and
    * the optional finish reason.
    */
-  DeltaRequestReturn GetReturnTokenIds(const Tokenizer& tokenizer,
-                                       int64_t max_single_sequence_length);
+  DeltaRequestReturn GetDeltaRequestReturn(const Tokenizer& tokenizer,
+                                           int64_t max_single_sequence_length);
 
   static constexpr const char* _type_key = "mlc.serve.RequestStateEntry";
   static constexpr const bool _type_has_method_sequal_reduce = false;

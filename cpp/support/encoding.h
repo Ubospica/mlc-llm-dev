@@ -42,6 +42,8 @@ std::string PrintAsEscaped(
     TCodepoint codepoint,
     const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {});
 
+std::string PrintAsEscaped(char raw_char);
+
 /*!
  * \brief Print the given string to a escaped string that can be printed.
  * \return The escaped string.
