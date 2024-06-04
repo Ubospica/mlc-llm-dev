@@ -15,7 +15,7 @@ def check_schema_with_grammar(
     separators: Optional[Tuple[str, str]] = None,
     strict_mode: bool = True,
 ):
-    schema_str = json.dumps(schema, indent=2)
+    schema_str = json.dumps(schema)
     grammar = BNFGrammar.debug_json_schema_to_ebnf(
         schema_str, indent=indent, separators=separators, strict_mode=strict_mode
     )

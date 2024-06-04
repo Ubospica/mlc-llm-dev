@@ -496,7 +496,7 @@ class EngineState:
             outputs = []
             for stream_output, text_streamer in zip(stream_outputs, text_streamers):
                 self.record_event(request_id, event="start detokenization")
-                delta_text = (
+                delta_text = stream_output.extra_prefix_string + (
                     text_streamer.put(stream_output.delta_token_ids)
                     if len(stream_output.delta_token_ids) > 0
                     else ""

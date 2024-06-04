@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2023 by Contributors
- * \file serve/encoding.cc
+ * \file support/encoding.cc
  */
 #include "encoding.h"
 
@@ -63,6 +63,10 @@ std::string PrintAsEscaped(
   ss << std::setfill('0') << std::setw(width) << std::hex << codepoint;
   auto hex = ss.str();
   return std::string("\\") + prefix + hex;
+}
+
+std::string PrintAsEscaped(char raw_char) {
+  return PrintAsEscaped(static_cast<TCodepoint>(raw_char));
 }
 
 std::string PrintAsEscaped(std::string raw_str) {

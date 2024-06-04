@@ -5,6 +5,8 @@
 
 #include "request_state.h"
 
+#include "../support/debug_utils.h"
+
 namespace mlc {
 namespace llm {
 namespace serve {
@@ -22,8 +24,8 @@ RequestModelState::RequestModelState(
   n->inputs = std::move(inputs);
 
   if (grammar_state_init_ctx.has_value()) {
-    // TODO(yixin): add support for stop_token_ids
-    n->grammar_state_matcher = GrammarStateMatcher(grammar_state_init_ctx.value());
+    // TODO(yixin): set rollback limit to a configurable value.
+    n->grammar_state_matcher = GrammarStateMatcher(grammar_state_init_ctx.value(), 10);
   }
 
   n->request = std::move(request);
@@ -48,26 +50,49 @@ void RequestModelStateNode::FindNextTokenBitmask(DLTensor* bitmask) {
 
 void RequestModelStateNode::CommitToken(SampleResult sampled_token) {
   committed_tokens.push_back(std::move(sampled_token));
-  appeared_token_ids[sampled_token.sampled_token_id.first] += 1;
+  appeared_token_ids[sampled_token.GetTokenId()] += 1;
+  ++num_pending_kv_cache_tokens;
+
+  std::cout << "Commit token: " << sampled_token.GetTokenId() << " <"
+            << DebugGetTokenizer()->PostProcessedTokenTable()[sampled_token.GetTokenId()] << ">"
+            << std::endl;
 
   // Update the grammar matcher state if it exists.
   if (grammar_state_matcher) {
-    bool accepted =
-        grammar_state_matcher.value()->AcceptToken(sampled_token.sampled_token_id.first);
-    ICHECK(accepted) << "Token id " << sampled_token.sampled_token_id.first
+    bool accepted = grammar_state_matcher.value()->AcceptToken(sampled_token.GetTokenId());
+    ICHECK(accepted) << "Token id " << sampled_token.GetTokenId()
                      << " is not accepted by the grammar state matcher.";
+  }
+}
+
+void RequestModelStateNode::RollbackTokens(int count) {
+  ICHECK(count <= static_cast<int>(committed_tokens.size()));
+  for (int i = 0; i < count; ++i) {
+    std::cout
+        << "Rollback token: " << committed_tokens.back().GetTokenId() << " <"
+        << DebugGetTokenizer()->PostProcessedTokenTable()[committed_tokens.back().GetTokenId()]
+        << ">" << std::endl;
+    auto it = appeared_token_ids.find(committed_tokens.back().GetTokenId());
+    CHECK(it != appeared_token_ids.end());
+    if (--it->second == 0) {
+      appeared_token_ids.erase(it);
+    }
+    committed_tokens.pop_back();
+    if (grammar_state_matcher) {
+      grammar_state_matcher.value()->Rollback(1);
+    }
   }
 }
 
 void RequestModelStateNode::AddDraftToken(SampleResult sampled_token, int draft_token_slot) {
   draft_output_tokens.push_back(std::move(sampled_token));
   draft_token_slots.push_back(draft_token_slot);
-  appeared_token_ids[sampled_token.sampled_token_id.first] += 1;
+  appeared_token_ids[sampled_token.GetTokenId()] += 1;
 }
 
 void RequestModelStateNode::RemoveLastDraftToken() {
   ICHECK(!draft_output_tokens.empty());
-  auto it = appeared_token_ids.find(draft_output_tokens.back().sampled_token_id.first);
+  auto it = appeared_token_ids.find(draft_output_tokens.back().GetTokenId());
   draft_output_tokens.pop_back();
   CHECK(it != appeared_token_ids.end());
   if (--it->second == 0) {
@@ -117,25 +142,29 @@ RequestStateEntry::RequestStateEntry(
   data_ = std::move(n);
 }
 
-DeltaRequestReturn RequestStateEntryNode::GetReturnTokenIds(const Tokenizer& tokenizer,
-                                                            int64_t max_single_sequence_length) {
+DeltaRequestReturn RequestStateEntryNode::GetDeltaRequestReturn(
+    const Tokenizer& tokenizer, int64_t max_single_sequence_length) {
   std::vector<int32_t> return_token_ids;
   std::vector<String> logprob_json_strs;
   Optional<String> finish_reason;
+
+  String extra_prefix_string = this->extra_prefix_string;
+  this->extra_prefix_string.clear();
+
   const std::vector<SampleResult>& committed_tokens = this->mstates[0]->committed_tokens;
   int num_committed_tokens = committed_tokens.size();
   ICHECK_LE(this->next_callback_token_pos, num_committed_tokens);
 
   // Case 1. There is no new token ids.
-  if (this->next_callback_token_pos == num_committed_tokens) {
-    return {{}, {}, Optional<String>()};
+  if (this->next_callback_token_pos == num_committed_tokens && extra_prefix_string.empty()) {
+    return {{}, {}, Optional<String>(), extra_prefix_string};
   }
 
   // Case 2. Any of the stop strings is matched.
   ICHECK(!stop_str_handler->StopTriggered());
   while (next_callback_token_pos < num_committed_tokens) {
     std::vector<int32_t> delta_token_ids =
-        stop_str_handler->Put(committed_tokens[next_callback_token_pos].sampled_token_id.first);
+        stop_str_handler->Put(committed_tokens[next_callback_token_pos].GetTokenId());
     logprob_json_strs.push_back(committed_tokens[next_callback_token_pos].GetLogProbJSON(
         tokenizer, request->generation_cfg->logprobs));
     ++next_callback_token_pos;
@@ -174,7 +203,7 @@ DeltaRequestReturn RequestStateEntryNode::GetReturnTokenIds(const Tokenizer& tok
   }
 
   if (finish_reason.defined()) {
-    return {return_token_ids, logprob_json_strs, finish_reason};
+    return {return_token_ids, logprob_json_strs, finish_reason, extra_prefix_string};
   }
 
   // Case 5. Generation reaches the specified max generation length ==> Finished
@@ -183,15 +212,15 @@ DeltaRequestReturn RequestStateEntryNode::GetReturnTokenIds(const Tokenizer& tok
       num_committed_tokens >= request->generation_cfg->max_tokens) {
     std::vector<int32_t> remaining = stop_str_handler->Finish();
     return_token_ids.insert(return_token_ids.end(), remaining.begin(), remaining.end());
-    return {return_token_ids, logprob_json_strs, String("length")};
+    return {return_token_ids, logprob_json_strs, String("length"), extra_prefix_string};
   }
   // Case 6. Total length of the request reaches the maximum single sequence length ==> Finished
   if (request->num_input_tokens + num_committed_tokens >= max_single_sequence_length) {
     std::vector<int32_t> remaining = stop_str_handler->Finish();
     return_token_ids.insert(return_token_ids.end(), remaining.begin(), remaining.end());
-    return {return_token_ids, logprob_json_strs, String("length")};
+    return {return_token_ids, logprob_json_strs, String("length"), extra_prefix_string};
   }
-  return {return_token_ids, logprob_json_strs, Optional<String>()};
+  return {return_token_ids, logprob_json_strs, Optional<String>(), extra_prefix_string};
 }
 
 /****************** RequestState ******************/
