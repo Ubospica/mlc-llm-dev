@@ -319,6 +319,7 @@ class ChatCompletion:  # pylint: disable=too-few-public-methods
         self,
         *,
         messages: List[Dict[str, Any]],
+        stream: Literal[False],
         model: Optional[str] = None,
         frequency_penalty: Optional[float] = None,
         presence_penalty: Optional[float] = None,
@@ -329,7 +330,6 @@ class ChatCompletion:  # pylint: disable=too-few-public-methods
         n: int = 1,
         seed: Optional[int] = None,
         stop: Optional[Union[str, List[str]]] = None,
-        stream: Literal[False] = False,
         stream_options: Literal[None] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -1815,7 +1815,7 @@ class MLCEngine(engine_base.MLCEngineBase):
     def _handle_completion(
         self, request: openai_api_protocol.CompletionRequest, request_id: str
     ) -> Iterator[openai_api_protocol.CompletionResponse]:
-        """The implementation fo synchronous CompletionRequest handling.
+        """The implementation for synchronous CompletionRequest handling.
 
         Yields
         ------
@@ -1956,7 +1956,7 @@ class MLCEngine(engine_base.MLCEngineBase):
             outputs: List[engine_base.CallbackStreamOutput] = []
             for stream_output, text_streamer in zip(stream_outputs, self.state.sync_text_streamers):
                 self.state.record_event(request_id, event="start detokenization")
-                delta_text = (
+                delta_text = stream_output.extra_prefix_string + (
                     text_streamer.put(stream_output.delta_token_ids)
                     if len(stream_output.delta_token_ids) > 0
                     else ""

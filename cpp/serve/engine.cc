@@ -19,6 +19,7 @@
 #include <unordered_set>
 
 #include "../grammar/grammar_state_matcher.h"
+#include "../support/debug_utils.h"
 #include "../support/json_parser.h"
 #include "../support/result.h"
 #include "../tokenizers/tokenizers.h"
@@ -131,7 +132,8 @@ class MockEchoEngineImpl : public Engine {
                 request->id,
                 std::vector<IntTuple>(request->generation_cfg->n, IntTuple({token_id})),
                 Optional<Array<Array<String>>>(),
-                std::vector<Optional<String>>(request->generation_cfg->n, NullOpt)));
+                std::vector<Optional<String>>(request->generation_cfg->n, NullOpt),
+                std::vector<String>(request->generation_cfg->n)));
           }
         }
       }
@@ -152,7 +154,8 @@ class MockEchoEngineImpl : public Engine {
     }
     outputs.push_back(RequestStreamOutput(
         request->id, group_delta_token_ids, Optional<Array<Array<String>>>(),
-        std::vector<Optional<String>>(request->generation_cfg->n, finish_reason)));
+        std::vector<Optional<String>>(request->generation_cfg->n, finish_reason),
+        std::vector<String>(request->generation_cfg->n)));
 
     // attach usage and config
     picojson::object usage;
@@ -182,7 +185,8 @@ class MockEchoEngineImpl : public Engine {
     Array<RequestStreamOutput> output{RequestStreamOutput(
         request_id, std::vector<IntTuple>(request->generation_cfg->n),
         Optional<Array<Array<String>>>(),
-        std::vector<Optional<String>>(request->generation_cfg->n, String("abort")))};
+        std::vector<Optional<String>>(request->generation_cfg->n, String("abort")),
+        std::vector<String>(request->generation_cfg->n))};
     // NOTE: Invariant requirement
     // always stream back final usage
     // otherwise frontend may have issues deciding
@@ -349,6 +353,7 @@ class EngineImpl : public Engine {
     }
     // - Initialize tokenizer and grammar
     n->tokenizer_ = Tokenizer::FromPath(engine_config->model, GetTokenizerInfo(model_configs[0]));
+    DebugRegisterTokenizer(n->tokenizer_);
     n->token_table_ = n->tokenizer_->PostProcessedTokenTable();
     n->grammar_init_context_cache_ = GrammarInitContextCache(n->token_table_);
     // - Create the logit processor and sampler, and
@@ -419,6 +424,17 @@ class EngineImpl : public Engine {
                                         draft_token_workspace_manager, engine_config,
                                         n->trace_recorder_)};
       }
+    } else if (!engine_config->debug_disable_jump_forward) {
+      n->actions_ = {EngineAction::NewRequestPrefill(n->models_,            //
+                                                     logit_processor,       //
+                                                     sampler,               //
+                                                     n->model_workspaces_,  //
+                                                     engine_config,         //
+                                                     model_configs,         //
+                                                     n->trace_recorder_),
+                     EngineAction::BatchJumpForward(n->models_, n->tokenizer_, n->trace_recorder_),
+                     EngineAction::BatchDecode(n->models_, n->tokenizer_, logit_processor, sampler,
+                                               engine_config, n->trace_recorder_)};
     } else {
       n->actions_ = {EngineAction::NewRequestPrefill(n->models_,            //
                                                      logit_processor,       //
@@ -427,8 +443,8 @@ class EngineImpl : public Engine {
                                                      engine_config,         //
                                                      model_configs,         //
                                                      n->trace_recorder_),
-                     EngineAction::BatchDecode(n->models_, logit_processor, sampler, engine_config,
-                                               n->trace_recorder_)};
+                     EngineAction::BatchDecode(n->models_, n->tokenizer_, logit_processor, sampler,
+                                               engine_config, n->trace_recorder_)};
     }
     // - Automatically set the threading backend max concurrency.
     n->engine_config_ = engine_config;
@@ -464,7 +480,8 @@ class EngineImpl : public Engine {
     Array<RequestStreamOutput> output{RequestStreamOutput(
         request->id, std::vector<IntTuple>(request->generation_cfg->n),
         Optional<Array<Array<String>>>(),
-        std::vector<Optional<String>>(request->generation_cfg->n, finish_reason))};
+        std::vector<Optional<String>>(request->generation_cfg->n, finish_reason),
+        std::vector<String>(request->generation_cfg->n))};
     // NOTE: Invariant requirement
     // always stream back final usage
     // otherwise frontend may have issues deciding
@@ -518,7 +535,7 @@ class EngineImpl : public Engine {
     int n = request->generation_cfg->n;
     int rng_seed = request->generation_cfg->seed;
     auto grammar_state_init_ctx =
-        ResponseFormatToGrammarInitContext(request->generation_cfg->response_format);
+        GetGrammarInitCtxFromResponseFormat(request->generation_cfg->response_format);
 
     std::vector<RequestStateEntry> rsentries;
     // Create the request state entry for the input.
@@ -757,7 +774,7 @@ class EngineImpl : public Engine {
 
   /*! \brief Create a grammar init context according to the response format. If the response format
    * is not JSON, return std::nullopt. */
-  std::optional<std::shared_ptr<GrammarStateInitContext>> ResponseFormatToGrammarInitContext(
+  std::optional<std::shared_ptr<GrammarStateInitContext>> GetGrammarInitCtxFromResponseFormat(
       const ResponseFormat& response_format) {
     if (response_format.type != "json_object") {
       return std::nullopt;

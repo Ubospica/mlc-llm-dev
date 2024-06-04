@@ -101,6 +101,7 @@ picojson::object EngineMetrics::AsJSON() const {
   picojson::object metrics;
   metrics["engine_prefill_time_sum"] = picojson::value(engine_prefill_time_sum);
   metrics["engine_decode_time_sum"] = picojson::value(engine_decode_time_sum);
+  metrics["engine_jump_forward_time_sum"] = picojson::value(engine_jump_forward_time_sum);
   metrics["num_input_tokens_sum"] = picojson::value(num_input_tokens_sum);
   metrics["num_prefill_tokens_sum"] = picojson::value(num_prefill_tokens_sum);
   metrics["num_output_tokens_sum"] = picojson::value(num_output_tokens_sum);

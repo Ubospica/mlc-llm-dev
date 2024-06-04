@@ -154,6 +154,7 @@ struct EngineMetrics {
   double engine_prefill_time_sum = 0;
   /*! \brief The total engine time on decode/draft/verify, including warmup */
   double engine_decode_time_sum = 0;
+  double engine_jump_forward_time_sum = 0;
   /*! \brief The total number of request input tokens. */
   int64_t num_input_tokens_sum = 0;
   /*! \brief The total number of processed tokens (excluding the prefix-cached length) in prefill */

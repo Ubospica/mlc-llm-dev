@@ -324,6 +324,8 @@ EngineConfig EngineConfig::FromJSONAndInferredConfig(
       json, "speculative_mode", SpeculativeModeToString(n->speculative_mode)));
   n->spec_draft_length =
       json::LookupOrDefault<int64_t>(json, "spec_draft_length", n->spec_draft_length);
+  n->debug_disable_jump_forward =
+      json::LookupOrDefault<bool>(json, "debug_disable_jump_forward", false);
   n->verbose = json::LookupOrDefault<bool>(json, "verbose", n->verbose);
 
   // - Fields from the inferred engine config.
@@ -400,6 +402,7 @@ String EngineConfigNode::AsJSONString() const {
       picojson::value(static_cast<int64_t>(this->prefix_cache_max_num_recycling_seqs));
   config["speculative_mode"] = picojson::value(SpeculativeModeToString(this->speculative_mode));
   config["spec_draft_length"] = picojson::value(static_cast<int64_t>(this->spec_draft_length));
+  config["debug_disable_jump_forward"] = picojson::value(this->debug_disable_jump_forward);
   config["verbose"] = picojson::value(static_cast<bool>(this->verbose));
 
   return picojson::value(config).serialize(true);
