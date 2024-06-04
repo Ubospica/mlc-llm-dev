@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2023 by Contributors
- * \file serve/encoding.h
+ * \file support/encoding.h
  * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
  */
-#ifndef MLC_LLM_SERVE_ENCODING_H_
-#define MLC_LLM_SERVE_ENCODING_H_
+#ifndef MLC_LLM_SUPPORT_ENCODING_H_
+#define MLC_LLM_SUPPORT_ENCODING_H_
 
 #include <string>
 #include <unordered_map>
@@ -41,6 +41,8 @@ std::string PrintAsUTF8(TCodepoint codepoint);
 std::string PrintAsEscaped(
     TCodepoint codepoint,
     const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {});
+
+std::string PrintAsEscaped(char raw_char);
 
 /*!
  * \brief Print the given string to a escaped string that can be printed.
@@ -104,4 +106,4 @@ std::pair<TCodepoint, const char*> ParseNextUTF8OrEscaped(
 }  // namespace llm
 }  // namespace mlc
 
-#endif  // MLC_LLM_SERVE_ENCODING_H_
+#endif  // MLC_LLM_SUPPORT_ENCODING_H_

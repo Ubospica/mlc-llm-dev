@@ -100,8 +100,9 @@ class EngineAction : public ObjectRef {
    * \param trace_recorder The event trace recorder for requests.
    * \return The created action object.
    */
-  static EngineAction BatchDecode(Array<Model> models, LogitProcessor logit_processor,
-                                  Sampler sampler, EngineConfig engine_config,
+  static EngineAction BatchDecode(Array<Model> models, Tokenizer tokenizer,
+                                  LogitProcessor logit_processor, Sampler sampler,
+                                  EngineConfig engine_config,
                                   Optional<EventTraceRecorder> trace_recorder);
 
   /*!
@@ -182,6 +183,9 @@ class EngineAction : public ObjectRef {
                                        std::vector<ModelWorkspace> model_workspaces,
                                        DraftTokenWorkspaceManager draft_token_workspace_manager,
                                        EngineConfig engine_config,
+                                       Optional<EventTraceRecorder> trace_recorder);
+
+  static EngineAction BatchJumpForward(Array<Model> models, Tokenizer tokenizer,
                                        Optional<EventTraceRecorder> trace_recorder);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(EngineAction, ObjectRef, EngineActionObj);

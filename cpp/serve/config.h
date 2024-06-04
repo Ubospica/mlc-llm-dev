@@ -219,6 +219,9 @@ class EngineConfigNode : public Object {
   /*! \brief The number of tokens to generate in speculative proposal (draft). */
   int spec_draft_length = 4;
 
+  /*************** Jump Forward ***************/
+  bool debug_disable_jump_forward;
+
   /*************** Debug ***************/
   bool verbose = false;
 

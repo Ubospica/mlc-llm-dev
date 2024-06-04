@@ -104,7 +104,7 @@ class BNFGrammar(Object):
     def from_schema(
         schema: str,
         *,
-        indent: Optional[int] = None,
+        indent: Optional[int] = 2,
         separators: Optional[Tuple[str, str]] = None,
         strict_mode: bool = True
     ) -> "BNFGrammar":
@@ -182,7 +182,7 @@ class BNFGrammar(Object):
     def debug_json_schema_to_ebnf(
         schema: str,
         *,
-        indent: Optional[int] = None,
+        indent: Optional[int] = 2,
         separators: Optional[Tuple[str, str]] = None,
         strict_mode: bool = True
     ) -> str:
@@ -195,7 +195,7 @@ class BNFGrammar(Object):
 
         indent : Optional[int]
             The number of spaces for indentation. If None, the output will be in one line.
-            Default: None.
+            Default: 2.
 
         separators : Optional[Tuple[str, str]]
             Two separators used in the schema: comma and colon. Examples: (",", ":"), (", ", ": ").
@@ -299,8 +299,8 @@ class GrammarStateMatcher(Object):
         Parameters
         ----------
         verbose : bool
-            Whether to print information about the timing and results to stderr. For debug purposes.
-            Default: False.
+            Whether to print information about timing and result counts to stderr.
+            For debug purposes. Default: False.
 
         Returns
         -------
@@ -320,6 +320,9 @@ class GrammarStateMatcher(Object):
         """
 
         return _ffi_api.GrammarStateMatcherFindNextTokenBitmaskAsNDArray(self)  # type: ignore  # pylint: disable=no-member
+
+    def find_jump_forward_string(self) -> str:
+        return _ffi_api.GrammarStateMatcherFindJumpForwardString(self)  # type: ignore  # pylint: disable=no-member
 
     def rollback(self, num_tokens: int) -> None:
         """Rollback the matcher to a previous state.

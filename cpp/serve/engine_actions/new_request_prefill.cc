@@ -37,7 +37,6 @@ class NewRequestPrefillActionObj : public BatchPrefillBaseActionObj {
         return {};
       }
     }
-
     int num_rsentries = prefill_inputs.size();
     {
       NVTXScopedRange nvtx_scope("NewRequestPrefill matching prefix");

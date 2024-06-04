@@ -3,11 +3,12 @@
  * \file grammar/grammar_state_matcher_preproc.h
  * \brief The header for the preprocessing of the grammar state matcher.
  */
-#ifndef MLC_LLM_SERVE_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
-#define MLC_LLM_SERVE_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#ifndef MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#define MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
 
 #include <vector>
 
+#include "../support/dynamic_bitset.h"
 #include "../support/encoding.h"
 #include "../support/utils.h"
 #include "grammar.h"
@@ -309,6 +310,8 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
 
   for (int i = 0; i < token_table.size(); ++i) {
     const auto& token = token_table[i];
+    // TODO(yixin): Now we detect stop tokens from the token string. We should be able to pass
+    // the stop token set in.
     // LLaMA2: </s>
     // LLaMA3: <|end_of_text|>, <|eot_id|>
     // Phi-2: <|endoftext|>
@@ -432,4 +435,4 @@ GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>&
 }  // namespace llm
 }  // namespace mlc
 
-#endif  // TVM_LLVM_COMPILE_ENGINE_CPP_SERVE_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#endif  // TVM_LLVM_COMPILE_ENGINE_CPP_GRAMMAR_STATE_MATCHER_PREPROC_H_
