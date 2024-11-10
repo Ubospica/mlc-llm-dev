@@ -215,6 +215,7 @@ BatchPrefillBaseActionObj::GetRequestStateEntriesToPrefill(EngineState estate) {
 
   // Reduce over the prefill inputs of all models.
   ICHECK(!prefill_inputs_for_all_models.empty());
+  // Find the minimum number of prefill inputs among all models.
   int num_prefill_inputs = prefill_inputs_for_all_models[0].size();
   for (int i = 1; i < static_cast<int>(prefill_inputs_for_all_models.size()); ++i) {
     num_prefill_inputs =

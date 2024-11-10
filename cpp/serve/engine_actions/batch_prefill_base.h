@@ -15,8 +15,7 @@ namespace llm {
 namespace serve {
 
 /*!
- * \brief The base action of that prefills requests in the `waiting_queue` of
- * the engine state.
+ * \brief The base action that prefills requests in the `waiting_queue` of the engine state.
  */
 class BatchPrefillBaseActionObj : public EngineActionObj {
  protected:

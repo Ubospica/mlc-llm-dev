@@ -24,6 +24,7 @@
 
 #include "../support/json_parser.h"
 #include "../support/result.h"
+#include "../support/thread_pool.h"
 #include "../support/utils.h"
 #include "../tokenizers/tokenizers.h"
 #include "engine_actions/action.h"
