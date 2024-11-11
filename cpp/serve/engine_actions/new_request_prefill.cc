@@ -159,6 +159,23 @@ class NewRequestPrefillActionObj : public BatchPrefillBaseActionObj {
     }
     logits_for_sample = logits_for_sample.CreateView({num_rsentries, logits_for_sample->shape[2]},
                                                      logits_for_sample->dtype);
+
+    {
+      // Filter requests whose grammar is not ready. For such requests with n input tokens,
+      // we will only handle the first n-1 tokens in prefilling to avoid sampling with mask.
+      // Then in the next decoding step, we will wait for the grammar to be ready, then handle
+      // the n-th token and sample the next token with grammar constraint.
+      // This is for overlapping the grammar processing and prefill execution.
+      // TODO(yixin): consider a better high-level design to handle overlapped execution.
+      NVTXScopedRange nvtx_scope("NewRequestPrefill filter requests for grammar");
+      std::vector<int> selected_indices;
+      for (int i = 0; i < num_rsentries; ++i) {
+        if (prefill_inputs[i].num_child_to_activate > 0) {
+          filtered_indices.push_back(i);
+        }
+      }
+    }
+
     logit_processor_->InplaceUpdateLogits(logits_for_sample, generation_cfg, mstates_for_logitproc,
                                           request_ids);
 

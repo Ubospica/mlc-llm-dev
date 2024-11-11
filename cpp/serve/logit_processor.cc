@@ -48,6 +48,7 @@ class LogitProcessorImpl : public LogitProcessorObj {
         apply_logit_bias_func_(ft->apply_logit_bias_func_),
         apply_penalty_func_(ft->apply_penalty_func_),
         apply_bitmask_func_(ft->apply_bitmask_func_),
+        filter_logits_with_indices_func_(ft->filter_logits_with_indices_func_),
         trace_recorder_(std::move(trace_recorder)) {
     Device preferred_host_device = GetPreferredHostDevice(device);
     // Initialize auxiliary arrays on CPU.
@@ -78,6 +79,8 @@ class LogitProcessorImpl : public LogitProcessorObj {
         << "Function \"apply_logit_bias_inplace\" not found in model";
     CHECK(apply_penalty_func_.defined()) << "Function \"apply_penalty_inplace\" not found in model";
     CHECK(apply_bitmask_func_.defined()) << "Function \"apply_bitmask_inplace\" not found in model";
+    CHECK(filter_logits_with_indices_func_.defined())
+        << "Function \"filter_logits_with_indices\" not found in model";
 
     // If the device is CUDA/ROCm, we create a standalone copy stream, in
     // purpose to hide the latency of auxiliary stream copy.
@@ -205,6 +208,18 @@ class LogitProcessorImpl : public LogitProcessorObj {
     }
     RECORD_EVENT(trace_recorder_, request_ids, "finish softmax");
     return probs.CreateView({num_total_token, vocab_size_}, probs->dtype);
+  }
+
+  NDArray FilterLogitsWithIndices(NDArray logits, const std::vector<int>& selected_indices,
+                                  NDArray result_buffer) {
+    CHECK_EQ(logits->ndim, 2);
+    CHECK_GE(logits->shape[0], selected_indices.back());
+    CHECK_EQ(result_buffer->ndim, 2);
+    CHECK_GE(result_buffer->shape[0], selected_indices.size());
+    auto view = result_buffer.CreateView(
+        {static_cast<int64_t>(selected_indices.size()), vocab_size_}, logits->dtype);
+    filter_logits_with_indices_func_(logits, selected_indices, view);
+    return view;
   }
 
  private:
@@ -389,7 +404,7 @@ class LogitProcessorImpl : public LogitProcessorObj {
       int token_start_offset = cum_num_token == nullptr ? i : cum_num_token->at(i);
       int token_number =
           cum_num_token == nullptr ? 1 : (cum_num_token->at(i + 1) - cum_num_token->at(i));
-      bool require_mask = mstates[i]->RequireNextTokenBitmask();
+      bool require_mask = mstates[i]->RequireGrammarMatcher();
       ICHECK(draft_token_indices == nullptr || draft_token_indices->at(i).size() == token_number);
       for (int j = 0; j < token_number; ++j) {
         if (require_mask) {
@@ -467,6 +482,7 @@ class LogitProcessorImpl : public LogitProcessorObj {
   PackedFunc apply_logit_bias_func_;
   PackedFunc apply_penalty_func_;
   PackedFunc apply_bitmask_func_;
+  PackedFunc filter_logits_with_indices_func_;
   // Auxiliary NDArrays on CPU
   NDArray seq_ids_host_;
   NDArray pos2seq_id_host_;

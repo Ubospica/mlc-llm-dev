@@ -11,6 +11,7 @@
 #include <tvm/runtime/object.h>
 #include <xgrammar/xgrammar.h>
 
+#include <future>
 #include <optional>
 
 #include "../support/random.h"
@@ -88,15 +89,21 @@ class RequestModelStateNode : public Object {
    * \brief The current state of the generated token matching the grammar. Used in grammar-guided
    * generation, otherwise it's std::nullopt.
    */
+  std::optional<std::shared_future<xgrammar::CompiledGrammar>> compiled_grammar_future;
+  int32_t grammar_max_rollback_tokens = 0;
   std::optional<xgrammar::GrammarMatcher> grammar_matcher;
 
   /*! \brief Return the total length of the input data. */
   int GetInputLength() const;
   /*!
-   * \brief Return whether the next token bitmask is required, i.e. the grammar-guided generation is
-   * enabled.
+   * \brief Return whether the grammar-guided generation is enabled.
    */
-  bool RequireNextTokenBitmask();
+  bool RequireGrammarMatcher();
+  /*!
+   * \brief Return whether the grammar-guided generation is enabled, and blocking wait for the
+   * grammar matcher to be ready if it's not ready yet.
+   */
+  bool PrepareGrammarMatcher();
   /*!
    * \brief Find the next token bitmask and store it in the given DLTensor.
    * \param bitmask The DLTensor to store the next token bitmask. The bitmask should be a tensor
@@ -123,8 +130,10 @@ class RequestModelStateNode : public Object {
 
 class RequestModelState : public ObjectRef {
  public:
-  explicit RequestModelState(Request request, int model_id, int64_t internal_id, Array<Data> inputs,
-                             const std::optional<xgrammar::CompiledGrammar>& compiled_grammar);
+  explicit RequestModelState(
+      Request request, int model_id, int64_t internal_id, Array<Data> inputs,
+      const std::optional<std::shared_future<xgrammar::CompiledGrammar>>& compiled_grammar_future,
+      int grammar_max_rollback_tokens);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(RequestModelState, ObjectRef, RequestModelStateNode);
 };
@@ -254,10 +263,11 @@ class RequestStateEntryNode : public Object {
 
 class RequestStateEntry : public ObjectRef {
  public:
-  explicit RequestStateEntry(Request request, int num_models, int64_t internal_id, int rng_seed,
-                             const std::vector<std::string>& token_table,
-                             const std::optional<xgrammar::CompiledGrammar>& compiled_grammar,
-                             int parent_idx = -1);
+  explicit RequestStateEntry(
+      Request request, int num_models, int64_t internal_id, int rng_seed,
+      const std::vector<std::string>& token_table,
+      const std::optional<std::shared_future<xgrammar::CompiledGrammar>>& compiled_grammar_future,
+      int grammar_max_rollback_tokens, int parent_idx = -1);
 
   TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(RequestStateEntry, ObjectRef, RequestStateEntryNode);
 };

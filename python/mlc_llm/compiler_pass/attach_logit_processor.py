@@ -170,3 +170,43 @@ def _get_apply_bitmask_inplace(target: tvm.target.Target):
                     )
 
     return _apply_bitmask_inplace
+
+
+def _get_filter_logits_with_indices(target: tvm.target.Target):
+    tx = 1024  # default
+    max_num_threads_per_block = get_max_num_threads_per_block(target)
+    if max_num_threads_per_block < tx:
+        tx = max_num_threads_per_block
+    check_thread_limits(target, bdx=tx, bdy=1, bdz=1, gdz=1)
+
+    @T.prim_func
+    def _filter_logits_with_indices(
+        var_logits: T.handle,
+        var_seq_ids: T.handle,
+        var_result: T.handle,
+    ) -> None:
+        """Function that filters logits with indices. var_seq_ids is the sequence ids of the picked
+        tokens."""
+        T.func_attr(
+            {
+                "global_symbol": "filter_logits_with_indices",
+                "tir.noalias": True,
+                "tir.is_scheduled": True,
+            }
+        )
+        batch_size = T.int32(is_size_var=True)
+        vocab_size = T.int32(is_size_var=True)
+        num_seq = T.int32(is_size_var=True)
+        logits = T.match_buffer(var_logits, (batch_size, vocab_size), "float32")
+        seq_ids = T.match_buffer(var_seq_ids, (num_seq,), "int32")
+        result = T.match_buffer(var_result, (num_seq, vocab_size), "float32")
+
+        for fused_s_v_0 in T.thread_binding(0, (num_seq * vocab_size + tx - 1) // tx, "blockIdx.x"):
+            for fused_s_v_1 in T.thread_binding(0, tx, "threadIdx.x"):
+                with T.block("block"):
+                    vs = T.axis.spatial(num_seq, (fused_s_v_0 * tx + fused_s_v_1) // vocab_size)
+                    vv = T.axis.spatial(vocab_size, (fused_s_v_0 * tx + fused_s_v_1) % vocab_size)
+                    T.where(fused_s_v_0 * tx + fused_s_v_1 < num_seq * vocab_size)
+                    result[vs, vv] = logits[seq_ids[vs], vv]
+
+    return _filter_logits_with_indices

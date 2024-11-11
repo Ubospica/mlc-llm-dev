@@ -15,18 +15,14 @@ TVM_REGISTER_OBJECT_TYPE(RequestModelStateNode);
 
 RequestModelState::RequestModelState(
     Request request, int model_id, int64_t internal_id, Array<Data> inputs,
-    const std::optional<xgrammar::CompiledGrammar>& compiled_grammar) {
+    const std::optional<std::shared_future<xgrammar::CompiledGrammar>>& compiled_grammar_future,
+    int grammar_max_rollback_tokens) {
   ObjectPtr<RequestModelStateNode> n = make_object<RequestModelStateNode>();
   n->model_id = model_id;
   n->internal_id = internal_id;
   n->inputs = std::move(inputs);
-
-  if (compiled_grammar.has_value()) {
-    // TODO(yixin): set rollback limit to a configurable value.
-    n->grammar_matcher =
-        xgrammar::GrammarMatcher(compiled_grammar.value(), std::nullopt, false, std::nullopt, 10);
-  }
-
+  n->compiled_grammar_future = compiled_grammar_future;
+  n->grammar_max_rollback_tokens = grammar_max_rollback_tokens;
   n->request = std::move(request);
   data_ = std::move(n);
 }
@@ -39,10 +35,21 @@ int RequestModelStateNode::GetInputLength() const {
   return total_length;
 }
 
-bool RequestModelStateNode::RequireNextTokenBitmask() { return grammar_matcher.has_value(); }
+bool RequestModelStateNode::RequireGrammarMatcher() {
+  return compiled_grammar_future.has_value() || grammar_matcher.has_value();
+}
+
+bool RequestModelStateNode::PrepareGrammarMatcher() {
+  if (compiled_grammar_future.has_value()) {
+    grammar_matcher = xgrammar::GrammarMatcher(compiled_grammar_future->get(), std::nullopt, false,
+                                               std::nullopt, grammar_max_rollback_tokens);
+    compiled_grammar_future = std::nullopt;
+  }
+  return grammar_matcher.has_value();
+}
 
 void RequestModelStateNode::GetNextTokenBitmask(DLTensor* bitmask) {
-  ICHECK(grammar_matcher.has_value());
+  ICHECK(PrepareGrammarMatcher());
 
   grammar_matcher->GetNextTokenBitmask(bitmask);
 }
@@ -54,7 +61,7 @@ void RequestModelStateNode::CommitToken(SampleResult sampled_token) {
   ++num_tokens_for_next_decode;
 
   // Update the grammar matcher state if it exists.
-  if (grammar_matcher) {
+  if (PrepareGrammarMatcher()) {
     bool accepted = grammar_matcher->AcceptToken(sampled_token.GetTokenId());
     ICHECK(accepted) << "Token id " << sampled_token.GetTokenId()
                      << " is not accepted by the grammar state matcher.";
@@ -70,7 +77,7 @@ void RequestModelStateNode::RollbackTokens(int count) {
       appeared_token_ids.erase(it);
     }
     committed_tokens.pop_back();
-    if (grammar_matcher) {
+    if (PrepareGrammarMatcher()) {
       grammar_matcher->Rollback(1);
     }
   }
@@ -144,7 +151,8 @@ TVM_REGISTER_OBJECT_TYPE(RequestStateEntryNode);
 RequestStateEntry::RequestStateEntry(
     Request request, int num_models, int64_t internal_id, int rng_seed,
     const std::vector<std::string>& token_table,
-    const std::optional<xgrammar::CompiledGrammar>& compiled_grammar, int parent_idx) {
+    const std::optional<std::shared_future<xgrammar::CompiledGrammar>>& compiled_grammar_future,
+    int grammar_max_rollback_tokens, int parent_idx) {
   ObjectPtr<RequestStateEntryNode> n = make_object<RequestStateEntryNode>();
   Array<RequestModelState> mstates;
   Array<Data> inputs;
@@ -153,7 +161,8 @@ RequestStateEntry::RequestStateEntry(
   }
   mstates.reserve(num_models);
   for (int i = 0; i < num_models; ++i) {
-    mstates.push_back(RequestModelState(request, i, internal_id, inputs, compiled_grammar));
+    mstates.push_back(RequestModelState(request, i, internal_id, inputs, compiled_grammar_future,
+                                        grammar_max_rollback_tokens));
   }
   n->status = RequestStateStatus::kPending;
   n->rng = RandomGenerator(rng_seed);
@@ -210,8 +219,8 @@ void RequestStateEntryNode::GetDeltaRequestReturn(const Tokenizer& tokenizer,
   }
 
   // Case 3. Any of the stop tokens appears in the committed tokens ===> Finished
-  // `stop_token_ids` includes the stop tokens from conversation template and user-provided tokens.
-  // This check will be ignored when `ignore_eos` is set for the benchmarking purpose.
+  // `stop_token_ids` includes the stop tokens from conversation template and user-provided
+  // tokens. This check will be ignored when `ignore_eos` is set for the benchmarking purpose.
   if (!request->generation_cfg->debug_config.ignore_eos) {
     for (int i = 0; i < static_cast<int>((*delta_stream_output)->group_delta_token_ids[idx].size());
          ++i) {
@@ -233,7 +242,7 @@ void RequestStateEntryNode::GetDeltaRequestReturn(const Tokenizer& tokenizer,
   // Case 4. When stop token is not detected (e.g. ignore_eos is set), but the grammar state is
   // terminated, stop the generation and pop the last token (used to trigger the termination).
   if ((*delta_stream_output)->group_finish_reason[idx] != "stop" &&
-      this->mstates[0]->grammar_matcher.has_value() &&
+      this->mstates[0]->PrepareGrammarMatcher() &&
       this->mstates[0]->grammar_matcher->IsTerminated()) {
     (*delta_stream_output)->group_delta_token_ids[idx].pop_back();
     (*delta_stream_output)->group_finish_reason[idx] = "stop";

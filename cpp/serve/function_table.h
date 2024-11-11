@@ -98,6 +98,7 @@ struct FunctionTable {
   PackedFunc apply_logit_bias_func_;
   PackedFunc apply_penalty_func_;
   PackedFunc apply_bitmask_func_;
+  PackedFunc filter_logits_with_indices_func_;
   PackedFunc alloc_embedding_tensor_func_;
   PackedFunc create_kv_cache_func_;
   PackedFunc reset_kv_cache_func_;

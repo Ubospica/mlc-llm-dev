@@ -496,12 +496,14 @@ class EngineImpl : public Engine {
 
     int n = request->generation_cfg->n;
     int rng_seed = request->generation_cfg->seed;
-    auto compiled_grammar = GetGrammarFromResponseFormat(request->generation_cfg->response_format);
+    auto compiled_grammar_future =
+        GetGrammarFromResponseFormat(request->generation_cfg->response_format);
 
     std::vector<RequestStateEntry> rsentries;
     // Create the request state entry for the input.
     rsentries.emplace_back(request, models_.size(), estate_->id_manager.GetNewId(), rng_seed,
-                           token_table_, compiled_grammar);
+                           token_table_, compiled_grammar_future,
+                           engine_config_->grammar_max_rollback_tokens);
     if (n > 1) {
       // Then create a request state entry for each parallel generation branch.
       // We add a offset to the rng seed so that to make generations different.
@@ -510,7 +512,8 @@ class EngineImpl : public Engine {
       for (int i = 0; i < n; ++i) {
         rsentries[0]->child_indices.push_back(rsentries.size());
         rsentries.emplace_back(request, models_.size(), estate_->id_manager.GetNewId(),
-                               rng_seed + i + 1, token_table_, compiled_grammar,
+                               rng_seed + i + 1, token_table_, compiled_grammar_future,
+                               engine_config_->grammar_max_rollback_tokens,
                                /*parent_idx=*/0);
       }
     }
@@ -814,15 +817,18 @@ class EngineImpl : public Engine {
 
   /*! \brief Create a grammar init context according to the response format. If the response format
    * is not JSON, return std::nullopt. */
-  std::optional<xgrammar::CompiledGrammar> GetGrammarFromResponseFormat(
+  std::optional<std::shared_future<xgrammar::CompiledGrammar>> GetGrammarFromResponseFormat(
       const ResponseFormat& response_format) {
     if (response_format.type != "json_object") {
       return std::nullopt;
     } else if (!response_format.schema) {
-      return cached_grammar_compiler_.GetCompiledGrammarForJSON();
+      return thread_pool_.Submit(
+          [&]() { return cached_grammar_compiler_.GetCompiledGrammarForJSON(); });
     } else {
-      return cached_grammar_compiler_.GetCompiledGrammarForJSONSchema(
-          response_format.schema.value());
+      return thread_pool_.Submit([&]() {
+        return cached_grammar_compiler_.GetCompiledGrammarForJSONSchema(
+            response_format.schema.value());
+      });
     }
   }
 
@@ -833,8 +839,11 @@ class EngineImpl : public Engine {
   // internal tokenizer
   Tokenizer tokenizer_;
   std::vector<std::string> token_table_;
+  // Thread pool. Now only used for parallel grammar compilation.
+  ThreadPool thread_pool_;
   // Cached grammar compiler for grammar matching.
   xgrammar::CachedGrammarCompiler cached_grammar_compiler_;
+
   // Models
   Array<Model> models_;
   // Device that the models run on.

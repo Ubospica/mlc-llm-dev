@@ -236,6 +236,8 @@ class EngineConfigNode : public Object {
   int64_t prefill_chunk_size = 1024;
   /*! \brief The maximum history size for RNN state. KV cache does not need this. */
   int max_history_size = 0;
+  /*! \brief The maximum number of grammar rollback tokens. */
+  int grammar_max_rollback_tokens = 10;
 
   /*************** Prefix cache ***************/
 

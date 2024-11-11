@@ -6,8 +6,11 @@
 #ifndef MLC_LLM_SUPPORT_THREAD_POOL_H_
 #define MLC_LLM_SUPPORT_THREAD_POOL_H_
 
+#include <tvm/runtime/logging.h>
+
 #include <condition_variable>
 #include <functional>
+#include <future>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -57,18 +60,33 @@ class ThreadPool {
 
   /*!
    * \brief Add a new task to be executed by the thread pool.
-   * \param task Function object representing the task to execute.
+   * \tparam F Type of the function to execute
+   * \tparam Args Types of the arguments to pass to the function
+   * \param f Function to execute
+   * \param args Arguments to pass to the function
+   * \return std::shared_future containing the result of the function call
    * \note Tasks are executed in FIFO order but may complete in any order.
    */
-  void AddTask(std::function<void()> task) {
+  template <class F, class... Args>
+  auto Submit(F&& f, Args&&... args)
+      -> std::shared_future<typename std::result_of<F(Args...)>::type> {
+    using return_type = typename std::result_of<F(Args...)>::type;
+
+    // Package the task with its arguments into a shared pointer to allow safe capture in lambda
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+    std::shared_future<return_type> res = task->get_future().share();
+
     {
       std::unique_lock<std::mutex> lock(queue_mutex_);
-      if (shutdown_) {
-        throw std::runtime_error("Cannot add task to stopped ThreadPool");
-      }
-      task_queue_.push(std::move(task));
+      CHECK(!shutdown_) << "Cannot submit task to stopped ThreadPool";
+
+      // Wrap task in lambda to allow type erasure via std::function
+      task_queue_.emplace([task]() { (*task)(); });
     }
-    queue_condition_.notify_one();  // Wake up one thread to execute task
+    queue_condition_.notify_one();
+    return res;
   }
 
   /*!

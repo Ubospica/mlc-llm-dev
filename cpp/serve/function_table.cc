@@ -230,6 +230,7 @@ void FunctionTable::_InitFunctions() {
   this->apply_logit_bias_func_ = mod->GetFunction("apply_logit_bias_inplace", true);
   this->apply_penalty_func_ = mod->GetFunction("apply_penalty_inplace", true);
   this->apply_bitmask_func_ = mod->GetFunction("apply_bitmask_inplace", true);
+  this->filter_logits_with_indices_func_ = mod->GetFunction("filter_logits_with_indices", true);
   this->alloc_embedding_tensor_func_ = mod_get_func("alloc_embedding_tensor");
   this->create_kv_cache_func_ = mod_get_func("create_flashinfer_paged_kv_cache");
   if (!this->create_kv_cache_func_.defined()) {
