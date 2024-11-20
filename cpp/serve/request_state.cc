@@ -39,6 +39,16 @@ bool RequestModelStateNode::RequireGrammarMatcher() {
   return compiled_grammar_future.has_value() || grammar_matcher.has_value();
 }
 
+bool RequestModelStateNode::IsGrammarMatcherReady() {
+  if (compiled_grammar_future.has_value() &&
+      compiled_grammar_future->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    grammar_matcher = xgrammar::GrammarMatcher(compiled_grammar_future->get(), std::nullopt, false,
+                                               std::nullopt, grammar_max_rollback_tokens);
+    compiled_grammar_future = std::nullopt;
+  }
+  return grammar_matcher.has_value();
+}
+
 bool RequestModelStateNode::PrepareGrammarMatcher() {
   if (compiled_grammar_future.has_value()) {
     grammar_matcher = xgrammar::GrammarMatcher(compiled_grammar_future->get(), std::nullopt, false,

@@ -71,7 +71,7 @@ class EngineStateObj : public Object {
   /*! \brief The prefix cache. */
   PrefixCache prefix_cache{nullptr};
   /*! \brief A boolean flag denoting whether the running request state entry list has changed. */
-  bool running_rsentries_changed = true;
+  bool -running_rsentries_changed = true;
   /*!
    * \brief The current engine speculative decoding draft length.
    * The length may change across time under the auto speculative decoding mode.

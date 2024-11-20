@@ -161,31 +161,46 @@ class NewRequestPrefillActionObj : public BatchPrefillBaseActionObj {
                                                      logits_for_sample->dtype);
 
     {
-      // Filter requests whose grammar is not ready. For such requests with n input tokens,
-      // we will only handle the first n-1 tokens in prefilling to avoid sampling with mask.
-      // Then in the next decoding step, we will wait for the grammar to be ready, then handle
-      // the n-th token and sample the next token with grammar constraint.
+      // Filter requests whose grammar is not ready.
+      // The grammar compilation could be slow, and could be not ready after prefilling is finished,
+      // so we cannot obtain the mask for sampling. Therefore, we will only handle the first
+      // n-1 tokens in prefilling to avoid sampling with mask. Then in the next decoding step, we
+      // will wait for the grammar to be ready, then handle the n-th token and sample the next token
+      // with grammar constraint.
       // This is for overlapping the grammar processing and prefill execution.
       // TODO(yixin): consider a better high-level design to handle overlapped execution.
       NVTXScopedRange nvtx_scope("NewRequestPrefill filter requests for grammar");
       std::vector<int> selected_indices;
+      std::vector<PrefillInput> selected_prefill_inputs;
+      std::vector<String> selected_request_ids;
+      std::vector<RequestState> selected_rstates_of_entries;
+      std::vector<RequestStateStatus> selected_status_before_prefill;
+      std::vector<GenerationConfig> selected_generation_cfg;
+      std::vector<RequestModelState> selected_mstates_for_logitproc;
+
       for (int i = 0; i < num_rsentries; ++i) {
-        if (prefill_inputs[i].num_child_to_activate > 0) {
-          filtered_indices.push_back(i);
+        if (!mstates_for_logitproc[i]->RequireGrammarMatcher() ||
+            mstates_for_logitproc[i]->IsGrammarMatcherReady()) {
+          selected_prefill_inputs.push_back(prefill_inputs[i]);
+          selected_request_ids.push_back(request_ids[i]);
+          selected_rstates_of_entries.push_back(rstates_of_entries[i]);
+          selected_status_before_prefill.push_back(status_before_prefill[i]);
+          selected_generation_cfg.push_back(generation_cfg[i]);
+          selected_mstates_for_logitproc.push_back(mstates_for_logitproc[i]);
+          selected_indices.push_back(i);
         }
       }
+
+      prefill_inputs = std::move(selected_prefill_inputs);
+      request_ids = std::move(selected_request_ids);
+      rstates_of_entries = std::move(selected_rstates_of_entries);
+      status_before_prefill = std::move(selected_status_before_prefill);
+      generation_cfg = std::move(selected_generation_cfg);
+      mstates_for_logitproc = std::move(selected_mstates_for_logitproc);
+
+      logits_for_sample =
+          logit_processor_->FilterLogitsWithIndices(logits_for_sample, selected_indices);
     }
-
-    logit_processor_->InplaceUpdateLogits(logits_for_sample, generation_cfg, mstates_for_logitproc,
-                                          request_ids);
-
-    // - Compute probability distributions.
-    NDArray probs_on_device =
-        logit_processor_->ComputeProbsFromLogits(logits_for_sample, generation_cfg, request_ids);
-
-    // - Commit the prefix cache changes from previous round of action.
-    // Note: we commit prefix cache changes here to overlap this commit with the GPU execution.
-    estate->prefix_cache->CommitSequenceExtention();
 
     // - Sample tokens.
     //   For rsentries which have children, sample
@@ -257,6 +272,18 @@ class NewRequestPrefillActionObj : public BatchPrefillBaseActionObj {
         rsentry_activated.push_back(true);
       }
     }
+
+    logit_processor_->InplaceUpdateLogits(logits_for_sample, sample_indices, generation_cfg,
+                                          mstates_for_logitproc, request_ids);
+
+    // - Compute probability distributions.
+    NDArray probs_on_device = logit_processor_->ComputeProbsFromLogits(
+        logits_for_sample, sample_indices, generation_cfg, request_ids);
+
+    // - Commit the prefix cache changes from previous round of action.
+    // Note: we commit prefix cache changes here to overlap this commit with the GPU execution.
+    estate->prefix_cache->CommitSequenceExtention();
+
     NDArray renormalized_probs = sampler_->BatchRenormalizeProbsByTopP(
         probs_on_device, sample_indices, request_ids, generation_cfg);
     std::vector<SampleResult> sample_results = sampler_->BatchSampleTokensWithProbAfterTopP(
@@ -360,14 +387,14 @@ class NewRequestPrefillActionObj : public BatchPrefillBaseActionObj {
           std::min(input->max_prefill_length, rsentry->mstates[0]->GetInputLength());
     }
   }
-};  // namespace serve
+}  // namespace serve
 
-EngineAction EngineAction::NewRequestPrefill(Array<Model> models, LogitProcessor logit_processor,
-                                             Sampler sampler,
-                                             std::vector<ModelWorkspace> model_workspaces,
-                                             EngineConfig engine_config,
-                                             std::vector<picojson::object> model_configs,
-                                             Optional<EventTraceRecorder> trace_recorder) {
+EngineAction
+EngineAction::NewRequestPrefill(Array<Model> models, LogitProcessor logit_processor,
+                                Sampler sampler, std::vector<ModelWorkspace> model_workspaces,
+                                EngineConfig engine_config,
+                                std::vector<picojson::object> model_configs,
+                                Optional<EventTraceRecorder> trace_recorder) {
   return EngineAction(make_object<NewRequestPrefillActionObj>(
       std::move(models), std::move(logit_processor), std::move(sampler),
       std::move(model_workspaces), std::move(engine_config), std::move(model_configs),

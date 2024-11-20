@@ -95,10 +95,13 @@ class RequestModelStateNode : public Object {
 
   /*! \brief Return the total length of the input data. */
   int GetInputLength() const;
+
   /*!
    * \brief Return whether the grammar-guided generation is enabled.
    */
   bool RequireGrammarMatcher();
+  /*! \brief Return whether the grammar matcher is ready. */
+  bool IsGrammarMatcherReady();
   /*!
    * \brief Return whether the grammar-guided generation is enabled, and blocking wait for the
    * grammar matcher to be ready if it's not ready yet.

@@ -35,8 +35,8 @@ class SamplerObj : public Object {
   /*!
    * \brief Renormalize the input batch of probability distributions with top p values.
    * \param probs_on_device The batch of prob distributions before normalization.
-   * \param sample_indices Specifying which request we will sample for
-   * in i-th output for the sampling later on.
+   * \param sample_indices Specifying which request we will sample for in i-th output for
+   * the sampling later on.
    * The output result of the sampling will be as follow:
    *   result[i] = sample_from(prob_on_device[sample_indices[i],:], generation_config[i]));
    * For renormalization, the sample indices are used for determine the top-p grouping.
